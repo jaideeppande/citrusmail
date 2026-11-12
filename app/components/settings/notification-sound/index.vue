@@ -6,9 +6,13 @@ function choose(sound: NotificationSound) {
   playSound(sound, prefs.value.volume)
 }
 
-const setVolume = useDebounceFn((volume: number) => {
-  set({ volume })
-  playSound(prefs.value.sound, volume)
+const volume = ref(prefs.value.volume)
+watch(() => prefs.value.volume, (saved) => {
+  volume.value = saved
+})
+const setVolume = useDebounceFn((value: number) => {
+  set({ volume: value })
+  playSound(prefs.value.sound, value)
 }, 250)
 </script>
 
@@ -35,7 +39,7 @@ const setVolume = useDebounceFn((volume: number) => {
       label="Volume"
     >
       <USlider
-        :model-value="prefs.volume"
+        v-model="volume"
         :min="5"
         :max="100"
         :step="5"
@@ -48,7 +52,7 @@ const setVolume = useDebounceFn((volume: number) => {
       label="Quiet hours"
       description="No sounds or banners between these times. Mail still arrives."
     >
-      <div class="flex items-center gap-2 mt-2">
+      <div class="flex flex-wrap items-center gap-2 mt-2">
         <UInput
           type="time"
           :model-value="prefs.quietFrom"

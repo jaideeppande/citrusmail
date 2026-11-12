@@ -29,7 +29,7 @@ function reset() {
         :content="false"
         color="neutral"
         size="sm"
-        class="w-80"
+        class="w-80 max-w-full"
       />
     </UFormField>
 
@@ -64,7 +64,7 @@ function reset() {
         :content="false"
         color="neutral"
         size="sm"
-        class="w-80"
+        class="w-80 max-w-full"
         @update:model-value="set('fontSize', $event as string)"
       />
     </UFormField>
@@ -76,7 +76,7 @@ function reset() {
         :content="false"
         color="neutral"
         size="sm"
-        class="w-80"
+        class="w-80 max-w-full"
         @update:model-value="set('radius', $event as string)"
       />
     </UFormField>

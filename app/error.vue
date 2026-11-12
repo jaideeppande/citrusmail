@@ -25,7 +25,8 @@ useHead({
   <UApp>
     <UError
       :error="error"
-      :clear="{ label: 'Back to inbox', to: '/mail/INBOX' }"
+      :clear="{ label: 'Back to inbox' }"
+      redirect="/mail/INBOX"
       class="min-h-svh"
     />
   </UApp>

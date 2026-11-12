@@ -26,6 +26,10 @@ export function useTrackingSettings() {
   })
   const checking = ref(false)
   const result = ref<{ ok: boolean, message: string }>()
+  // A check's verdict is about the address it checked
+  watch(address, () => {
+    result.value = undefined
+  })
 
   function set(patch: Partial<ReceiptSettings>, saved: string | false = 'Saved') {
     return save({ receipts: { ...receipts.value, ...patch } }, saved)

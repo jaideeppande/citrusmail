@@ -22,7 +22,9 @@ const emit = defineEmits<{
       <UInput
         v-model="apiKey"
         type="password"
-        autocomplete="off"
+        autocomplete="new-password"
+        data-1p-ignore
+        data-lpignore="true"
         spellcheck="false"
       />
     </UFormField>

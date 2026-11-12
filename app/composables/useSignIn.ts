@@ -50,11 +50,20 @@ export function useSignIn() {
   })
 
   const email = refDebounced(toRef(form, 'email'), 450)
+  /** An address typed but not looked up yet */
+  const pending = computed(() => email.value !== form.email)
 
+  // An error is about what was sent; changing it starts over
+  watch(() => [form.email, form.password], () => {
+    error.value = ''
+  })
+
+  let lookup = 0
   watch(email, async (value) => {
     discovery.value = null
     if (!isEmail(value) || locked.value) return
 
+    const current = ++lookup
     discovering.value = true
     try {
       const result = await $fetch<DiscoveryResult>('/api/discover', { method: 'POST', body: { email: value } })
@@ -72,7 +81,8 @@ export function useSignIn() {
       // Sign-in still works: the server runs discovery again, and the
       // advanced settings are there when it can't
     } finally {
-      discovering.value = false
+      // An older lookup finishing late leaves the newer one's spinner alone
+      if (current === lookup) discovering.value = false
     }
   })
 
@@ -86,6 +96,11 @@ export function useSignIn() {
   }
 
   async function submit() {
+    // A Microsoft address has no password to send: Enter in the address field goes there instead
+    if (oauth.value && !advancedOpen.value && !touched.value) {
+      if (discovery.value?.oauthReady) window.location.assign(oauthUrl.value)
+      return
+    }
     error.value = ''
     submitting.value = true
     try {
@@ -122,5 +137,5 @@ export function useSignIn() {
     }
   }
 
-  return { form, adding, locked, discovery, discovering, advancedOpen, touched, error, submitting, submit, oauth, oauthUrl, chooseJmap }
+  return { form, adding, locked, discovery, discovering, pending, advancedOpen, touched, error, submitting, submit, oauth, oauthUrl, chooseJmap }
 }

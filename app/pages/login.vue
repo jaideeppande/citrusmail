@@ -55,6 +55,7 @@ const panel = computed(() => {
         :form="signIn.form"
         :discovery="signIn.discovery.value"
         :discovering="signIn.discovering.value"
+        :pending="signIn.pending.value"
         :submitting="signIn.submitting.value"
         :failed="!!signIn.error.value"
       />

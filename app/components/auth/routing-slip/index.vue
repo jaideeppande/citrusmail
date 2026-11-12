@@ -5,6 +5,8 @@ const props = defineProps<{
   form: SignInForm
   discovery: DiscoveryResult | null
   discovering: boolean
+  /** An address typed but not looked up yet */
+  pending?: boolean
   submitting: boolean
   failed: boolean
 }>()
@@ -24,7 +26,8 @@ const domain = computed(() => isEmail(props.form.email) ? props.form.email.split
 type State = 'idle' | 'looking' | 'found' | 'missing'
 const state = (value: string | undefined): State => {
   if (!domain.value) return 'idle'
-  if (props.discovering) return 'looking'
+  // Still typing, or the lookup hasn't started yet: not missing
+  if (props.discovering || props.pending) return 'looking'
   return value ? 'found' : 'missing'
 }
 
@@ -41,7 +44,7 @@ function hostOf(url: string) {
 }
 
 const rows = computed(() => [
-  { label: 'Provider', icon: 'i-lucide-building-2', value: props.discovery?.provider ?? (props.discovery?.incoming ? 'Your own server' : undefined) },
+  { label: 'Provider', icon: 'i-lucide-building-2', value: props.discovery?.provider ?? (props.discovery?.incoming ? 'Your own server' : undefined), optional: true },
   { label: `Incoming mail${props.form.incoming.host ? ` (${props.form.incoming.protocol.toUpperCase()})` : ''}`, icon: 'i-lucide-inbox', value: server(props.form.incoming.host, props.form.incoming.port) },
   { label: 'Outgoing mail (SMTP)', icon: 'i-lucide-send', value: server(props.form.outgoing.host, props.form.outgoing.port) },
   { label: 'Calendar', icon: 'i-lucide-calendar', value: hostOf(props.form.caldav), optional: true },

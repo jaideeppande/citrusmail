@@ -9,7 +9,7 @@ const _useShell = () => {
 
   // Folding the sidebar is remembered in this browser, apart from the phone slideover
   const folded = useLocalStorage('citrusmail-sidebar-folded', false)
-  const isSidebarOpen = ref(isMobile.value ? false : !folded.value)
+  const isSidebarOpen = ref(!folded.value)
   watch(isSidebarOpen, (open) => {
     if (!isMobile.value) folded.value = !open
   })

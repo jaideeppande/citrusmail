@@ -46,7 +46,7 @@ export function useBackground() {
   }
 
   async function remove() {
-    await save({ appearance: { ...settings.value.appearance, background: undefined } }, 'Background removed')
+    if (!await save({ appearance: { ...settings.value.appearance, background: undefined } }, 'Background removed')) return
     $fetch('/api/background', { method: 'PUT', body: { image: '' } }).catch(() => {})
   }
 

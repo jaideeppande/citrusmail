@@ -361,12 +361,13 @@ const _useMail = () => {
   const onMail = () => route.path.startsWith('/mail')
   // Not while a menu, list or dialog is open: its own keys (typeahead, arrows)
   // would otherwise also archive, flag or step to the next message behind it
-  const overlayOpen = () => !!document.querySelector('[role="menu"], [role="listbox"], [role="dialog"]')
+  // (The phone's reader is a slideover, which is the mail itself, not over it)
+  const overlayOpen = () => !!document.querySelector('[role="menu"], [role="listbox"], [role="dialog"]:not(:has([data-reader]))')
   const when = (handler: () => void) => () => onMail() && !overlayOpen() && handler()
   const withSelected = (handler: (message: MessageSummary) => void) => when(() => selected.value && handler(selected.value))
 
   // Off the mail pages none of these are held, so the arrows scroll the page again
-  defineShortcuts(computed(() => !route.path.startsWith('/mail') ? {} : {
+  const mailKeys = {
     'j': when(() => step(1)),
     'k': when(() => step(-1)),
     'arrowdown': when(() => step(1)),
@@ -378,7 +379,8 @@ const _useMail = () => {
     's': withSelected(toggleFlag),
     // Both ways, as the menus that show it say
     'shift_u': withSelected(message => setUnread(message, !message.unread))
-  }))
+  }
+  defineShortcuts(computed(() => route.path.startsWith('/mail') ? mailKeys : {}))
 
   // Escape closes the open message. A plain listener, not a shortcut: those
   // cancel the key, and an open menu or dialog has to get it first

@@ -62,7 +62,10 @@ defineShortcuts({
 </script>
 
 <template>
-  <article class="flex flex-col min-w-0 min-h-0 bg-default">
+  <article
+    data-reader
+    class="flex flex-col min-w-0 min-h-0 bg-default"
+  >
     <MailReaderHeader
       :summary="summary"
       :message="message ?? undefined"

@@ -20,7 +20,7 @@ const preview = computed(() => `<!doctype html><html><head><meta charset="utf-8"
       spellcheck="false"
       :ui="{ base: 'text-xs leading-5' }"
     />
-    <div class="rounded-lg ring ring-default overflow-hidden bg-white">
+    <div class="rounded-lg ring ring-default overflow-hidden">
       <p class="px-4 py-2 text-xs text-muted border-b border-default bg-elevated/40">
         Preview
       </p>

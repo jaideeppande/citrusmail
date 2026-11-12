@@ -93,16 +93,29 @@ export function useNewMail() {
   }
 
   let stopOpen: (() => void) | undefined
+  // Held while mounted and let go after: a lock kept by a layout that's gone
+  // (to /login and back) would stop new-mail checks in every tab
+  let release: (() => void) | undefined
+  const waiting = new AbortController()
   onMounted(() => {
     // The tab holding the lock watches; the others wait their turn
-    if (navigator.locks) navigator.locks.request('citrusmail-new-mail', () => new Promise<void>(() => start()))
-    else start()
+    if (navigator.locks) {
+      navigator.locks.request('citrusmail-new-mail', { signal: waiting.signal }, () => new Promise<void>((resolve) => {
+        release = resolve
+        start()
+      })).catch(() => {})
+    } else {
+      start()
+    }
     // A clicked banner in the Mac app says which message to show
     stopOpen = desktop?.onOpen(target => open({ ...target, id: target.id || undefined }))
   })
   onBeforeUnmount(() => {
     clearTimeout(timer)
+    timer = undefined
     stopOpen?.()
+    waiting.abort()
+    release?.()
   })
   useEventListener(document, 'visibilitychange', () => !document.hidden && timer && start())
 
