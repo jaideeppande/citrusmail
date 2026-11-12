@@ -8,7 +8,7 @@ const props = defineProps<{
   sent?: boolean
 }>()
 
-const { selectedId } = useMail()
+const { select } = useMail()
 const menu = useMessageActions(() => props.message)
 
 const person = computed(() => props.sent
@@ -30,7 +30,7 @@ const person = computed(() => props.sent
         block
         class="h-10 items-center justify-start text-start gap-3 ps-2 pe-4 rounded-none font-normal text-sm"
         :class="selected ? 'bg-(--lb-selected) hover:bg-(--lb-selected)' : message.unread ? 'hover:bg-elevated/60' : 'bg-elevated/25 hover:bg-elevated/60'"
-        @click="selectedId = message.id"
+        @click="select(message)"
       >
         <span
           class="size-2 shrink-0 rounded-full"

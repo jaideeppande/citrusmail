@@ -19,7 +19,9 @@ const _useContactsPage = () => {
   const groups = computed(() => {
     const map = new Map<string, Contact[]>()
     for (const contact of filtered.value) {
-      const letter = /^[a-z]/i.test(contact.name) ? contact.name[0]!.toUpperCase() : '#'
+      // Émile sorts among the E's, so it is filed there too; any script's letters count
+      const base = contact.name.normalize('NFD').replace(/\p{M}/gu, '')
+      const letter = /^\p{L}/u.test(base) ? base[0]!.toLocaleUpperCase() : '#'
       map.set(letter, [...(map.get(letter) ?? []), contact])
     }
     return [...map.entries()].map(([letter, items]) => ({ letter, items }))
@@ -44,8 +46,13 @@ const _useContactsPage = () => {
     editorOpen.value = true
   }
 
+  // Held until the server answers, so a second click on a slow server can't add the contact twice
+  const saving = ref(false)
   async function submit(contact: Contact) {
+    if (saving.value) return
+    saving.value = true
     const saved = await save({ ...contact, emails: contact.emails.filter(Boolean), phones: contact.phones.filter(Boolean) })
+    saving.value = false
     if (saved) {
       editorOpen.value = false
       selectedId.value = saved.id
@@ -63,7 +70,7 @@ const _useContactsPage = () => {
     }
   }
 
-  return { contacts, books, status, search, groups, filtered, selectedId, selected, editorOpen, editing, openCreate, openEdit, submit, confirmRemove }
+  return { contacts, books, status, search, groups, filtered, selectedId, selected, editorOpen, editing, saving, openCreate, openEdit, submit, confirmRemove }
 }
 
 export const useContactsPage = createAppComposable(_useContactsPage)

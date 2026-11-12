@@ -1,4 +1,5 @@
 import { parseDate, type CalendarDate } from '@internationalized/date'
+import { breakpointsTailwind } from '@vueuse/core'
 
 const _useCalendar = () => {
   const route = useRoute()
@@ -15,7 +16,15 @@ const _useCalendar = () => {
     }
   })
 
-  const range = computed<DateRange>(() => rangeFor(view.value, date.value))
+  // Below `lg` the week view is three days from the date: stepped, titled and
+  // fetched as three, or a step of a week would skip the four it never shows
+  const isSmallScreen = useBreakpoints(breakpointsTailwind).smaller('lg')
+  const narrow = computed(() => view.value === 'week' && isSmallScreen.value)
+  function rangeOf(target: CalendarDate): DateRange {
+    return narrow.value ? weekRange(target, 3) : rangeFor(view.value, target)
+  }
+
+  const range = computed<DateRange>(() => rangeOf(date.value))
 
   // The month docked at the top of the month view scroll viewport, kept in
   // sync live while scrolling so the header title follows along
@@ -52,7 +61,7 @@ const _useCalendar = () => {
     switch (view.value) {
       case 'year': return { years: 1 }
       case 'month': return { months: 1 }
-      case 'week': return { days: 7 }
+      case 'week': return { days: narrow.value ? 3 : 7 }
       default: return { days: 1 }
     }
   })
@@ -104,7 +113,10 @@ const _useCalendar = () => {
 
   function unlessEditing(handler: () => void) {
     return () => {
-      if (onCalendar() && !useEventDraft().draft.value && !useEventEditor().editingId.value) {
+      // Arrows also move focus inside the mini calendar, the view tabs and menus,
+      // and `defineShortcuts` hears them on the document all the same
+      const widget = document.activeElement?.closest('[role="grid"], [role="tablist"], [role="menu"], [role="listbox"]')
+      if (onCalendar() && !widget && !useEventDraft().draft.value && !useEventEditor().editingId.value) {
         handler()
       }
     }
@@ -137,6 +149,7 @@ const _useCalendar = () => {
     view,
     date,
     range,
+    rangeOf,
     title,
     visibleMonth,
     monthLabelsVisible,

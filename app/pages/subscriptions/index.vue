@@ -47,6 +47,13 @@ useSeoMeta({ title: 'Subscriptions' })
       description="None of the recent mail in your Inbox has an unsubscribe link."
       variant="naked"
     />
+    <UEmpty
+      v-else-if="!shown.length"
+      icon="i-lucide-search-x"
+      title="No matches"
+      :description="`No mailing list matches “${query}”.`"
+      variant="naked"
+    />
     <ul
       v-else
       class="divide-y divide-default border-y border-default"

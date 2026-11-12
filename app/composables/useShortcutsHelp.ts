@@ -15,15 +15,19 @@ export const SHORTCUT_GROUPS = [{
   items: [
     { label: 'New message', keys: ['c'] },
     { label: 'Next / previous message', keys: ['j', 'k'] },
+    { label: 'Close message', keys: ['escape'] },
     { label: 'Reply', keys: ['r'] },
     { label: 'Reply all', keys: ['a'] },
     { label: 'Forward', keys: ['f'] },
     { label: 'Archive', keys: ['e'] },
     { label: 'Delete', keys: ['#'] },
     { label: 'Flag', keys: ['s'] },
-    { label: 'Mark unread', keys: ['shift', 'u'] },
+    { label: 'Mark read / unread', keys: ['shift', 'u'] },
+    { label: 'Split or list view', keys: ['shift', 'v'] },
     { label: 'Send', keys: ['meta', 'enter'] },
-    { label: 'Search', keys: ['/'] }
+    { label: 'Search', keys: ['/'] },
+    { label: 'Fold sidebar', keys: ['['] },
+    { label: 'These shortcuts', keys: ['?'] }
   ]
 }, {
   title: 'Calendar',

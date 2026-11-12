@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // AI search: the answer first, then the messages it found, from any folder
-const { ai, selectedId, folders } = useMail()
+const { ai, isSelected, folders } = useMail()
 
 const folderName = (path: string) => folders.value.find(item => item.path === path)?.name ?? path
 </script>
@@ -54,7 +54,7 @@ const folderName = (path: string) => folders.value.find(item => item.path === pa
         >
           <MailListItem
             :message="message"
-            :selected="message.id === selectedId"
+            :selected="isSelected(message)"
             :note="folderName(message.folder)"
           />
         </div>

@@ -28,7 +28,7 @@ const isForward = computed(() => /^fwd:/i.test(draft.value.subject))
           variant="soft"
           size="xs"
           aria-label="Leave out the signature"
-          class="absolute top-0 end-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+          class="absolute top-0 end-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
           @click="draft.signature = false"
         />
       </UTooltip>
@@ -47,7 +47,7 @@ const isForward = computed(() => /^fwd:/i.test(draft.value.subject))
       />
       <blockquote
         v-else
-        class="border-s-2 border-default ps-3 text-sm text-muted whitespace-pre-line line-clamp-[40]"
+        class="border-s-2 border-default ps-3 text-sm text-muted whitespace-pre-line wrap-anywhere line-clamp-[40]"
       >
         {{ draft.quoteText }}
       </blockquote>

@@ -160,12 +160,19 @@ const _useMail = () => {
     poll.resume()
   })
 
+  // The open message's id, and its folder when it isn't the one on screen (an
+  // AI search match): ids are only unique within a folder
   const selectedId = computed<string | undefined>({
     get: () => route.query.m as string | undefined,
     set: (id) => {
-      router.replace({ query: { ...route.query, m: id || undefined } })
+      router.replace({ query: { ...route.query, m: id || undefined, f: undefined } })
     }
   })
+  const selectedFolder = computed(() => (route.query.f as string | undefined) ?? folderPath.value)
+  const isSelected = (message: MessageSummary) => message.id === selectedId.value && message.folder === selectedFolder.value
+  function select(message: MessageSummary) {
+    router.replace({ query: { ...route.query, m: message.id, f: message.folder === folderPath.value ? undefined : message.folder } })
+  }
 
   /* AI search ------------------------------------------------------ */
 
@@ -193,7 +200,7 @@ const _useMail = () => {
   /** What the list shows: the folder, or AI search's matches */
   const shown = computed(() => ai.value.on ? ai.value.result?.messages ?? [] : messages.value)
 
-  const selected = computed(() => shown.value.find(message => message.id === selectedId.value) ?? messages.value.find(message => message.id === selectedId.value))
+  const selected = computed(() => shown.value.find(isSelected) ?? messages.value.find(isSelected))
 
   // Ids are only unique within a folder, and AI search shows several at once
   function patchLocal(id: string, change: Partial<MessageSummary>, folder?: string) {
@@ -239,7 +246,7 @@ const _useMail = () => {
   function takeOut(message: MessageSummary) {
     const same = (item: MessageSummary) => item.id === message.id && item.folder === message.folder
     const index = messages.value.findIndex(same)
-    const wasSelected = selectedId.value === message.id
+    const wasSelected = isSelected(message)
     const key = leaveKey(message)
     leaving.add(key)
     setTimeout(() => leaving.delete(key), 60_000)
@@ -287,7 +294,9 @@ const _useMail = () => {
     const restore = takeOut(message)
     try {
       await $fetch(`/api/messages/${encodeURIComponent(message.id)}`, { method: 'DELETE', query: { folder: message.folder } })
-      toast.add({ title: folder.value?.role === 'trash' ? 'Deleted for good' : 'Moved to Trash', icon: 'i-lucide-trash-2' })
+      const from = folders.value.find(item => item.path === message.folder)
+      const forGood = from?.role === 'trash' || !folders.value.some(item => item.role === 'trash')
+      toast.add({ title: forGood ? 'Deleted for good' : 'Moved to Trash', icon: 'i-lucide-trash-2' })
     } catch {
       restore()
       toast.add({ title: 'Couldn’t delete the message', color: 'error', icon: 'i-lucide-circle-alert' })
@@ -343,17 +352,21 @@ const _useMail = () => {
 
   // j/k and the arrows walk the list, the rest act on the open message
   function step(offset: number) {
-    const index = shown.value.findIndex(message => message.id === selectedId.value)
+    const index = shown.value.findIndex(isSelected)
     const next = shown.value[index === -1 ? 0 : index + offset]
-    if (next) selectedId.value = next.id
+    if (next) select(next)
     if (!ai.value.on && offset > 0 && index >= messages.value.length - 5) load(false)
   }
 
   const onMail = () => route.path.startsWith('/mail')
-  const when = (handler: () => void) => () => onMail() && handler()
+  // Not while a menu, list or dialog is open: its own keys (typeahead, arrows)
+  // would otherwise also archive, flag or step to the next message behind it
+  const overlayOpen = () => !!document.querySelector('[role="menu"], [role="listbox"], [role="dialog"]')
+  const when = (handler: () => void) => () => onMail() && !overlayOpen() && handler()
   const withSelected = (handler: (message: MessageSummary) => void) => when(() => selected.value && handler(selected.value))
 
-  defineShortcuts({
+  // Off the mail pages none of these are held, so the arrows scroll the page again
+  defineShortcuts(computed(() => !route.path.startsWith('/mail') ? {} : {
     'j': when(() => step(1)),
     'k': when(() => step(-1)),
     'arrowdown': when(() => step(1)),
@@ -363,8 +376,9 @@ const _useMail = () => {
     'delete': withSelected(remove),
     'backspace': withSelected(remove),
     's': withSelected(toggleFlag),
-    'shift_u': withSelected(message => setUnread(message, true))
-  })
+    // Both ways, as the menus that show it say
+    'shift_u': withSelected(message => setUnread(message, !message.unread))
+  }))
 
   // Escape closes the open message. A plain listener, not a shortcut: those
   // cancel the key, and an open menu or dialog has to get it first
@@ -404,6 +418,9 @@ const _useMail = () => {
     load,
     refreshTop,
     selectedId,
+    selectedFolder,
+    isSelected,
+    select,
     selected,
     shown,
     ai,

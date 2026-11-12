@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const { search, groups, filtered, status, selectedId } = useContactsPage()
+const { refresh } = useContacts()
 const { isSidebarOpen } = useShell()
 </script>
 
@@ -40,6 +41,16 @@ const { isSidebarOpen } = useShell()
         class="h-9"
       />
     </div>
+
+    <UEmpty
+      v-else-if="status === 'error' && !filtered.length"
+      icon="i-lucide-cloud-off"
+      title="Couldn’t load contacts"
+      description="The address book didn’t answer."
+      :actions="[{ label: 'Try again', icon: 'i-lucide-refresh-cw', color: 'neutral', variant: 'subtle', onClick: () => refresh() }]"
+      variant="naked"
+      class="flex-1"
+    />
 
     <UEmpty
       v-else-if="!filtered.length"

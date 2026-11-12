@@ -43,7 +43,7 @@ const items = computed<DropdownMenuItem[][]>(() => [
         icon="i-lucide-chevron-up"
         aria-label="Send later"
         :disabled="sending"
-        class="border-s border-white/20 px-2"
+        class="border-s border-inverted/20 px-2"
       />
     </UDropdownMenu>
   </UFieldGroup>

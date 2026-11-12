@@ -33,7 +33,7 @@ const summary = computed(() => {
             :label="personName(message.from)"
             color="neutral"
             variant="link"
-            class="p-0 font-semibold text-highlighted"
+            class="p-0 font-semibold text-highlighted min-w-0 max-w-full"
             @click="compose([message.from])"
           />
         </UTooltip>

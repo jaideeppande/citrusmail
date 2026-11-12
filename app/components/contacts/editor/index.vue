@@ -11,17 +11,15 @@ const emit = defineEmits<{
 const open = defineModel<boolean>('open', { required: true })
 
 const state = ref<Contact>({ id: '', bookId: '', name: '', emails: [''], phones: [] })
-const saving = ref(false)
+const { saving } = useContactsPage()
 
 watch(() => props.contact, (contact) => {
   if (contact) state.value = { ...contact, emails: [...contact.emails], phones: [...contact.phones] }
 }, { immediate: true })
 
 async function onSubmit() {
-  saving.value = true
+  // The page closes the slideover once the save lands; `saving` holds until then
   emit('save', state.value)
-  // The page closes the slideover once the save lands
-  setTimeout(() => (saving.value = false), 600)
 }
 </script>
 

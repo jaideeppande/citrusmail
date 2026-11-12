@@ -8,7 +8,7 @@ const props = defineProps<{
   note?: string
 }>()
 
-const { selectedId } = useMail()
+const { select } = useMail()
 const menu = useMessageActions(() => props.message)
 
 const person = computed(() => props.sent
@@ -32,7 +32,7 @@ const avatarAddress = computed(() => props.sent ? props.message.to[0] : props.me
         block
         class="items-start justify-start text-start gap-3 ps-2 pe-4 py-3 rounded-none font-normal"
         :class="selected ? 'bg-(--lb-selected) hover:bg-(--lb-selected)' : 'hover:bg-elevated/60'"
-        @click="selectedId = message.id"
+        @click="select(message)"
       >
         <span
           class="mt-[15px] size-2 shrink-0 rounded-full"

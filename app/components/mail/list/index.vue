@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { messages, status, cursor, load, folder, search, filter, filtering, selectedId } = useMail()
+const { messages, status, cursor, load, folder, search, filter, filtering, selectedId, isSelected } = useMail()
 const { view } = useMailLayout()
 const { isMobile } = useShell()
 // The list-only view packs a message into one line
@@ -69,13 +69,13 @@ const empty = computed(() => {
       <MailListItemCompact
         v-if="compact"
         :message="item as MessageSummary"
-        :selected="item.id === selectedId"
+        :selected="isSelected(item as MessageSummary)"
         :sent="folder?.role === 'sent' || folder?.role === 'drafts'"
       />
       <MailListItem
         v-else
         :message="item as MessageSummary"
-        :selected="item.id === selectedId"
+        :selected="isSelected(item as MessageSummary)"
         :sent="folder?.role === 'sent' || folder?.role === 'drafts'"
       />
     </template>

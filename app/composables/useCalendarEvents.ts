@@ -25,7 +25,7 @@ function eventsQuery({ start, end }: DateRange) {
 }
 
 const _useCalendarEvents = () => {
-  const { view, range, prevDate, nextDate } = useCalendar()
+  const { view, range, rangeOf, prevDate, nextDate } = useCalendar()
   const nuxtApp = useNuxtApp()
   const toast = useToast()
 
@@ -76,8 +76,8 @@ const _useCalendarEvents = () => {
         return
       }
 
-      warmRange(rangeFor(view.value, prevDate.value))
-      warmRange(rangeFor(view.value, nextDate.value))
+      warmRange(rangeOf(prevDate.value))
+      warmRange(rangeOf(nextDate.value))
     }, { immediate: true })
   })
 

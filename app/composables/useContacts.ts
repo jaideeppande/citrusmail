@@ -23,7 +23,7 @@ const _useContacts = () => {
       const saved = contact.id
         ? await $fetch<Contact>(`/api/contacts/${contact.id}`, { method: 'PUT', body: contact })
         : await $fetch<Contact>('/api/contacts', { method: 'POST', body: contact })
-      contacts.value = [...contacts.value.filter(item => item.id !== saved.id), saved].sort((a, b) => a.name.localeCompare(b.name))
+      contacts.value = [...contacts.value.filter(item => item.id !== saved.id), saved].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
       toast.add({ title: contact.id ? 'Contact saved' : 'Contact added', icon: 'i-lucide-check' })
       return saved
     } catch (error) {

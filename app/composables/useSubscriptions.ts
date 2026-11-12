@@ -8,7 +8,7 @@ export function useSubscriptions() {
 
   const shown = computed(() => {
     const q = query.value.trim().toLowerCase()
-    return q ? subscriptions.value.filter(item => item.address.includes(q) || item.name?.toLowerCase().includes(q)) : subscriptions.value
+    return q ? subscriptions.value.filter(item => item.address.toLowerCase().includes(q) || item.name?.toLowerCase().includes(q)) : subscriptions.value
   })
 
   async function leave(item: Subscription) {

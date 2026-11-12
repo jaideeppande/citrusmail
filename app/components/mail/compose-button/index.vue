@@ -29,7 +29,7 @@ const { compose } = useComposer()
       >
         <UKbd
           value="c"
-          class="hidden lg:inline-flex ms-auto bg-white/15 text-white ring-0"
+          class="hidden lg:inline-flex ms-auto bg-inverted/15 text-inverted ring-0"
         />
       </template>
     </UButton>

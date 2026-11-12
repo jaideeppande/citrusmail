@@ -161,12 +161,25 @@ const _useComposer = () => {
     version.value++
   }
 
+  // Drafts on screen follow a draft saved, sent or thrown away: its old row would
+  // otherwise linger and open as "couldn't open this message"
+  // Taken before any await: the app context isn't there after one
+  function draftsFollower() {
+    const { folder, load } = useMail()
+    return () => {
+      if (folder.value?.role === 'drafts') load()
+    }
+  }
+
   function discard() {
     if (sending.value) return
     const saved = draft.value.savedAs
     reset()
     open.value = false
-    if (saved) $fetch('/api/drafts', { method: 'DELETE', query: saved }).catch(() => {})
+    if (saved) {
+      const follow = draftsFollower()
+      $fetch('/api/drafts', { method: 'DELETE', query: saved }).then(follow, () => {})
+    }
   }
 
   // Your words, then the signature, then the original
@@ -205,12 +218,14 @@ const _useComposer = () => {
     if (sending.value) return
     open.value = false
     if (!isDirty.value) return reset()
+    const follow = draftsFollower()
     const kept: Draft = JSON.parse(JSON.stringify(draft.value))
     reset()
     const reopenAction = { label: 'Reopen', color: 'neutral' as const, variant: 'outline' as const, onClick: () => restore(kept) }
     try {
       kept.savedAs = await $fetch<DraftRef>('/api/drafts', { method: 'POST', body: { ...outgoing(kept), replace: kept.savedAs } })
       toast.add({ title: 'Saved to Drafts', icon: 'i-lucide-file-pen-line', actions: [reopenAction] })
+      follow()
     } catch {
       toast.add({ title: 'Draft closed', description: 'It couldn’t be saved to Drafts.', icon: 'i-lucide-file-x', duration: 10_000, actions: [reopenAction] })
     }
@@ -230,13 +245,16 @@ const _useComposer = () => {
     }
 
     sending.value = true
+    const follow = draftsFollower()
     try {
       const result = await $fetch<{ scheduled?: ScheduledMessage }>('/api/send', {
         method: 'POST',
         body: { message: outgoing(), sendAt: sendAt?.toISOString(), draft: draft.value.savedAs }
       })
+      const wasDraft = !!draft.value.savedAs
       reset()
       open.value = false
+      if (wasDraft) follow()
       if (result.scheduled) {
         await refreshScheduled()
         toast.add({ title: `Scheduled for ${scheduleLabel(result.scheduled.sendAt)}`, icon: 'i-lucide-clock-arrow-up', actions: [{ label: 'View', color: 'neutral', variant: 'outline', to: draftsLink.value }] })

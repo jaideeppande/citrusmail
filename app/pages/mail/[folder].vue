@@ -5,14 +5,15 @@ definePageMeta({
   key: 'mail'
 })
 
-const { folder, selectedId, selected, folderPath } = useMail()
+const { folder, selectedId, selectedFolder } = useMail()
 const { view, listWidth } = useMailLayout()
 const { isMobile } = useShell()
 
 useSeoMeta({ title: () => folder.value?.name ?? 'Mail' })
 
-// A message found by AI search can live in another folder
-const readerFolder = computed(() => selected.value?.folder ?? folderPath.value)
+// A message found by AI search can live in another folder; the route keeps
+// which, so leaving the search doesn't open a namesake here
+const readerFolder = selectedFolder
 
 const readerOpen = computed({
   get: () => !!selectedId.value,

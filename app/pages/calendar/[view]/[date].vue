@@ -127,8 +127,12 @@ function onViewChange(value: string | number) {
         @update:model-value="onViewChange"
       >
         <template #default="{ item }">
-          <span class="sm:hidden">{{ item.label.charAt(0) }}</span>
-          <span class="hidden sm:inline">{{ item.label }}</span>
+          <!-- The letter is for the eye; a screen reader hears the whole name -->
+          <span
+            class="sm:hidden"
+            aria-hidden="true"
+          >{{ item.label.charAt(0) }}</span>
+          <span class="max-sm:sr-only">{{ item.label }}</span>
         </template>
       </UTabs>
 

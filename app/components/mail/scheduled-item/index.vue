@@ -12,11 +12,13 @@ const emit = defineEmits<{
   'cancel': []
 }>()
 
-const menu = computed<DropdownMenuItem[][]>(() => [
+// Read again each time the menu opens: "Tonight" is in the past by morning
+const opened = ref(0)
+const menu = computed<DropdownMenuItem[][]>(() => opened.value >= 0 ? [
   [{ type: 'label', label: 'Send at' }],
   sendLaterPresets().map(preset => ({ label: preset.label, description: scheduleLabel(preset.date.toISOString()), icon: preset.icon, onSelect: () => emit('reschedule-to', preset.date) })),
   [{ label: 'Custom time…', icon: 'i-lucide-calendar-clock', onSelect: () => emit('reschedule') }]
-])
+] : [])
 
 const failed = computed(() => props.item.status === 'failed')
 </script>
@@ -46,6 +48,7 @@ const failed = computed(() => props.item.status === 'failed')
     <div class="flex items-center shrink-0">
       <UDropdownMenu
         :items="menu"
+        @update:open="$event && opened++"
         :content="{ align: 'end' }"
         :ui="{ content: 'min-w-64' }"
       >

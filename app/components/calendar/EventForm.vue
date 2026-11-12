@@ -277,51 +277,62 @@ watch(
       />
 
       <span class="text-sm text-muted text-end w-16">Starts:</span>
-      <div class="flex items-center gap-2">
-        <UInputDate
-          ref="startsDate"
-          v-model="state.startDate"
-          variant="none"
-          :ui="{ base: 'ps-5 pe-0 py-0', leading: 'ps-0' }"
-        >
-          <template #leading>
-            <UPopover :reference="startsDate?.inputsRef[3]?.$el">
-              <UButton
-                variant="link"
-                size="xs"
-                icon="i-lucide-calendar"
-                aria-label="Select a start date"
-                class="p-0 rounded-xs"
-              />
-
-              <template #content>
-                <UCalendar
-                  v-model="state.startDate"
-                  :week-starts-on="1"
-                  class="p-2"
+      <!-- The start's own errors (a segment cleared) show here, or Enter fails without a word -->
+      <UFormField
+        name="startDate"
+        :error-pattern="/^start(Date|Time)$/"
+      >
+        <div class="flex items-center gap-2">
+          <UInputDate
+            ref="startsDate"
+            v-model="state.startDate"
+            variant="none"
+            aria-label="Start date"
+            :ui="{ base: 'ps-5 pe-0 py-0', leading: 'ps-0' }"
+          >
+            <template #leading>
+              <UPopover :reference="startsDate?.inputsRef[3]?.$el">
+                <UButton
+                  variant="link"
+                  size="xs"
+                  icon="i-lucide-calendar"
+                  aria-label="Select a start date"
+                  class="p-0 rounded-xs"
                 />
-              </template>
-            </UPopover>
-          </template>
-        </UInputDate>
 
-        <UInputTime
-          v-if="!state.allDay"
-          v-model="state.startTime"
-          variant="none"
-          :hour-cycle="24"
-          aria-label="Start time"
-          :ui="{ base: 'p-0' }"
-        />
-      </div>
+                <template #content>
+                  <UCalendar
+                    v-model="state.startDate"
+                    :week-starts-on="1"
+                    class="p-2"
+                  />
+                </template>
+              </UPopover>
+            </template>
+          </UInputDate>
+
+          <UInputTime
+            v-if="!state.allDay"
+            v-model="state.startTime"
+            variant="none"
+            :hour-cycle="24"
+            aria-label="Start time"
+            :ui="{ base: 'p-0' }"
+          />
+        </div>
+      </UFormField>
 
       <span class="text-sm text-muted text-end w-16">Ends:</span>
-      <UFormField name="endDate">
+      <UFormField
+        name="endDate"
+        :error-pattern="/^end(Date|Time)$/"
+      >
         <div class="flex items-center gap-2">
           <UInputDate
             ref="endsDate"
             v-model="state.endDate"
             variant="none"
+            aria-label="End date"
             :ui="{ base: 'ps-5 pe-0 py-0', leading: 'ps-0' }"
           >
             <template #leading>

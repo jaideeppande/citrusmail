@@ -27,7 +27,7 @@ const hasRemote = computed(() => props.message.remoteContent && !showImages.valu
   <div>
     <div class="max-w-4xl mx-auto px-4 sm:px-8 py-6 flex flex-col gap-5">
       <!-- Its text is set by hand, so translation can swap it like the body's -->
-      <h1 class="text-2xl font-bold tracking-tight text-highlighted text-pretty">
+      <h1 class="text-2xl font-bold tracking-tight text-highlighted text-pretty wrap-anywhere">
         <span
           ref="subject"
           v-text="message.subject || '(No subject)'"

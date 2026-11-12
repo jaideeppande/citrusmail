@@ -43,7 +43,7 @@ const isPicture = (file: OutgoingAttachment) => /^image\/(png|jpe?g|gif|webp)$/.
         variant="solid"
         size="xs"
         :aria-label="`Remove ${file.filename}`"
-        class="absolute -top-2 -end-2 rounded-full size-5 p-0 justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+        class="absolute -top-2 -end-2 rounded-full size-5 p-0 justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 transition-opacity"
         @click="detach(index)"
       />
     </li>

@@ -9,6 +9,9 @@ const emit = defineEmits<{
   block: []
 }>()
 
+const { lists } = useSenders()
+const blockText = computed(() => `Block: their mail goes straight to ${lists.value.blockAction === 'trash' ? 'Trash' : 'Junk'}`)
+
 const when = computed(() => new Date(props.item.lastDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }))
 </script>
 
@@ -52,7 +55,7 @@ const when = computed(() => new Date(props.item.lastDate).toLocaleDateString(und
         />
       </UTooltip>
     </template>
-    <UTooltip text="Block: their mail goes straight to Junk">
+    <UTooltip :text="blockText">
       <UButton
         icon="i-lucide-ban"
         color="neutral"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { draft, isDirty, editor, discard } = useComposer()
+const { draft, isDirty, editor, discard, close } = useComposer()
 const { writing } = useAiReply()
 const { translating, fallback } = useReplyTranslation()
 
@@ -33,6 +33,7 @@ async function picked(event: Event) {
       v-model="draft.html"
       content-type="html"
       placeholder="Write your message"
+      :autofocus="draft.to.length && draft.subject ? 'start' : false"
       :image="{ allowBase64: true, HTMLAttributes: { style: 'max-width:100%;height:auto' } }"
       :editor-props="{ handlePaste: (_view: unknown, event: ClipboardEvent) => drop.onPaste(event) }"
       class="flex-1 flex flex-col min-h-0 overflow-y-auto"
@@ -55,7 +56,7 @@ async function picked(event: Event) {
             color="neutral"
             variant="ghost"
             :aria-label="isDirty ? 'Discard draft' : 'Close'"
-            @click="discard"
+            @click="isDirty ? discard() : close()"
           />
         </UTooltip>
         <UTooltip text="Attach files">
