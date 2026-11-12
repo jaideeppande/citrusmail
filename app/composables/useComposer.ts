@@ -100,7 +100,7 @@ const _useComposer = () => {
     const self = account.value?.email.toLowerCase()
     const primary = message.replyTo.length ? message.replyTo : [message.from]
     const others = all
-      ? [...message.to, ...message.cc].filter(address => address.address.toLowerCase() !== self && !primary.some(p => p.address === address.address))
+      ? [...message.to, ...message.cc].filter(address => address.address.toLowerCase() !== self && !primary.some(p => p.address.toLowerCase() === address.address.toLowerCase()))
       : []
 
     start({
@@ -132,7 +132,12 @@ const _useComposer = () => {
     const attachments = await Promise.all(message.attachments.map(async (file) => {
       const blob = await $fetch<Blob>(`/api/messages/${encodeURIComponent(message.id)}/attachments/${file.index}`, { query: { folder: message.folder }, responseType: 'blob' })
       return { filename: file.filename, contentType: file.contentType, content: await blobToBase64(blob) }
-    })).catch(() => [] as OutgoingAttachment[])
+    })).catch(() => undefined)
+    // Opening without them would save over the only copy that has them
+    if (!attachments) {
+      toast.add({ title: 'Couldn’t open the draft', description: 'Its attachments didn’t download. Try again.', color: 'error', icon: 'i-lucide-circle-alert' })
+      return
+    }
     start({
       to: message.to,
       cc: message.cc,
@@ -157,6 +162,7 @@ const _useComposer = () => {
   }
 
   function discard() {
+    if (sending.value) return
     const saved = draft.value.savedAs
     reset()
     open.value = false
@@ -195,6 +201,8 @@ const _useComposer = () => {
    * composer starts clean next time. Reopen brings it straight back
    */
   async function close() {
+    // Mid-send it would save a copy of a message that is about to go out
+    if (sending.value) return
     open.value = false
     if (!isDirty.value) return reset()
     const kept: Draft = JSON.parse(JSON.stringify(draft.value))
@@ -269,7 +277,8 @@ const _useComposer = () => {
   })
 
   defineShortcuts({
-    c: () => compose(),
+    // Not over a message being written: it would be replaced without being saved
+    c: () => !open.value && compose(),
     meta_enter: {
       usingInput: true,
       handler: () => open.value && !sending.value && send()
@@ -282,6 +291,8 @@ const _useComposer = () => {
   useEventListener('keydown', (event: KeyboardEvent) => {
     if (event.key !== 'Escape' || !open.value || event.defaultPrevented) return
     if (document.querySelector('[data-reka-popper-content-wrapper]:has([role="menu"], [role="listbox"], [role="dialog"])')) return
+    // A dialog over the composer (Send later) takes the key for itself
+    if (document.querySelectorAll('[role="dialog"]').length > 1) return
     close()
   })
 

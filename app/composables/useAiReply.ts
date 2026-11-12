@@ -22,6 +22,8 @@ const _useAiReply = () => {
 
   // A new message in the composer starts the AI panel over
   watch(() => draft.value.replyingTo, () => {
+    // What was being written belongs to the message left behind
+    controller?.abort()
     written.value = false
     instruction.value = ''
   })

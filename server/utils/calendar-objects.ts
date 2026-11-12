@@ -15,7 +15,8 @@ export async function findEventObject(dav: CalDav, calendar: DAVCalendar, basena
     return withExtension
   }
 
-  return /\.[a-z]+$/i.test(basename) ? null : await getObject(dav, objectUrl(calendar, basename, ''))
+  // Any other ending is part of the name ("abc@example.com"), not an extension
+  return !basename || /\.ics$/i.test(basename) ? null : await getObject(dav, objectUrl(calendar, basename, ''))
 }
 
 /** Looks in the given calendars at once; the first hit wins */

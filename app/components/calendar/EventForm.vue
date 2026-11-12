@@ -153,6 +153,12 @@ function flush() {
 function queue(event: CalendarEvent) {
   pending = event
   clearTimeout(timer)
+  // An occurrence is saved once, as the form closes. Its edit moves the series
+  // from the time in its id; a second one sent while the first is still on
+  // its way would move it from there again
+  if (event.recurring) {
+    return
+  }
   timer = setTimeout(flush, SAVE_DELAY)
 }
 

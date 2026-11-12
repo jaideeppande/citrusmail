@@ -20,6 +20,8 @@ export function useMessageTranslation(message: () => MessageDetail | undefined, 
   const detected = ref<string>()
   const error = ref('')
   let pieces: Piece[] = []
+  /** The last run reached the end; a stopped or failed one left some pieces untranslated */
+  let complete = false
   let controller: AbortController | undefined
 
   /** Written in a language other than yours */
@@ -51,6 +53,7 @@ export function useMessageTranslation(message: () => MessageDetail | undefined, 
       if (piece.span.isConnected) piece.span.replaceWith(piece.span.ownerDocument.createTextNode(piece.lead + piece.text + piece.trail))
     }
     pieces = []
+    complete = false
   }
 
   function show(which: 'translated' | 'original') {
@@ -68,7 +71,8 @@ export function useMessageTranslation(message: () => MessageDetail | undefined, 
     const els = present()
     const current = message()
     if (!els.length || !current || state.value === 'translating') return
-    if (pieces.some(piece => piece.translated)) {
+    // Only a finished translation is shown again; one stopped halfway is run again
+    if (complete && pieces.some(piece => piece.translated)) {
       show('translated')
       if (from.value) remember(current, from.value, target.value)
       return
@@ -96,6 +100,7 @@ export function useMessageTranslation(message: () => MessageDetail | undefined, 
       // Anything the model skipped stays as it was, without the wave
       pieces.filter(piece => !piece.translated).forEach(piece => piece.span.classList.remove('lb-tr-wait'))
       from.value = source ?? detected.value
+      complete = true
       state.value = 'translated'
       remember(current, from.value ?? '', target.value)
     } catch (failure) {

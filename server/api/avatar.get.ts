@@ -66,7 +66,7 @@ async function fetchBimiLogo(url: string): Promise<Picture | null> {
 async function bimiLogoUrl(domain: string): Promise<string | undefined> {
   const labels = domain.split('.')
   const candidates = [domain]
-  if (labels.length > 2) candidates.push(labels.slice(-2).join('.'))
+  if (labels.length > 2 && baseDomain(domain) !== domain) candidates.push(baseDomain(domain))
   for (const name of candidates) {
     const records = await dns.resolveTxt(`default._bimi.${name}`).catch(() => [])
     for (const record of records) {
@@ -95,7 +95,7 @@ async function lookup(email: string): Promise<Picture | null> {
 
   // Google answers a missing icon with a 404, so a domain without one falls
   // back to initials instead of a generic globe. Tiny icons are placeholders
-  const site = domain.split('.').slice(-2).join('.')
+  const site = baseDomain(domain)
   return fetchImage(`https://www.google.com/s2/favicons?domain=${encodeURIComponent(site)}&sz=128`, 200)
 }
 

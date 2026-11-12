@@ -7,10 +7,16 @@ const props = defineProps<{
 }>()
 
 const { messages, shown, setUnread } = useMail()
-const { reply, forward } = useComposer()
+const { reply, forward, open: composing } = useComposer()
 const cache = useMessageCache()
 
 const showImages = ref(false)
+
+// Ids are only unique within a folder, and an AI search match can be from any
+function row(id: string, folder: string) {
+  const match = (item: MessageSummary) => item.id === id && item.folder === folder
+  return shown.value.find(match) ?? messages.value.find(match)
+}
 
 // The copy on hand shows at once; otherwise the server is asked
 const message = ref<MessageDetail>()
@@ -28,8 +34,10 @@ async function load() {
     message.value = entry.message
     status.value = 'success'
     // Opening marks it read: the server did, unless it was fetched ahead
-    const item = messages.value.find(row => row.id === id)
+    const item = row(id, folder)
     if (item?.unread) setUnread(item, false, entry.marked)
+    // Only that first fetch marked it read; opened again from the copy, the server is told
+    entry.marked = false
   } catch {
     if (props.id === id) status.value = 'error'
   }
@@ -41,13 +49,15 @@ async function load() {
 watch(() => [props.id, props.folder, showImages.value], load, { immediate: true })
 const refresh = load
 
-const summary = computed(() => messages.value.find(item => item.id === props.id))
+const summary = computed(() => row(props.id, props.folder))
 const content = useTemplateRef('content')
 
+// Not over a message being written: it would be replaced without being saved
+const free = () => !composing.value && !!message.value
 defineShortcuts({
-  r: () => message.value && reply(message.value),
-  a: () => message.value && reply(message.value, true),
-  f: () => message.value && forward(message.value)
+  r: () => free() && reply(message.value!),
+  a: () => free() && reply(message.value!, true),
+  f: () => free() && forward(message.value!)
 })
 </script>
 

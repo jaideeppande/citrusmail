@@ -38,13 +38,13 @@ const _useEventMove = () => {
   function bind() {
     document.addEventListener('pointermove', onPointermove)
     document.addEventListener('pointerup', onPointerup)
-    document.addEventListener('pointercancel', onPointerup)
+    document.addEventListener('pointercancel', onPointercancel)
   }
 
   function unbind() {
     document.removeEventListener('pointermove', onPointermove)
     document.removeEventListener('pointerup', onPointerup)
-    document.removeEventListener('pointercancel', onPointerup)
+    document.removeEventListener('pointercancel', onPointercancel)
   }
 
   function reset() {
@@ -107,6 +107,12 @@ const _useEventMove = () => {
     gesture.current = dateAtPoint(pointerEvent.clientX, pointerEvent.clientY) ?? gesture.current
 
     deltaDays.value = differenceInCalendarDays(gesture.current, gesture.origin)
+  }
+
+  // The browser took the gesture away: nothing was dropped anywhere
+  function onPointercancel() {
+    reset()
+    release()
   }
 
   function onPointerup() {

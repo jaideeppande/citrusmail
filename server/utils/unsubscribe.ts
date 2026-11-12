@@ -76,7 +76,8 @@ export async function unsubscribe(account: AccountSettings, folder: string, id: 
   if (!done && targets.mailto) {
     const message = mailtoMessage(targets.mailto)
     if (message) {
-      await sendMail(account, message)
+      // The account's own way out: a JMAP mailbox may have no working SMTP settings
+      await mailFor(account).send(message)
       done = true
     }
   }

@@ -25,8 +25,9 @@ const valid = computed(() => !!when.value && when.value.getTime() > Date.now() +
 
 function confirm() {
   if (!valid.value) return
-  open.value = false
+  // Before closing: the parent forgets what was being picked for once it closes
   emit('pick', when.value!)
+  open.value = false
 }
 </script>
 

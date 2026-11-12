@@ -365,9 +365,26 @@ function editSeries(calendar: Component, master: Component, occurrence: string, 
 
   // Wall-clock delta in the viewer's zone, applied to the master in its own
   // zone so the series keeps its local time across DST
-  const delta = floatingMs(event.start) - floatingMs(occurrence)
-  const duration = floatingMs(event.end) - floatingMs(event.start)
+  // An occurrence moved on its own shows that time, not the series' one in
+  // its id: the edit is measured from what was on screen, or renaming it
+  // would move the whole series by however far it had been moved
+  const override = findOverride(calendar, occurrence, zone)
+  const moved = override && new ICAL.Event(override)
+  // The one that was edited takes the edit, even with a name of its own
+  if (override) {
+    setText(override, 'summary', event.title)
+    setText(override, 'description', event.description)
+  }
+  const shown = moved ? timeToLocal(moved.startDate, zone, tzidOf(override, 'dtstart')) : occurrence
+  const delta = floatingMs(event.start) - floatingMs(shown)
+  let duration = floatingMs(event.end) - floatingMs(event.start)
+  // Its length is its own too: left as it was, the series keeps the one it had
+  if (moved && duration === moved.duration.toSeconds() * 1000) {
+    duration = item.duration.toSeconds() * 1000
+  }
   const oldStart = item.startDate
+  const startZone = tzidOf(master, 'dtstart')
+  const endZone = tzidOf(master, 'dtend') ?? startZone
   const hadDuration = master.hasProperty('duration') && !master.hasProperty('dtend')
   let start: Time
 
@@ -408,6 +425,16 @@ function editSeries(calendar: Component, master: Component, occurrence: string, 
     item.duration = end.subtractDate(start)
   } else {
     item.endDate = end
+  }
+  // ical.js drops the TZID of a time whose zone has no VTIMEZONE in the file,
+  // which would leave the series floating: at another hour for everyone elsewhere
+  if (!!event.allDay === oldStart.isDate && !start.isDate && !isUtc(start) && !hasZoneData(start)) {
+    if (startZone) {
+      master.getFirstProperty('dtstart')?.setParameter('tzid', startZone)
+    }
+    if (endZone && !hadDuration) {
+      master.getFirstProperty('dtend')?.setParameter('tzid', endZone)
+    }
   }
   touch(master)
 }

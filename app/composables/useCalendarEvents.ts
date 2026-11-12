@@ -338,7 +338,8 @@ const _useCalendarEvents = () => {
       const result = await send({ method: 'PATCH', path: `/api/events/${encodeURIComponent(event.id)}`, body: event })
       // An edit to one occurrence moves the whole series on the server, so the
       // other occurrences are fetched again to follow it
-      if (event.recurring) {
+      // Only once it has: an edit queued offline stays on screen until it is sent
+      if (event.recurring && online.value) {
         const { [event.id]: _edited, ...updated } = overlay.value.updated
         overlay.value = { ...overlay.value, updated }
         chunks.value = {}

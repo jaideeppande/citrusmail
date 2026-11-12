@@ -47,6 +47,8 @@ export default defineEventHandler(async (event): Promise<SessionAccount> => {
   // Per address too, so this server can't be used to try many passwords on one
   // mailbox from many IPs
   rateLimit(event, 'login-email', 10, 15 * 60_000, body.email)
+  // The login name is what the password is tried against, whatever address is beside it
+  if (body.username && body.username.toLowerCase() !== body.email) rateLimit(event, 'login-email', 10, 15 * 60_000, body.username.toLowerCase())
 
   const config = mailConfig()
   // With allowed domains set, those domains' own servers are the only ones:

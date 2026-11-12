@@ -97,17 +97,22 @@ function setStructured(card: Component, name: string, value: string[]) {
 // the rest, then appends the new ones
 function syncList(card: Component, name: string, wanted: string[], scheme: string, type?: string) {
   const remaining = new Set(wanted.map(value => value.trim()).filter(Boolean))
+  // The same number filed twice (home and work) keeps both lines
+  const kept = new Set<string>()
 
   for (const property of card.getAllProperties(name)) {
     const value = stripScheme(text(property.getFirstValue()), scheme)
     if (remaining.has(value)) {
-      remaining.delete(value)
+      kept.add(value)
     } else {
       card.removeProperty(property)
     }
   }
 
   for (const value of remaining) {
+    if (kept.has(value)) {
+      continue
+    }
     const property = card.addPropertyWithValue(name, value)
     if (type) {
       property.setParameter('type', type)
@@ -125,8 +130,13 @@ function setBirthday(card: Component, birthday: string | undefined) {
 }
 
 function applyFields(card: Component, contact: ContactFields, previous?: Contact) {
-  if (!previous || previous.name !== contact.name || !card.hasProperty('fn') || !card.hasProperty('n')) {
+  // Each only when it has to be: a card with no FN keeps the N it came with
+  // (prefix, middle name, suffix), which rebuilding from the display name would scramble
+  const renamed = !previous || previous.name !== contact.name
+  if (renamed || !card.hasProperty('fn')) {
     card.updatePropertyWithValue('fn', contact.name)
+  }
+  if (renamed || !card.hasProperty('n')) {
     setStructured(card, 'n', nameParts(contact.name))
   }
   syncList(card, 'email', contact.emails, 'mailto', 'INTERNET')

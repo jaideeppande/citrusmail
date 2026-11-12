@@ -11,7 +11,8 @@ const { openEdit, confirmRemove, selectedId } = useContactsPage()
 const subtitle = computed(() => [props.contact.title, props.contact.company].filter(Boolean).join(' at '))
 const birthday = computed(() => {
   if (!props.contact.birthday) return undefined
-  const date = new Date(props.contact.birthday)
+  // A bare date is read as midnight UTC, the day before anywhere west of it
+  const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(props.contact.birthday) ? `${props.contact.birthday}T00:00` : props.contact.birthday)
   return Number.isNaN(date.getTime()) ? props.contact.birthday : format(date, 'd MMMM yyyy')
 })
 </script>

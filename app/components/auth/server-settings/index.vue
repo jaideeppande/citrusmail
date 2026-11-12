@@ -30,6 +30,12 @@ const TABS = computed(() => [
 const tab = ref('incoming')
 
 useServerPorts(form)
+
+// Anything changed here is yours to keep. Watched, not heard: the selects
+// and the protocol tabs fire no DOM event on their way up
+watch(() => [form.value.username, form.value.incoming, form.value.outgoing, form.value.caldav, form.value.carddav], () => {
+  if (open.value) emit('touch')
+}, { deep: true })
 </script>
 
 <template>
@@ -48,8 +54,6 @@ useServerPorts(form)
         size="sm"
         class="gap-0"
         :ui="{ list: 'pt-2 px-4 sm:px-6 border-b border-default', trigger: 'pb-2.5 data-[state=active]:text-highlighted', content: 'px-4 sm:px-6 py-5 min-h-72' }"
-        @input="emit('touch')"
-        @change="emit('touch')"
       >
         <template #account>
           <AuthAccountFields v-model:form="form" />

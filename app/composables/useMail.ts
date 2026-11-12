@@ -112,7 +112,10 @@ const _useMail = () => {
         refreshFolders()
         return load()
       }
+      const current = generation
       const page = await $fetch<MessagePage>('/api/messages', { query: listQuery() })
+      // The folder was left while this was on its way
+      if (current !== generation) return
       const known = new Set(messages.value.map(message => message.id))
       const fresh = page.messages.filter(message => !known.has(message.id) && staying(message))
       if (fresh.length) {
@@ -192,10 +195,12 @@ const _useMail = () => {
 
   const selected = computed(() => shown.value.find(message => message.id === selectedId.value) ?? messages.value.find(message => message.id === selectedId.value))
 
-  function patchLocal(id: string, change: Partial<MessageSummary>) {
-    messages.value = messages.value.map(message => message.id === id ? { ...message, ...change } : message)
+  // Ids are only unique within a folder, and AI search shows several at once
+  function patchLocal(id: string, change: Partial<MessageSummary>, folder?: string) {
+    const hit = (message: MessageSummary) => message.id === id && (!folder || message.folder === folder)
+    messages.value = messages.value.map(message => hit(message) ? { ...message, ...change } : message)
     if (ai.value.result) {
-      ai.value.result = { ...ai.value.result, messages: ai.value.result.messages.map(message => message.id === id ? { ...message, ...change } : message) }
+      ai.value.result = { ...ai.value.result, messages: ai.value.result.messages.map(message => hit(message) ? { ...message, ...change } : message) }
     }
   }
 
@@ -205,14 +210,14 @@ const _useMail = () => {
 
   async function setUnread(message: MessageSummary, unread: boolean, silent = false) {
     if (message.unread === unread) return
-    patchLocal(message.id, { unread })
+    patchLocal(message.id, { unread }, message.folder)
     adjustUnread(message.folder, unread ? 1 : -1)
 
     if (silent) return
     try {
       await $fetch(`/api/messages/${encodeURIComponent(message.id)}`, { method: 'PATCH', query: { folder: message.folder }, body: { unread } })
     } catch {
-      patchLocal(message.id, { unread: !unread })
+      patchLocal(message.id, { unread: !unread }, message.folder)
       adjustUnread(message.folder, unread ? -1 : 1)
       toast.add({ title: 'Couldn’t update the message', color: 'error', icon: 'i-lucide-circle-alert' })
     }
@@ -220,11 +225,11 @@ const _useMail = () => {
 
   async function toggleFlag(message: MessageSummary) {
     const flagged = !message.flagged
-    patchLocal(message.id, { flagged })
+    patchLocal(message.id, { flagged }, message.folder)
     try {
       await $fetch(`/api/messages/${encodeURIComponent(message.id)}`, { method: 'PATCH', query: { folder: message.folder }, body: { flagged } })
     } catch {
-      patchLocal(message.id, { flagged: !flagged })
+      patchLocal(message.id, { flagged: !flagged }, message.folder)
       toast.add({ title: 'Couldn’t flag the message', color: 'error', icon: 'i-lucide-circle-alert' })
     }
   }
@@ -232,22 +237,32 @@ const _useMail = () => {
   // Takes the message off the list and selects its neighbour, the way a
   // reader expects to keep going down the inbox
   function takeOut(message: MessageSummary) {
-    const index = messages.value.findIndex(item => item.id === message.id)
+    const same = (item: MessageSummary) => item.id === message.id && item.folder === message.folder
+    const index = messages.value.findIndex(same)
     const wasSelected = selectedId.value === message.id
     const key = leaveKey(message)
     leaving.add(key)
     setTimeout(() => leaving.delete(key), 60_000)
-    messages.value = messages.value.filter(item => item.id !== message.id)
-    if (ai.value.result) ai.value.result = { ...ai.value.result, messages: ai.value.result.messages.filter(item => !(item.id === message.id && item.folder === message.folder)) }
-    total.value = Math.max(0, total.value - 1)
+    messages.value = messages.value.filter(item => !same(item))
+    const aiIndex = ai.value.result?.messages.findIndex(same) ?? -1
+    if (ai.value.result) ai.value.result = { ...ai.value.result, messages: ai.value.result.messages.filter(item => !same(item)) }
+    if (index !== -1) total.value = Math.max(0, total.value - 1)
     if (message.unread) adjustUnread(message.folder, -1)
     if (wasSelected) {
       selectedId.value = messages.value[index]?.id ?? messages.value[index - 1]?.id
     }
     return () => {
       leaving.delete(key)
-      messages.value.splice(index, 0, message)
-      total.value++
+      // An AI search match from another folder was never on this folder's list
+      if (index !== -1) {
+        messages.value.splice(index, 0, message)
+        total.value++
+      }
+      if (aiIndex !== -1 && ai.value.result) {
+        const back = [...ai.value.result.messages]
+        back.splice(aiIndex, 0, message)
+        ai.value.result = { ...ai.value.result, messages: back }
+      }
       if (message.unread) adjustUnread(message.folder, 1)
     }
   }
@@ -255,6 +270,8 @@ const _useMail = () => {
   const MOVE_LABELS: Record<string, string> = { archive: 'Archived', trash: 'Moved to Trash', junk: 'Moved to Junk', inbox: 'Moved to Inbox' }
 
   async function move(message: MessageSummary, to: string) {
+    // Already there (`e` in Archive): the server would do nothing and the row would vanish anyway
+    if (message.folder === to || folders.value.find(item => item.path === message.folder)?.role === to) return
     const restore = takeOut(message)
     try {
       await $fetch(`/api/messages/${encodeURIComponent(message.id)}/move`, { method: 'POST', query: { folder: message.folder }, body: { to } })
@@ -354,7 +371,8 @@ const _useMail = () => {
   useEventListener('keydown', (event: KeyboardEvent) => {
     if (event.key !== 'Escape' || event.defaultPrevented || !selectedId.value || !onMail()) return
     const target = event.target as HTMLElement | null
-    if (target?.closest('input, textarea, [contenteditable="true"]')) return
+    // A key passed on from inside a message arrives on the document itself
+    if (target instanceof Element && target.closest('input, textarea, [contenteditable="true"]')) return
     if (document.querySelector('[role="menu"], [role="listbox"], [role="dialog"]')) return
     selectedId.value = undefined
   })

@@ -15,7 +15,10 @@ const _useReplyTranslation = () => {
   let controller: AbortController | undefined
   let stage: Stage | undefined
 
+  // The composer moved on to another message while translating
+  let superseded = false
   watch(() => draft.value.replyingTo, () => {
+    superseded = true
     controller?.abort()
     original.value = undefined
   })
@@ -42,6 +45,7 @@ const _useReplyTranslation = () => {
 
     controller?.abort()
     controller = new AbortController()
+    superseded = false
     original.value = html
     originals = segments.map(segment => segment.text)
     translations = [...originals]
@@ -66,7 +70,7 @@ const _useReplyTranslation = () => {
       if (stage) await wait(SETTLE_MS)
     } catch (failure) {
       if ((failure as Error).name !== 'AbortError') toast.add({ title: 'Couldn’t translate your reply', description: (failure as Error).message, color: 'error', icon: 'i-lucide-circle-alert' })
-      draft.value.html = html
+      if (!superseded) draft.value.html = html
       original.value = undefined
     } finally {
       finish()
