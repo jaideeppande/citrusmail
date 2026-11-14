@@ -11,6 +11,11 @@ const _useScheduled = () => {
     default: () => []
   })
 
+  // Another window scheduled, moved or cancelled one
+  onWindowEvent((event) => {
+    if (event.type === 'scheduled:changed') refresh()
+  })
+
   // Something due in the next minute will have gone out by then
   useIntervalFn(() => {
     if (scheduled.value.some(item => new Date(item.sendAt).getTime() < Date.now() + 60_000)) refresh()
@@ -21,6 +26,7 @@ const _useScheduled = () => {
     try {
       const message = await $fetch<OutgoingMessage>(`/api/scheduled/${item.id}`, { method: 'DELETE' })
       scheduled.value = scheduled.value.filter(entry => entry.id !== item.id)
+      tellWindows({ type: 'scheduled:changed' })
       return message
     } catch (error) {
       const description = (error as { data?: { message?: string } }).data?.message
@@ -35,6 +41,7 @@ const _useScheduled = () => {
     try {
       const next = await $fetch<ScheduledMessage>(`/api/scheduled/${item.id}`, { method: 'PATCH', body: { sendAt: sendAt.toISOString() } })
       scheduled.value = scheduled.value.map(entry => entry.id === item.id ? next : entry).sort((a, b) => a.sendAt.localeCompare(b.sendAt))
+      tellWindows({ type: 'scheduled:changed' })
       toast.add({ title: `Rescheduled for ${scheduleLabel(next.sendAt)}`, icon: 'i-lucide-clock-arrow-up' })
     } catch (error) {
       const description = (error as { data?: { message?: string } }).data?.message
