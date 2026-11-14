@@ -13,6 +13,8 @@ An open-source mail, calendar and contacts client for any provider, built with [
 - **Translation** of messages you receive and replies you write
 - **Signatures** for each mailbox you send from, written in the app or pasted as HTML
 - **Notifications** for new mail, and one-click unsubscribe
+- **Windows and layouts**: any page in a window of its own, a window split into up to four panes, and sets of windows saved under a name ([more](#windows-and-layouts))
+- **Triage** built for the keyboard: conversations, bulk actions, undo, snooze, pins, saved searches, a one-at-a-time triage mode and a command palette on `Ctrl/⌘K`
 
 ## Three ways to use it
 
@@ -160,50 +162,43 @@ In Docker, mount a volume at `/app/.data` (or wherever the app runs from). Witho
 
 ## Keyboard
 
-Press `?` anywhere in the app to see every shortcut. The main ones:
+Press `?` anywhere in the app to see every shortcut, and `Ctrl/⌘K` to search for a folder, a person or anything the app can do. Every key can be changed in **Settings → Shortcuts**, which also has presets for hands that learned Gmail, Outlook or Superhuman. The defaults:
 
-| Mail | | Calendar | |
+| Mail | | Everywhere | |
 | --- | --- | --- | --- |
-| `c` | New message | `d` `w` `m` `y` | Day, week, month, year |
-| `j` / `k` | Next / previous | `t` | Today |
-| `r` / `a` / `f` | Reply / all / forward | `n` | New event |
-| `e` / `#` | Archive / delete | `⌘K` | Search events |
-| `⌘↵` | Send | `←` / `→` | Previous / next |
+| `c` | New message | `Ctrl/⌘K` | Search and commands |
+| `j` / `k` | Next / previous | `g` then `i` `d` `t` | Inbox, Drafts, Sent |
+| `r` / `a` / `f` | Reply / all / forward | `g` then `c` `p` `s` | Calendar, Contacts, Settings |
+| `e` / `#` | Archive / delete | `Shift+O` | Open in a new window |
+| `z` | Undo the last move or delete | `Shift+L` | Next layout |
+| `x` / `Shift+A` | Select / select all | `Shift+F` | Focus mode |
+| `h` / `p` | Snooze / pin to top | `Shift+D` | Today panel |
+| `Shift+T` | Triage mode | `[` | Fold the sidebar |
+| `⌘↵` | Send | `?` | These shortcuts |
 
-## Privacy and security
+On the calendar: `d` `w` `m` `y` for day, week, month and year, `t` for today, `n` for a new event, `←` / `→` to move.
 
-- Message HTML is sanitized on the server and shown in a sandboxed frame that can't run scripts, with a Content-Security-Policy of its own.
-- Remote images are blocked until you choose to show them, so senders can't tell when you open a message.
-- Passwords are never written to logs or error messages. The session cookie is encrypted, `HttpOnly`, and lasts a week.
-- The server refuses cross-site requests, form posts and oversized bodies, and every route except signing in needs a session.
-- It won't connect to private or loopback addresses unless you allow it, and it pins each connection to the address it checked, so DNS can't redirect it.
-- Sign-in attempts are rate-limited per address and per mailbox.
+## Windows and layouts
 
-Found a security problem? Please report it privately, as described in [SECURITY.md](SECURITY.md), rather than in a public issue.
+- **A window of its own.** A message, the composer, the calendar or contacts opens in its own window from the button at the top right, `Shift+O`, or a right-click on a message. A window like that has no sidebar until you ask for one, and a button hands its page back to the main window. In the desktop app each window remembers which monitor it was on and where.
+- **Split layouts.** The layout button at the top right divides the window into two, three or four panes, each showing a page of the app with its own header: the Inbox beside the calendar, or two folders at once. Drag the gap between panes to resize them. Layouts are part of the desktop app; a browser forbids the app from framing itself.
+- **Workspaces.** Arrange windows across your screens, then save them under a name from the same menu. Opening a workspace puts every window back where it was, on the page it was showing.
+- **In step.** Reading, flagging, archiving or deleting in one window shows in the others at once, as do settings.
 
-## Contributing
+## Kept on this computer
 
-Issues and pull requests are welcome. Before you open a pull request, run the same checks as CI:
+A mail server has no notion of some of what CitrusMail does, so these are kept in this browser or desktop app, per mailbox, and don't follow you to another device: pins, snoozes (a snoozed message stays in its folder and is only hidden here), saved searches, templates, favourite contacts, window layouts, your own shortcuts, the motion and density choices, do not disturb and VIPs, and the app lock.
 
-```bash
-pnpm install
-pnpm run lint
-pnpm run typecheck
-pnpm run test
-pnpm run build
-```
+Two things work differently from what the words might suggest:
 
-Keep each pull request to one change, and say in the description what it fixes or adds. For security problems, follow [SECURITY.md](SECURITY.md) instead of opening an issue.
-
-## License
-
-The code is [MIT](LICENSE): use it, change it and ship it, commercially or not.
-
-The license covers the code, not the CitrusMail name or the citrus logo. If you give your copy to other people, give it your own name and logo (see [Make it yours](#make-it-yours) and [Build it as your own app](#build-it-as-your-own-app)), so nobody mistakes it for the official CitrusMail. Running it for yourself under the original name is fine.
+- **Undo.** Archive, delete and move wait five seconds before the server is told, and **undo send** holds a message for the time set in Settings → Reading. Undo within that time and nothing was ever sent. Closing the window sends whatever is still waiting.
+- **App lock.** The PIN hides the app from someone at your desk. It does not encrypt anything on disk.
 
 ## Desktop app
 
 CitrusMail runs as a desktop app for Mac, Windows and Linux. The app runs the same server inside itself on a local port, so nothing else needs to be running.
+
+Besides the windows and layouts above, the desktop app has a menu bar, the unread count on the Dock or taskbar, a tray icon on Windows and Linux, and in **Settings → Desktop**: opening at sign-in, becoming the default app for `mailto:` links, staying in the tray when the window is closed, and a shortcut that opens a new message from any app.
 
 ```bash
 pnpm desktop               # build, then open the app from source

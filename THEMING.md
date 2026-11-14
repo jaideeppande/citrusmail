@@ -117,6 +117,20 @@ Every theme value is a CSS custom property, so plain `:root` and `.dark` rules o
 | `--lb-selected`, `--lb-selected-edge`, `--lb-unread`, `--lb-flag` | row and status colors |
 | `--lb-avatar-1` … `6` and `--lb-avatar-N-text` | the tints behind initials (set in `main.css`) |
 
+### Motion
+
+Everything that moves uses one scale, so a theme can retime the whole app from `custom.css`:
+
+| Variable | Default | Used for |
+| --- | --- | --- |
+| `--lb-dur-1` | `120ms` | A press, a hover |
+| `--lb-dur-2` | `180ms` | A menu, a chip, a row |
+| `--lb-dur-3` | `240ms` | A panel, a pane, a page |
+| `--lb-dur-4` | `320ms` | A window layout, the triage card |
+| `--lb-ease-out`, `--lb-ease-in-out` | two cubic-beziers | Things arriving, things changing place |
+
+Each person chooses how much of it they get in Settings → Appearance → Motion (System, Full, Reduced or Off), which sets `data-motion` on `<html>`; `data-density` is there too, for the Comfortable, Cozy and Compact lists.
+
 ## 4. Component styling
 
 CitrusMail is built only from [Nuxt UI](https://ui.nuxt.com) components, and each one can be restyled from the `ui` key in `app.config.ts`. These examples make every button pill-shaped and bold, and make dialogs wider:
@@ -136,4 +150,4 @@ Each component's page in the Nuxt UI docs lists its slots and variants under "Th
 
 ## 5. Per person
 
-Settings → Appearance lets each person pick light or dark, an accent (presets or any color), a font from `citrusmail.fonts`, a text size and corner style. Their choices are saved with their account and follow them to other devices. Set `allowAppearance: false` to give everyone the instance's look.
+Settings → Appearance lets each person pick light or dark, an accent (presets or any color), a font from `citrusmail.fonts`, a text size and corner style. Their choices are saved with their account and follow them to other devices. A row of ready-made looks sets accent, font and corners together, and the theme can follow the time of day. Motion, density and zoom are kept on the device they were chosen on. Set `allowAppearance: false` to give everyone the instance's look.
