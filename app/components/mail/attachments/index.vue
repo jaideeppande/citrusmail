@@ -3,9 +3,11 @@ const props = defineProps<{
   message: MessageDetail
 }>()
 
-function url(index: number) {
-  return `/api/messages/${encodeURIComponent(props.message.id)}/attachments/${index}?folder=${encodeURIComponent(props.message.folder)}`
-}
+// Pictures and text open in a quick look over the message, where the arrow
+// keys step through them; anything else opens in its own tab or downloads
+const items = computed<AttachmentItem[]>(() => props.message.attachments.map(file => ({ message: props.message, file, url: attachmentUrl(props.message, file.index) })))
+const looking = ref<number>()
+watch(() => [props.message.id, props.message.folder], () => (looking.value = undefined))
 </script>
 
 <template>
@@ -15,27 +17,64 @@ function url(index: number) {
     </h2>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-      <UButton
-        v-for="file in message.attachments"
-        :key="file.index"
-        :to="url(file.index)"
-        target="_blank"
-        external
-        color="neutral"
-        variant="outline"
-        :icon="attachmentIcon(file.contentType)"
-        class="justify-start gap-3 p-3 rounded-lg"
-        :ui="{ leadingIcon: 'size-6 text-muted' }"
+      <template
+        v-for="(item, index) in items"
+        :key="item.file.index"
       >
-        <span class="flex-1 min-w-0 text-start">
-          <span class="block truncate text-sm font-medium text-highlighted">{{ file.filename }}</span>
-          <span class="block text-xs text-muted">{{ formatSize(file.size) }}</span>
-        </span>
-        <UIcon
-          name="i-lucide-download"
-          class="size-4 text-dimmed"
-        />
-      </UButton>
+        <UButton
+          v-if="previewKind(item.file)"
+          color="neutral"
+          variant="outline"
+          class="justify-start gap-3 p-3 rounded-lg lb-press"
+          :class="previewKind(item.file) === 'image' && 'ps-2.5'"
+          :icon="previewKind(item.file) === 'image' ? undefined : attachmentIcon(item.file.contentType)"
+          :ui="{ leadingIcon: 'size-6 text-muted' }"
+          :aria-label="`Look at ${item.file.filename}`"
+          @click="looking = index"
+        >
+          <img
+            v-if="previewKind(item.file) === 'image'"
+            :src="item.url"
+            alt=""
+            loading="lazy"
+            decoding="async"
+            class="size-9 shrink-0 rounded-sm object-cover bg-elevated"
+          >
+          <span class="flex-1 min-w-0 text-start">
+            <span class="block truncate text-sm font-medium text-highlighted">{{ item.file.filename }}</span>
+            <span class="block text-xs text-muted">{{ formatSize(item.file.size) }}</span>
+          </span>
+          <UIcon
+            name="i-lucide-eye"
+            class="size-4 text-dimmed"
+          />
+        </UButton>
+        <UButton
+          v-else
+          :to="item.url"
+          target="_blank"
+          external
+          color="neutral"
+          variant="outline"
+          :icon="attachmentIcon(item.file.contentType)"
+          class="justify-start gap-3 p-3 rounded-lg lb-press"
+          :ui="{ leadingIcon: 'size-6 text-muted' }"
+        >
+          <span class="flex-1 min-w-0 text-start">
+            <span class="block truncate text-sm font-medium text-highlighted">{{ item.file.filename }}</span>
+            <span class="block text-xs text-muted">{{ formatSize(item.file.size) }}</span>
+          </span>
+          <UIcon
+            name="i-lucide-download"
+            class="size-4 text-dimmed"
+          />
+        </UButton>
+      </template>
     </div>
+
+    <MailQuickLook
+      v-model:index="looking"
+      :items="items"
+    />
   </section>
 </template>

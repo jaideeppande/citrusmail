@@ -1,0 +1,82 @@
+/* reader features. Imported by main.css; uses the motion scale defined there (--lb-dur-*, --lb-ease-*). */
+
+/* The "Aa" menu: how a message is set. The reader carries the choices as
+   data attributes and everything under it reads these variables */
+[data-reader] {
+  --lb-reader-width: 56rem;
+  --lb-reader-leading: 1.625;
+  --lb-reader-font: var(--font-sans);
+  transition: background-color var(--lb-dur-3) ease;
+}
+[data-reader][data-reader-width='narrow'] { --lb-reader-width: 42rem; }
+[data-reader][data-reader-width='wide'] { --lb-reader-width: 72rem; }
+[data-reader][data-reader-leading='tight'] { --lb-reader-leading: 1.45; }
+[data-reader][data-reader-leading='loose'] { --lb-reader-leading: 1.85; }
+[data-reader][data-reader-face='serif'] { --lb-reader-font: 'Source Serif 4', ui-serif, Georgia, serif; }
+
+/* Sepia paper: the sheet and what sits on it turn warm. The light value is
+   SEPIA_PAPER in useReaderType.ts, which the message frame is tinted with */
+[data-reader][data-reader-paper='sepia'] {
+  --ui-bg: #f7f0e1;
+  --ui-bg-muted: #f1e8d5;
+  --ui-bg-elevated: #efe5d0;
+  --ui-bg-accented: #e6dabf;
+  --ui-border: #e2d6bb;
+  --ui-border-accented: #d3c5a5;
+  --lb-ai-bg: color-mix(in oklab, var(--lb-ai) 6%, #f7f0e1);
+}
+.dark [data-reader][data-reader-paper='sepia'] {
+  --ui-bg: #26211a;
+  --ui-bg-muted: #2c261e;
+  --ui-bg-elevated: #312a21;
+  --ui-bg-accented: #3b3328;
+  --ui-border: #3b3328;
+  --ui-border-accented: #4a4033;
+  --lb-ai-bg: color-mix(in oklab, var(--lb-ai) 8%, #26211a);
+}
+
+/* The column a message is read in */
+@utility lb-reader-column {
+  max-width: var(--lb-reader-width, 56rem);
+  transition: max-width var(--lb-dur-4) var(--lb-ease-in-out);
+}
+
+/* Plain-text mail takes the chosen typeface and line height; formatted mail keeps its own */
+@utility lb-reader-text {
+  font-family: var(--lb-reader-font, inherit);
+  line-height: var(--lb-reader-leading, 1.625);
+  transition: line-height var(--lb-dur-3) var(--lb-ease-out);
+}
+
+@utility lb-serif {
+  font-family: 'Source Serif 4', ui-serif, Georgia, serif;
+}
+
+/* How far down the message you are: a hairline under the reader's header.
+   Driven by the scroll position itself where the browser can (the scroller
+   names a timeline, the bar follows it); elsewhere the reader sets --lb-read */
+@utility lb-read-scope {
+  timeline-scope: --lb-reader-scroll;
+}
+@utility lb-read-scroller {
+  scroll-timeline: --lb-reader-scroll block;
+}
+@utility lb-read-progress {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  z-index: 1;
+  height: 2px;
+  background: var(--ui-primary);
+  transform-origin: 0 50%;
+  transform: scaleX(var(--lb-read, 0));
+  pointer-events: none;
+  @supports (animation-timeline: scroll()) {
+    animation: lb-read-progress linear both;
+    animation-timeline: --lb-reader-scroll;
+  }
+}
+@keyframes lb-read-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
