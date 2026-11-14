@@ -31,6 +31,11 @@ onMounted(checkSheet)
 watch(() => colorMode.value, () => nextTick(checkSheet))
 const paper = computed(() => !sheetIsWhite.value)
 
+// The "Aa" menu. Sepia tints the sheet a formatted message sits on (its own
+// design is left alone); plain text also takes the typeface and line height
+const type = useReaderType()
+const sheet = () => type.value.sepia ? SEPIA_PAPER : '#fff'
+
 // Text the sender didn't style uses the app's own font and accent
 function token(name: string, fallback: string) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
@@ -46,7 +51,7 @@ const policy = computed(() => {
 const srcdoc = computed(() => `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="${policy.value}"><meta charset="utf-8"><base target="_blank">
 <meta name="color-scheme" content="light">
 <style>
-  html,body{margin:0;padding:0;background:#fff;color:#1c1917;overflow-y:hidden}
+  html,body{margin:0;padding:0;background:${sheet()};color:#1c1917;overflow-y:hidden}
   html{overflow-x:hidden}
   body{overflow:visible}
   body{display:flow-root;font:15px/1.6 ${token('--font-sans', 'system-ui, sans-serif')};padding:${paper.value ? '24px' : '0'};overflow-wrap:anywhere;-webkit-font-smoothing:antialiased}
@@ -116,7 +121,8 @@ defineExpose({
   <div
     v-if="message.html"
     class="transition-opacity duration-150 motion-reduce:transition-none"
-    :class="[paper && 'rounded-lg bg-white overflow-hidden', ready ? 'opacity-100' : 'opacity-0']"
+    :class="[paper && 'rounded-lg overflow-hidden', ready ? 'opacity-100' : 'opacity-0']"
+    :style="paper ? { backgroundColor: sheet() } : undefined"
   >
     <iframe
       ref="frame"
@@ -135,7 +141,7 @@ defineExpose({
   <div
     v-else
     ref="plain"
-    class="flex flex-col gap-[1lh] text-[15px] leading-relaxed text-default"
+    class="lb-reader-text flex flex-col gap-[1lh] text-[15px] text-default"
   >
     <p
       v-for="(paragraph, index) in paragraphs"

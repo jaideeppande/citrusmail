@@ -4,8 +4,10 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 // Send, with Send later beside it: a few usual times, or exactly when you choose
 const { sending, send } = useComposer()
 const { account } = useShell()
-
-const customOpen = ref(false)
+const { kbds } = useShortcutKeys()
+const prefs = usePrefs()
+// Also opened by /later in the editor
+const { later: customOpen } = useComposerTools()
 
 const items = computed<DropdownMenuItem[][]>(() => [
   [{ type: 'label', label: 'Send later' }],
@@ -22,14 +24,14 @@ const items = computed<DropdownMenuItem[][]>(() => [
 <template>
   <UFieldGroup>
     <UTooltip
-      text="Send"
-      :kbds="['meta', 'enter']"
+      :text="prefs.undoSend > 0 ? 'Send, with a moment to undo' : 'Send'"
+      :kbds="kbds('compose.send')"
     >
       <UButton
         label="Send"
         trailing-icon="i-lucide-send-horizontal"
         :loading="sending"
-        class="px-4"
+        class="lb-press px-4"
         @click="send()"
       />
     </UTooltip>

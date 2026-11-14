@@ -16,10 +16,16 @@ const _useSettings = () => {
     if (value && JSON.stringify(value) !== JSON.stringify($appearance.value)) $appearance.value = { ...value }
   })
 
+  onWindowEvent((event) => {
+    if (event.type === 'settings:changed') refresh()
+  })
+
   /** Pass `saved: false` to save without a toast, for choices that show on screen as they're made */
   async function save(patch: Partial<UserSettings>, saved: string | false = 'Settings saved') {
     try {
       settings.value = await $fetch<UserSettings>('/api/settings', { method: 'PATCH', body: patch })
+      // Every other window of the app follows: the signature, the view, the notification choices
+      tellWindows({ type: 'settings:changed' })
       if (saved) toast.add({ title: saved, icon: 'i-lucide-check' })
       return true
     } catch (error) {

@@ -28,7 +28,7 @@ const many = computed(() => props.message.to.length + props.message.cc.length > 
         label="AI Reply"
         color="neutral"
         variant="outline"
-        class="text-highlighted"
+        class="text-highlighted lb-press"
         :ui="{ leadingIcon: 'text-(--lb-ai)' }"
         @click="replyWithAi(message)"
       />
@@ -37,6 +37,7 @@ const many = computed(() => props.message.to.length + props.message.cc.length > 
         label="Reply"
         color="neutral"
         variant="outline"
+        class="lb-press"
         @click="reply(message)"
       />
       <UButton
@@ -45,6 +46,7 @@ const many = computed(() => props.message.to.length + props.message.cc.length > 
         label="Reply all"
         color="neutral"
         variant="outline"
+        class="lb-press"
         @click="reply(message, true)"
       />
       <UButton
@@ -52,6 +54,7 @@ const many = computed(() => props.message.to.length + props.message.cc.length > 
         label="Forward"
         color="neutral"
         variant="outline"
+        class="lb-press"
         @click="forward(message)"
       />
     </template>

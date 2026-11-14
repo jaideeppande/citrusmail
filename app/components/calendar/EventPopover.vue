@@ -15,6 +15,7 @@ const props = withDefaults(defineProps<{
 const { formSide } = useCalendar()
 const { removeEvent, updateEvent } = useCalendarEvents()
 const { editingId, openEvent, closeEvent } = useEventEditor()
+const { rest, hide } = useEventPeek()
 
 // A popover and a context menu each are what an event costs to render, and the
 // month view puts a few hundred of them on screen at once. Neither is worth
@@ -37,6 +38,30 @@ function arm(event: Event) {
   // tabbing onto it has to be handed the one taking its place
   if (event.type === 'focusin') {
     nextTick(() => root.value?.querySelector<HTMLElement>('[data-event]')?.focus())
+  }
+}
+
+// The pointer resting on the event raises its peek card. Heard here rather
+// than on the event: this wrapper is what survives the swap above. Both
+// bubble, so a move between the title and the time inside one event is told
+// apart from arriving and leaving by where the pointer came from or went to
+function onPointerover(event: PointerEvent) {
+  arm(event)
+
+  // A finger has no resting state, and a pointer that is down is dragging
+  // something, this event or another one across it
+  if (event.pointerType === 'touch' || event.buttons || props.disabled) {
+    return
+  }
+
+  if (!root.value?.contains(event.relatedTarget as Node | null)) {
+    rest(props.event, () => root.value?.querySelector('[data-event]'))
+  }
+}
+
+function onPointerout(event: PointerEvent) {
+  if (!root.value?.contains(event.relatedTarget as Node | null)) {
+    hide()
   }
 }
 
@@ -81,7 +106,8 @@ const items = computed<ContextMenuItem[]>(() => [{
   <div
     ref="root"
     class="contents"
-    @pointerover="arm"
+    @pointerover="onPointerover"
+    @pointerout="onPointerout"
     @focusin="arm"
     @contextmenu="arm"
   >
@@ -105,7 +131,7 @@ const items = computed<ContextMenuItem[]>(() => [{
           content only mounts while it is open, which re-seeds it every time -->
         <UPopover
           :open="open"
-          :ui="{ content: 'p-2 w-74' }"
+          :ui="{ content: eventFormContentClass }"
           :content="{ side: formSide }"
           @update:open="onUpdateOpen"
         >

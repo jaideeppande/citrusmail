@@ -30,6 +30,7 @@ definePageMeta({
 const { view, date, title, monthLabelsVisible, prevDate, nextDate, pathFor, setDirection, isSidebarOpen } = useCalendar()
 const { online, queue } = useCalendarEvents()
 const { account } = useShell()
+useCalendarCommands()
 
 useSeoMeta({ title: 'Calendar' })
 
@@ -201,6 +202,10 @@ function onViewChange(value: string | number) {
       <CalendarWeekView v-else />
     </div>
 
+    <!-- One card for every event on the page, shown beside whichever the
+      pointer rests on -->
+    <CalendarEventPeek />
+
     <!-- The phone toolbar, down where the thumb is, the way iOS keeps Today
       and its actions. Today stands in for the header one that has no room
       below `sm`, and `+` for the sidebar one that is a menu away below `lg`.
@@ -220,6 +225,5 @@ function onViewChange(value: string | number) {
         <NewEventMenu floating />
       </div>
     </div>
-    <AppSearch />
   </div>
 </template>

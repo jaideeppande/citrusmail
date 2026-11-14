@@ -7,6 +7,7 @@ defineProps<{
 }>()
 
 const colorMode = useColorMode()
+const themeSchedule = useThemeSchedule()
 const { account } = useShell()
 const { settings } = useSettings()
 const { others, switchTo, signOutOf, signOutAll, add } = useMailboxes()
@@ -18,7 +19,9 @@ const appearance = (value: 'light' | 'dark' | 'system', label: string, icon: str
   checked: colorMode.preference === value,
   onSelect: (event: Event) => {
     event.preventDefault()
-    colorMode.preference = value
+    // A theme that follows the time of day would switch straight back: choosing one by hand ends it
+    if (themeSchedule.schedule.value.on) themeSchedule.turnOff(value)
+    else colorMode.preference = value
   }
 })
 

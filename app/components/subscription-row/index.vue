@@ -2,11 +2,16 @@
 const props = defineProps<{
   item: Subscription
   busy: boolean
+  /** Ticked for unsubscribing from several at once */
+  picked?: boolean
+  /** Whether it can be ticked: there are several, and this one hasn't been left yet */
+  pickable?: boolean
 }>()
 
 const emit = defineEmits<{
   unsubscribe: []
   block: []
+  pick: []
 }>()
 
 const { lists } = useSenders()
@@ -16,7 +21,17 @@ const when = computed(() => new Date(props.item.lastDate).toLocaleDateString(und
 </script>
 
 <template>
-  <li class="flex items-center gap-3 py-3">
+  <li
+    class="flex items-center gap-3 py-3 transition-colors duration-(--lb-dur-1)"
+    :class="picked && 'bg-primary/5'"
+  >
+    <UCheckbox
+      v-if="pickable"
+      :model-value="picked"
+      :aria-label="`Select ${item.name || item.address}`"
+      class="ms-1"
+      @update:model-value="emit('pick')"
+    />
     <SenderAvatar
       :address="{ name: item.name, address: item.address }"
       size="md"

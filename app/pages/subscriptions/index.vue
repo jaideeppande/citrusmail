@@ -1,5 +1,7 @@
 <script setup lang="ts">
-const { subscriptions, shown, query, status, refresh, busy, leave, block } = useSubscriptions()
+const { subscriptions, shown, query, status, refresh, busy, leave, block, picked, pick, pickAll, pickable, leaveMany, sweep } = useSubscriptions()
+
+const open = computed(() => shown.value.filter(pickable))
 useSeoMeta({ title: 'Subscriptions' })
 </script>
 
@@ -22,13 +24,50 @@ useSeoMeta({ title: 'Subscriptions' })
       </UTooltip>
     </template>
 
-    <UInput
-      v-if="subscriptions.length > 8"
-      v-model="query"
-      icon="i-lucide-search"
-      placeholder="Find a sender"
-      class="mb-4 max-w-sm"
-    />
+    <div class="flex flex-wrap items-center gap-2 mb-4 empty:hidden">
+      <UInput
+        v-if="subscriptions.length > 8"
+        v-model="query"
+        icon="i-lucide-search"
+        placeholder="Find a sender"
+        class="flex-1 max-w-sm"
+      />
+      <template v-if="open.length > 1">
+        <UButton
+          :label="picked.size === open.length ? 'Select none' : 'Select all'"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          class="ms-auto"
+          :disabled="!!sweep"
+          @click="pickAll"
+        />
+        <UButton
+          :label="picked.size ? `Unsubscribe from ${picked.size}` : 'Unsubscribe from selected'"
+          icon="i-lucide-mail-x"
+          color="neutral"
+          variant="soft"
+          size="sm"
+          :disabled="!picked.size || !!sweep"
+          @click="leaveMany"
+        />
+      </template>
+    </div>
+
+    <Transition name="lb-collapse">
+      <div v-if="sweep">
+        <div class="pb-4">
+          <p class="text-sm text-muted mb-1.5 tabular-nums">
+            Unsubscribing: {{ sweep.done }} of {{ sweep.total }}
+          </p>
+          <UProgress
+            :model-value="sweep.done"
+            :max="sweep.total"
+            size="sm"
+          />
+        </div>
+      </div>
+    </Transition>
 
     <div
       v-if="status === 'pending' && !subscriptions.length"
@@ -63,6 +102,9 @@ useSeoMeta({ title: 'Subscriptions' })
         :key="item.address"
         :item="item"
         :busy="busy.has(item.address)"
+        :picked="picked.has(item.address)"
+        :pickable="open.length > 1 && pickable(item)"
+        @pick="pick(item)"
         @unsubscribe="leave(item)"
         @block="block(item.address)"
       />

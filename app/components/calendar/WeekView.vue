@@ -4,7 +4,7 @@ import { isSameDay, isToday, isWeekend } from 'date-fns'
 const { range, go } = useCalendar()
 const { eventsForDay, eventsForDays, status } = useCalendarEvents()
 const { draftEvent, onGridPointerdown, onGridDblclick, registerHost } = useEventDraft()
-const { movingId, preview } = useEventMove()
+const { movingId, preview, ghost, targetDate } = useEventMove()
 
 // A grid the `+` button can draw on, so it knows it does not have to navigate
 // somewhere else first
@@ -39,7 +39,8 @@ const allDayEvents = computed(() => layoutAllDay(
   [
     ...eventsForDays(days.value).filter(event => event.allDay && event.id !== movingId.value),
     ...(draftEvent.value?.allDay ? [draftEvent.value] : []),
-    ...(preview.value?.allDay ? [preview.value] : [])
+    ...(preview.value?.allDay ? [preview.value] : []),
+    ...(ghost.value?.allDay ? [ghost.value] : [])
   ],
   days.value
 ))
@@ -226,7 +227,8 @@ onMounted(async () => {
           v-for="(day, index) in days"
           :key="`all-day-${day.getTime()}`"
           :data-date="isoDate(day)"
-          class="row-span-full border-s border-default"
+          :data-drop-target="targetDate === isoDate(day) || undefined"
+          class="lb-drop-day row-span-full border-s border-default"
           :class="isWeekend(day) && 'bg-(--weekend-bg)'"
           :style="{ gridColumn: index + 2 }"
           @pointerdown="onGridPointerdown($event, { kind: 'allDay', day })"

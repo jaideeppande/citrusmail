@@ -6,74 +6,119 @@ const props = defineProps<{
   back?: boolean
 }>()
 
-const { messages, shown, setUnread } = useMail()
+const toast = useToast()
 const { reply, forward, open: composing } = useComposer()
-const cache = useMessageCache()
+const { ready } = useAi()
+const { kbds } = useShortcutKeys()
+const mailEvent = useMailEvent()
+// Its palette command lives as long as the app; this makes sure it is there once mail is being read
+useAttachmentGallery()
 
 const showImages = ref(false)
 
-// Ids are only unique within a folder, and an AI search match can be from any
-function row(id: string, folder: string) {
-  const match = (item: MessageSummary) => item.id === id && item.folder === folder
-  return shown.value.find(match) ?? messages.value.find(match)
-}
-
 // The copy on hand shows at once; otherwise the server is asked
-const message = ref<MessageDetail>()
-const status = ref<'pending' | 'success' | 'error'>('pending')
-
-async function load() {
-  const { folder, id } = props
-  const images = showImages.value
-  const hit = cache.cached(folder, id, images)
-  message.value = hit?.message ?? (images ? message.value : undefined)
-  status.value = hit ? 'success' : 'pending'
-  try {
-    const entry = await cache.open(folder, id, images)
-    if (props.id !== id || props.folder !== folder || showImages.value !== images) return
-    message.value = entry.message
-    status.value = 'success'
-    // Opening marks it read: the server did, unless it was fetched ahead
-    const item = row(id, folder)
-    if (item?.unread) setUnread(item, false, entry.marked)
-    // Only that first fetch marked it read; opened again from the copy, the server is told
-    entry.marked = false
-  } catch {
-    if (props.id === id) status.value = 'error'
-  }
-  // The messages either side are likely next
-  const index = shown.value.findIndex(row => row.id === id && row.folder === folder)
-  if (index !== -1) cache.prefetch([shown.value[index + 1], shown.value[index - 1], shown.value[index + 2]].filter(row => row !== undefined))
-}
-
-watch(() => [props.id, props.folder, showImages.value], load, { immediate: true })
-const refresh = load
+const { message, status, offline, arrived, refresh, row } = useReaderMessage(() => ({ folder: props.folder, id: props.id }), showImages, { neighbours: true })
 
 const summary = computed(() => row(props.id, props.folder))
-const content = useTemplateRef('content')
+const thread = useTemplateRef('thread')
+const header = useTemplateRef('header')
+
+/* How the message is set ("Aa") ------------------------------------- */
+
+const type = useReaderType()
+
+/* Printing, the calendar --------------------------------------------- */
+
+async function print() {
+  const parts = thread.value?.printable() ?? []
+  if (!parts.length) return
+  if (!await printMessages(parts)) toast.add({ title: 'Couldn’t open the print dialog', color: 'error', icon: 'i-lucide-circle-alert' })
+}
+
+function addToCalendar() {
+  if (message.value) mailEvent.fromMessage(message.value)
+}
+
+/* Reading progress --------------------------------------------------- */
+
+// A hairline under the header fills as the message scrolls by. Where the
+// browser can tie an animation to the scroll position, CSS does it alone
+// (reader.css); elsewhere the position is measured here. Either way it only
+// shows when there is something to scroll
+const scroller = useTemplateRef<HTMLElement>('scroller')
+const scrolls = ref(false)
+const read = ref(0)
+const drivenByCss = import.meta.client && typeof CSS !== 'undefined' && CSS.supports('animation-timeline: scroll()')
+
+function measure() {
+  const el = scroller.value
+  if (!el) return
+  const room = el.scrollHeight - el.clientHeight
+  scrolls.value = room > 48
+  if (!drivenByCss) read.value = room > 0 ? Math.min(1, el.scrollTop / room) : 0
+}
+useResizeObserver(scroller, measure)
+useResizeObserver(() => scroller.value?.firstElementChild as HTMLElement | null | undefined, measure)
+useEventListener(scroller, 'scroll', () => !drivenByCss && measure(), { passive: true })
+watch(() => [props.id, props.folder], () => (scrolls.value = false))
+
+/* Keys and commands -------------------------------------------------- */
 
 // Not over a message being written: it would be replaced without being saved
 const free = () => !composing.value && !!message.value
-defineShortcuts({
-  r: () => free() && reply(message.value!),
-  a: () => free() && reply(message.value!, true),
-  f: () => free() && forward(message.value!)
+defineAppShortcuts({
+  'mail.reply': () => free() && reply(message.value!),
+  'mail.replyAll': () => free() && reply(message.value!, true),
+  'mail.forward': () => free() && forward(message.value!),
+  'mail.print': () => message.value && print(),
+  'mail.snooze': () => summary.value && header.value?.openSnooze()
 })
+
+useCommands(() => message.value
+  ? [{
+      id: 'reader',
+      label: 'This message',
+      items: [
+        { label: 'Print or save as PDF', icon: 'i-lucide-printer', kbds: kbds('mail.print').map(value => ({ value, variant: 'soft' as const })), onSelect: print },
+        ...(mailEvent.available.value ? [{ label: 'Add to calendar', icon: 'i-lucide-calendar-plus', onSelect: addToCalendar }] : []),
+        ...(ready.value && thread.value?.isThread ? [{ label: 'Summarize conversation', icon: 'i-lucide-sparkles', onSelect: () => thread.value?.summarize() }] : [])
+      ]
+    }]
+  : [])
 </script>
 
 <template>
   <article
     data-reader
-    class="flex flex-col min-w-0 min-h-0 bg-default"
+    :data-reader-width="type.width"
+    :data-reader-leading="type.leading"
+    :data-reader-face="type.face"
+    :data-reader-paper="type.sepia ? 'sepia' : 'plain'"
+    class="lb-read-scope flex flex-col min-w-0 min-h-0 bg-default"
   >
     <MailReaderHeader
+      ref="header"
       :summary="summary"
       :message="message ?? undefined"
       :back="back"
-      :translation="content?.translationState"
-      @summarize="content?.summarize()"
-      @translate="content?.translate()"
+      :translation="thread?.translationState"
+      :thread="thread?.isThread"
+      @summarize="thread?.summarize()"
+      @translate="thread?.translate()"
+      @print="print"
+      @event="addToCalendar"
     />
+
+    <div class="relative shrink-0 h-0">
+      <Transition name="lb-fade">
+        <div
+          v-show="scrolls && !!message"
+          class="lb-read-progress"
+          :style="drivenByCss ? undefined : { '--lb-read': read }"
+          aria-hidden="true"
+        />
+      </Transition>
+    </div>
 
     <div
       v-if="status === 'pending' && !message"
@@ -100,12 +145,20 @@ defineShortcuts({
       class="flex-1"
     />
 
-    <MailReaderContent
+    <div
       v-else-if="message"
-      ref="content"
-      v-model:show-images="showImages"
-      :message="message"
-      class="flex-1 overflow-y-auto"
-    />
+      ref="scroller"
+      class="lb-read-scroller flex-1 min-h-0 overflow-y-auto"
+    >
+      <!-- Fades in when it takes the skeleton's place; a message already on hand is simply there -->
+      <MailThread
+        ref="thread"
+        v-model:show-images="showImages"
+        :summary="summary"
+        :message="message"
+        :offline="offline"
+        :class="arrived && 'lb-in'"
+      />
+    </div>
   </article>
 </template>

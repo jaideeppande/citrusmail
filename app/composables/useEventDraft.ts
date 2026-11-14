@@ -369,6 +369,7 @@ const _useEventDraft = () => {
     commitDraft,
     createAtAnchor,
     createFromQuick,
+    defaultCalendarId,
     onGridPointerdown,
     onGridDblclick,
     registerHost,

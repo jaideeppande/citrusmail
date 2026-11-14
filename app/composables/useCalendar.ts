@@ -101,7 +101,9 @@ const _useCalendar = () => {
   // the viewport is a small one
   const { isSidebarOpen } = useShell()
 
-  const isSearchOpen = ref(false)
+  // Search is the app's one palette (Ctrl/Cmd+K), which lists the calendar's
+  // views, calendars and events while the calendar is on screen
+  const { isOpen: isSearchOpen } = useCommandPalette()
 
   // The form popover holds the focus on a switch, a select or a date segment
   // as readily as on an input, and `defineShortcuts` only stands down for the
@@ -122,27 +124,17 @@ const _useCalendar = () => {
     }
   }
 
-  defineShortcuts({
-    // Enabled while typing so it also closes the palette from its own input
-    meta_k: {
-      usingInput: true,
-      handler: () => {
-        if (!onCalendar()) {
-          return
-        }
-        isSearchOpen.value = !isSearchOpen.value
-      }
-    },
-    t: unlessEditing(() => navigateTo(pathFor(todayDate()))),
-    d: unlessEditing(() => navigateTo(pathFor(date.value, 'day'))),
-    w: unlessEditing(() => navigateTo(pathFor(date.value, 'week'))),
-    m: unlessEditing(() => navigateTo(pathFor(date.value, 'month'))),
-    y: unlessEditing(() => navigateTo(pathFor(date.value, 'year'))),
+  defineAppShortcuts({
+    'calendar.today': unlessEditing(() => navigateTo(pathFor(todayDate()))),
+    'calendar.day': unlessEditing(() => navigateTo(pathFor(date.value, 'day'))),
+    'calendar.week': unlessEditing(() => navigateTo(pathFor(date.value, 'week'))),
+    'calendar.month': unlessEditing(() => navigateTo(pathFor(date.value, 'month'))),
+    'calendar.year': unlessEditing(() => navigateTo(pathFor(date.value, 'year'))),
     // The draft composable reads this one, so it is resolved inside the
     // handler rather than at setup, where the two would wait on each other
-    n: unlessEditing(() => useEventDraft().createAtAnchor()),
-    arrowleft: unlessEditing(() => go('left')),
-    arrowright: unlessEditing(() => go('right'))
+    'calendar.newEvent': unlessEditing(() => useEventDraft().createAtAnchor()),
+    'calendar.prev': unlessEditing(() => go('left')),
+    'calendar.next': unlessEditing(() => go('right'))
   })
 
   return {

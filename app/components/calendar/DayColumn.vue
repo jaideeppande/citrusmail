@@ -31,7 +31,8 @@ function anchored(event: CalendarEvent): boolean {
   <div
     data-day-column
     :data-date="isoDate(day)"
-    class="relative border-s border-default snap-start"
+    :data-drop-target="dropTargetDate === isoDate(day) || undefined"
+    class="lb-drop-day relative border-s border-default snap-start"
     :class="isWeekend(day) && 'bg-(--weekend-bg)'"
     :style="{ height: `${24 * HOUR_HEIGHT}px` }"
     @pointerdown="onGridPointerdown($event, { kind: 'timed', day })"

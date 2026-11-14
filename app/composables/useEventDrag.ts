@@ -1,5 +1,28 @@
 import { addDays, addMinutes } from 'date-fns'
 
+// The day a block being moved would land on, as the `data-date` of its
+// column, so the column can light up under it. One for the app: only one
+// block is ever in hand
+export const dropTargetDate = ref<string | null>(null)
+
+// Where a block was on screen the moment it was let go, by event id. The
+// block that draws the event next (the same one, or a new one in another
+// day's column) picks it up and eases from there into its place
+const released = new Map<string, DOMRect>()
+
+export function markReleased(id: string, rect: DOMRect) {
+  released.set(id, rect)
+  // Nobody came for it: the drop put the event somewhere no block draws it
+  setTimeout(() => released.delete(id), 200)
+}
+
+export function takeReleased(id: string): DOMRect | undefined {
+  const rect = released.get(id)
+  released.delete(id)
+
+  return rect
+}
+
 // Pointer-capture drag to move (across days) or resize (bottom handle) an
 // event block, snapped to 15-minute increments. The block itself is
 // translated as a ghost preview, the real update only happens on drop.
@@ -19,6 +42,7 @@ export function useEventDrag(
   let startX = 0
   let startY = 0
   let columnRects: DOMRect[] = []
+  let columnDates: (string | undefined)[] = []
   let columnIndex = -1
 
   function reset() {
@@ -27,6 +51,7 @@ export function useEventDrag(
     deltaMinutes.value = 0
     deltaDays.value = 0
     deltaX.value = 0
+    dropTargetDate.value = null
   }
 
   function onPointerdown(pointerEvent: PointerEvent) {
@@ -42,7 +67,9 @@ export function useEventDrag(
 
     // Measure the day columns once per drag, they are the geometry source
     const grid = target.closest('[data-week-grid]')
-    columnRects = grid ? [...grid.querySelectorAll('[data-day-column]')].map(column => column.getBoundingClientRect()) : []
+    const columns = grid ? [...grid.querySelectorAll<HTMLElement>('[data-day-column]')] : []
+    columnRects = columns.map(column => column.getBoundingClientRect())
+    columnDates = columns.map(column => column.dataset.date)
     columnIndex = columnRects.findIndex(rect => pointerEvent.clientX >= rect.left && pointerEvent.clientX < rect.right)
 
     target.setPointerCapture(pointerEvent.pointerId)
@@ -75,6 +102,10 @@ export function useEventDrag(
         deltaDays.value = targetIndex - columnIndex
         deltaX.value = columnRects[targetIndex]!.left - columnRects[columnIndex]!.left
       }
+
+      // Keeps the last column it was over once the pointer leaves the grid,
+      // the same as the block itself does
+      dropTargetDate.value = columnDates[columnIndex + deltaDays.value] ?? null
     }
   }
 
@@ -140,6 +171,7 @@ export function useEventDrag(
     suppressed,
     mode,
     deltaMinutes,
+    deltaDays,
     deltaX,
     onPointerdown,
     onPointermove,
