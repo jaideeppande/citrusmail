@@ -14,12 +14,14 @@ const extras = computed<NavigationMenuItem[]>(() => account.value && account.val
 </script>
 
 <template>
-  <UNavigationMenu
-    v-if="extras.length"
-    :items="extras"
-    orientation="vertical"
-    :collapsed="collapsed"
-    :tooltip="{ content: { side: 'right' } }"
-    class="mt-auto"
-  />
+  <div class="mt-auto flex flex-col gap-0.5">
+    <MailSnoozed :collapsed="collapsed" />
+    <UNavigationMenu
+      v-if="extras.length"
+      :items="extras"
+      orientation="vertical"
+      :collapsed="collapsed"
+      :tooltip="{ content: { side: 'right' } }"
+    />
+  </div>
 </template>

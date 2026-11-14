@@ -8,6 +8,7 @@ definePageMeta({
 const { folder, selectedId, selectedFolder } = useMail()
 const { view, listWidth } = useMailLayout()
 const { isMobile } = useShell()
+const { focus } = useWindowChrome()
 
 useSeoMeta({ title: () => folder.value?.name ?? 'Mail' })
 
@@ -22,11 +23,14 @@ const readerOpen = computed({
   }
 })
 
-const split = computed(() => !isMobile.value && view.value === 'split')
+// Focus mode leaves only the open message: the list steps aside as if this were the list-only view
+const split = computed(() => !isMobile.value && view.value === 'split' && !(focus.value && selectedId.value))
 </script>
 
 <template>
   <div class="relative flex-1 flex min-w-0">
+    <MailSnoozePicker />
+
     <MailListPanel
       v-show="split || isMobile || !selectedId"
       class="shrink-0"

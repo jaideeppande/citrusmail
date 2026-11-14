@@ -1,9 +1,34 @@
+import type { Thread } from '~/utils/threads'
+
+/** How long a move or delete can still be taken back before the server is told */
+const UNDO_MS = 5000
+/** A row's way out of the list, matched by `lb-row-leaving` in the stylesheet */
+const LEAVE_MS = 170
+
+interface ServerCall {
+  url: string
+  method: 'POST' | 'DELETE'
+  query: Record<string, string>
+  body?: Record<string, unknown>
+}
+
+interface PendingAction {
+  calls: ServerCall[]
+  undo: () => void
+  timer: ReturnType<typeof setTimeout>
+  toast: string | number
+}
+
 // Folders, the open folder's messages and every action on them. Actions are
-// optimistic: the list changes first and is put back if the server refuses
+// optimistic: the list changes first and is put back if the server refuses.
+// Moving and deleting wait a few seconds before the server hears of them, so
+// Undo is always a matter of not sending the request
 const _useMail = () => {
   const route = useRoute()
   const router = useRouter()
   const toast = useToast()
+  const prefs = usePrefs()
+  const marks = useMailMarks()
 
   const { data: folders, refresh: refreshFolders } = useFetch<Folder[]>('/api/folders', {
     key: 'folders',
@@ -60,7 +85,10 @@ const _useMail = () => {
   // Messages just moved or deleted. A list request already on its way can
   // still name them; they stay off the list until the server has caught up
   const leaving = new Set<string>()
-  const leaveKey = (message: MessageSummary) => `${message.folder}\0${message.id}`
+  const leaveKey = messageKey
+  // Rows playing their way out, and rows that just came in, for the list to animate
+  const vanishing = ref(new Set<string>())
+  const arrived = ref(new Set<string>())
   const staying = (message: MessageSummary) => !leaving.has(leaveKey(message))
 
   async function load(reset = true) {
@@ -122,6 +150,9 @@ const _useMail = () => {
         // In date order, so a message moved in from another folder lands among its own day's mail
         messages.value = [...fresh, ...messages.value].sort((a, b) => b.date.localeCompare(a.date))
         total.value = page.total
+        // They settle in rather than appear, and other windows hear of them too
+        arrived.value = new Set(fresh.map(messageKey))
+        setTimeout(() => (arrived.value = new Set()), 600)
       }
       refreshFolders()
     } catch {
@@ -198,14 +229,86 @@ const _useMail = () => {
   }
 
   /** What the list shows: the folder, or AI search's matches */
-  const shown = computed(() => ai.value.on ? ai.value.result?.messages ?? [] : messages.value)
+  const shown = computed(() => ai.value.on ? ai.value.result?.messages ?? [] : listed.value)
 
   const selected = computed(() => shown.value.find(isSelected) ?? messages.value.find(isSelected))
 
+  /* Conversations, pins, snoozes and the Inbox tabs -------------------- */
+
+  // The Inbox tabs lean on sender lists and contacts, which in turn lean on
+  // this composable, so the layout hands them over once both exist
+  const organise = shallowRef<ReturnType<typeof useInboxTabs>>()
+  const inInbox = computed(() => folder.value?.role === 'inbox' || folderPath.value === 'INBOX')
+  const tabbed = computed(() => inInbox.value && !!organise.value?.enabled.value && !query.value && !filtering.value)
+
+  // Messages you track show up in the Inbox's Tracked tab, though they live in Sent
+  const tracked = ref<MessageSummary[]>([])
+  async function loadTracked() {
+    const sent = folders.value.find(item => item.role === 'sent')
+    if (!sent) return
+    const page = await $fetch<MessagePage>('/api/messages', { query: { folder: sent.path } }).catch(() => undefined)
+    if (page) tracked.value = page.messages.filter(message => message.receipt)
+  }
+  watch(() => tabbed.value && organise.value?.tab.value === 'tracked', on => on && loadTracked())
+
+  const threading = computed(() => prefs.value.threading)
+  const threads = computed(() => threading.value ? groupThreads(messages.value) : [])
+  const threadOf = computed(() => {
+    const map = new Map<string, Thread>()
+    for (const item of threads.value) for (const message of item.messages) map.set(messageKey(message), item)
+    return map
+  })
+
+  /** The conversation a message belongs to among those loaded, oldest first */
+  function thread(message: MessageSummary): MessageSummary[] {
+    return threadOf.value.get(messageKey(message))?.messages ?? [message]
+  }
+  /** How many messages its row stands for, and whether any is unread or flagged */
+  function threadInfo(message: MessageSummary): Thread | undefined {
+    const found = threadOf.value.get(messageKey(message))
+    return found && found.messages.length > 1 ? found : undefined
+  }
+
+  /** The folder as it's listed: one row per conversation, pins first, snoozed mail left out */
+  const listed = computed(() => {
+    if (tabbed.value && organise.value!.tab.value === 'tracked') return tracked.value
+    let list = messages.value.filter(message => !marks.isSnoozed(message))
+    if (tabbed.value) list = list.filter(organise.value!.accepts)
+    if (threading.value) {
+      const heads = new Set<string>()
+      list = list.filter((message) => {
+        const head = threadOf.value.get(messageKey(message))?.head ?? message
+        const key = messageKey(head)
+        // A conversation shows once, where its newest message that passed the filters stands
+        if (heads.has(key)) return false
+        heads.add(key)
+        return true
+      }).map(message => threadOf.value.get(messageKey(message))?.head ?? message)
+    }
+    // Pinned first, then what's back from a snooze; the rest keep their order
+    const rank = (message: MessageSummary) => {
+      const all = thread(message)
+      return all.some(marks.isPinned) ? 0 : all.some(marks.isReturned) ? 1 : 2
+    }
+    const ranks = new Map(list.map(message => [message, rank(message)]))
+    return ranks.size && [...ranks.values()].some(value => value < 2)
+      ? [...list].sort((a, b) => ranks.get(a)! - ranks.get(b)!)
+      : list
+  })
+
+  /** A conversation's row is selected while any of its messages is open */
+  function isRowSelected(message: MessageSummary) {
+    if (isSelected(message)) return true
+    return !!selectedId.value && thread(message).some(isSelected)
+  }
+
   // Ids are only unique within a folder, and AI search shows several at once
-  function patchLocal(id: string, change: Partial<MessageSummary>, folder?: string) {
+  function patchLocal(id: string, change: Partial<MessageSummary>, folder?: string, heard = false) {
     const hit = (message: MessageSummary) => message.id === id && (!folder || message.folder === folder)
+    // Other windows show the same change, unless this is one of theirs
+    if (!heard && folder) tellWindows({ type: 'mail:patch', folder, id, change })
     messages.value = messages.value.map(message => hit(message) ? { ...message, ...change } : message)
+    tracked.value = tracked.value.map(message => hit(message) ? { ...message, ...change } : message)
     if (ai.value.result) {
       ai.value.result = { ...ai.value.result, messages: ai.value.result.messages.map(message => hit(message) ? { ...message, ...change } : message) }
     }
@@ -243,20 +346,26 @@ const _useMail = () => {
 
   // Takes the message off the list and selects its neighbour, the way a
   // reader expects to keep going down the inbox
-  function takeOut(message: MessageSummary) {
+  function takeOut(message: MessageSummary, heard = false) {
     const same = (item: MessageSummary) => item.id === message.id && item.folder === message.folder
     const index = messages.value.findIndex(same)
+    const row = shown.value.findIndex(isRowSelected)
     const wasSelected = isSelected(message)
     const key = leaveKey(message)
     leaving.add(key)
     setTimeout(() => leaving.delete(key), 60_000)
+    if (!heard) tellWindows({ type: 'mail:gone', folder: message.folder, id: message.id })
     messages.value = messages.value.filter(item => !same(item))
+    tracked.value = tracked.value.filter(item => !same(item))
     const aiIndex = ai.value.result?.messages.findIndex(same) ?? -1
     if (ai.value.result) ai.value.result = { ...ai.value.result, messages: ai.value.result.messages.filter(item => !same(item)) }
     if (index !== -1) total.value = Math.max(0, total.value - 1)
     if (message.unread) adjustUnread(message.folder, -1)
     if (wasSelected) {
-      selectedId.value = messages.value[index]?.id ?? messages.value[index - 1]?.id
+      // The row that took its place, or the one before it at the end of the list
+      const next = shown.value[row] ?? shown.value[row - 1]
+      if (next) select(next)
+      else selectedId.value = undefined
     }
     return () => {
       leaving.delete(key)
@@ -274,34 +383,241 @@ const _useMail = () => {
     }
   }
 
+  /** Lets the rows play their way out before the list closes up behind them */
+  async function vanish(list: MessageSummary[]) {
+    if (document.documentElement.dataset.motion !== 'full' || document.hidden) return
+    // A conversation leaves as its one row
+    vanishing.value = new Set([...list, ...list.map(message => threadOf.value.get(messageKey(message))?.head ?? message)].map(messageKey))
+    await new Promise(resolve => setTimeout(resolve, LEAVE_MS))
+    vanishing.value = new Set()
+  }
+
+  /* Selecting several -------------------------------------------------- */
+
+  // Rows ticked for a bulk action, apart from the one message that's open.
+  // While any are ticked, the keys that act on a message act on all of them
+  const checked = ref(new Set<string>())
+  const checkedRows = computed(() => checked.value.size ? shown.value.filter(message => checked.value.has(messageKey(message))) : [])
+  const isChecked = (message: MessageSummary) => checked.value.has(messageKey(message))
+  let anchor: string | undefined
+
+  /** Ticks or unticks a row; with `range`, everything from the last one ticked to this one */
+  function check(message: MessageSummary, range = false) {
+    const key = messageKey(message)
+    const next = new Set(checked.value)
+    const from = range && anchor ? shown.value.findIndex(item => messageKey(item) === anchor) : -1
+    const to = shown.value.findIndex(item => messageKey(item) === key)
+    if (from !== -1 && to !== -1) {
+      for (const item of shown.value.slice(Math.min(from, to), Math.max(from, to) + 1)) next.add(messageKey(item))
+    } else if (next.has(key)) {
+      next.delete(key)
+    } else {
+      next.add(key)
+    }
+    anchor = key
+    checked.value = next
+  }
+
+  function checkAll() {
+    checked.value = checked.value.size === shown.value.length ? new Set() : new Set(shown.value.map(messageKey))
+  }
+
+  function clearChecked() {
+    if (checked.value.size) checked.value = new Set()
+    anchor = undefined
+  }
+
+  // A row that left the list can't stay ticked, and another folder starts clean
+  watch(shown, (rows) => {
+    if (!checked.value.size) return
+    const present = new Set(rows.map(messageKey))
+    const kept = [...checked.value].filter(key => present.has(key))
+    if (kept.length !== checked.value.size) checked.value = new Set(kept)
+  })
+  watch(folderPath, clearChecked)
+
+  /** What a key or a button acts on: the ticked rows, or else the open message */
+  function acting(): MessageSummary[] {
+    if (checkedRows.value.length) return checkedRows.value
+    return selected.value ? [selected.value] : []
+  }
+
+  /* Undo -------------------------------------------------------------- */
+
+  // What's been done on screen but not yet on the server. Undo drops the
+  // request; otherwise it goes out when the toast runs down, or at once if
+  // the window is closing
+  const pending: PendingAction[] = []
+
+  function request(call: ServerCall) {
+    return $fetch(call.url, { method: call.method, query: call.query, body: call.body })
+  }
+
+  async function commit(action: PendingAction) {
+    const index = pending.indexOf(action)
+    if (index === -1) return
+    pending.splice(index, 1)
+    clearTimeout(action.timer)
+    const results = await Promise.allSettled(action.calls.map(request))
+    if (results.some(result => result.status === 'rejected')) {
+      // Some may have gone through: the server is asked what's really there
+      toast.add({ title: action.calls.length > 1 ? 'Some messages couldn’t be moved' : 'Couldn’t move the message', color: 'error', icon: 'i-lucide-circle-alert' })
+      await load()
+    }
+    refreshFolders()
+    tellWindows({ type: 'mail:refresh' })
+  }
+
+  function later(title: string, icon: string, calls: ServerCall[], restore: () => void) {
+    const action: PendingAction = {
+      calls,
+      undo: () => {
+        const index = pending.indexOf(action)
+        if (index === -1) return
+        pending.splice(index, 1)
+        clearTimeout(action.timer)
+        restore()
+        toast.remove(action.toast)
+        tellWindows({ type: 'mail:refresh' })
+      },
+      timer: setTimeout(() => commit(action), UNDO_MS),
+      toast: ''
+    }
+    action.toast = toast.add({
+      title,
+      icon,
+      duration: UNDO_MS,
+      actions: [{ label: 'Undo', color: 'neutral', variant: 'outline', onClick: () => action.undo() }]
+    }).id
+    pending.push(action)
+  }
+
+  /** Takes back the last move or delete, while it still can be */
+  function undo() {
+    pending[pending.length - 1]?.undo()
+  }
+
+  // Closing the window with something still waiting sends it on its way
+  useEventListener(window, 'pagehide', () => {
+    for (const action of pending.splice(0)) {
+      clearTimeout(action.timer)
+      for (const call of action.calls) {
+        const url = `${call.url}?${new URLSearchParams(call.query)}`
+        fetch(url, { method: call.method, keepalive: true, headers: call.body ? { 'content-type': 'application/json' } : undefined, body: call.body ? JSON.stringify(call.body) : undefined }).catch(() => {})
+      }
+    }
+  })
+
   const MOVE_LABELS: Record<string, string> = { archive: 'Archived', trash: 'Moved to Trash', junk: 'Moved to Junk', inbox: 'Moved to Inbox' }
+  const counted = (count: number, one: string) => count === 1 ? one : `${count} ${one.charAt(0).toLowerCase()}${one.slice(1)}`
 
-  async function move(message: MessageSummary, to: string) {
+  /** Every message a row stands for: a conversation moves as one */
+  function withThreads(list: MessageSummary[]) {
+    const all = new Map<string, MessageSummary>()
+    for (const message of list) for (const member of thread(message)) all.set(messageKey(member), member)
+    return [...all.values()]
+  }
+
+  async function moveMany(list: MessageSummary[], to: string) {
     // Already there (`e` in Archive): the server would do nothing and the row would vanish anyway
-    if (message.folder === to || folders.value.find(item => item.path === message.folder)?.role === to) return
-    const restore = takeOut(message)
-    try {
-      await $fetch(`/api/messages/${encodeURIComponent(message.id)}/move`, { method: 'POST', query: { folder: message.folder }, body: { to } })
-      const target = folders.value.find(item => item.path === to)
-      toast.add({ title: MOVE_LABELS[to] ?? `Moved to ${target?.name ?? to}`, icon: 'i-lucide-check' })
-    } catch {
-      restore()
-      toast.add({ title: 'Couldn’t move the message', color: 'error', icon: 'i-lucide-circle-alert' })
-    }
+    const going = withThreads(list).filter(message => message.folder !== to && folders.value.find(item => item.path === message.folder)?.role !== to)
+    if (!going.length) return
+    await vanish(going)
+    const restores = going.map(message => takeOut(message))
+    marks.forget(going)
+    const target = folders.value.find(item => item.path === to)
+    later(
+      counted(going.length, MOVE_LABELS[to] ?? `Moved to ${target?.name ?? to}`),
+      'i-lucide-check',
+      going.map(message => ({ url: `/api/messages/${encodeURIComponent(message.id)}/move`, method: 'POST', query: { folder: message.folder }, body: { to } })),
+      // Last out, first back, so each lands where it was
+      () => [...restores].reverse().forEach(restore => restore())
+    )
   }
 
-  async function remove(message: MessageSummary) {
-    const restore = takeOut(message)
-    try {
-      await $fetch(`/api/messages/${encodeURIComponent(message.id)}`, { method: 'DELETE', query: { folder: message.folder } })
-      const from = folders.value.find(item => item.path === message.folder)
-      const forGood = from?.role === 'trash' || !folders.value.some(item => item.role === 'trash')
-      toast.add({ title: forGood ? 'Deleted for good' : 'Moved to Trash', icon: 'i-lucide-trash-2' })
-    } catch {
-      restore()
-      toast.add({ title: 'Couldn’t delete the message', color: 'error', icon: 'i-lucide-circle-alert' })
-    }
+  async function removeMany(list: MessageSummary[]) {
+    const going = withThreads(list)
+    if (!going.length) return
+    await vanish(going)
+    const restores = going.map(message => takeOut(message))
+    marks.forget(going)
+    const from = folders.value.find(item => item.path === going[0]!.folder)
+    const forGood = from?.role === 'trash' || !folders.value.some(item => item.role === 'trash')
+    later(
+      counted(going.length, forGood ? 'Deleted for good' : 'Moved to Trash'),
+      'i-lucide-trash-2',
+      going.map(message => ({ url: `/api/messages/${encodeURIComponent(message.id)}`, method: 'DELETE', query: { folder: message.folder } })),
+      () => [...restores].reverse().forEach(restore => restore())
+    )
   }
+
+  const move = (message: MessageSummary, to: string) => moveMany([message], to)
+  const remove = (message: MessageSummary) => removeMany([message])
+
+  async function setUnreadMany(list: MessageSummary[], unread: boolean) {
+    await Promise.all(withThreads(list).map(message => setUnread(message, unread)))
+  }
+
+  async function flagMany(list: MessageSummary[], flagged: boolean) {
+    await Promise.all(list.filter(message => message.flagged !== flagged).map(toggleFlag))
+  }
+
+  /* Snooze and pins --------------------------------------------------- */
+
+  async function snooze(list: MessageSummary[], until: Date) {
+    const going = withThreads(list)
+    if (!going.length) return
+    await vanish(going)
+    // The open message closes: its row is about to leave the list
+    if (going.some(isSelected)) {
+      const row = shown.value.findIndex(isRowSelected)
+      const next = shown.value[row + 1] ?? shown.value[row - 1]
+      if (next && !going.includes(next)) select(next)
+      else selectedId.value = undefined
+    }
+    marks.snooze(going, until)
+    const keys = going.map(messageKey)
+    toast.add({
+      title: counted(going.length, `Snoozed until ${snoozeLabel(until)}`),
+      icon: 'i-lucide-alarm-clock',
+      actions: [{ label: 'Undo', color: 'neutral', variant: 'outline', onClick: () => marks.wake(keys) }]
+    })
+  }
+
+  // Back from a snooze: at the top, unread again, the way it first arrived
+  marks.onWoke(({ due }) => {
+    for (const { message } of due) {
+      const row = messages.value.find(item => item.id === message.id && item.folder === message.folder)
+      if (row && !row.unread) setUnread(row, true)
+    }
+    const first = due[0]!.message
+    toast.add({
+      title: due.length === 1 ? `Back from snooze: ${first.subject || '(No subject)'}` : `${due.length} messages are back from snooze`,
+      icon: 'i-lucide-alarm-clock-check',
+      actions: [{ label: 'Open', color: 'neutral', variant: 'outline', onClick: () => navigateTo({ path: folderLink(first.folder), query: { m: first.id } }) }]
+    })
+  })
+
+  // Opening a returned message is what it came back for
+  watch(selected, message => message && marks.clearReturned(message))
+
+  /* Other windows ------------------------------------------------------ */
+
+  onWindowEvent((event) => {
+    if (event.type === 'mail:patch') {
+      const row = messages.value.find(item => item.id === event.id && item.folder === event.folder)
+      if (row && event.change.unread !== undefined && row.unread !== event.change.unread) adjustUnread(event.folder, event.change.unread ? 1 : -1)
+      patchLocal(event.id, event.change, event.folder, true)
+    } else if (event.type === 'mail:gone') {
+      const row = messages.value.find(item => item.id === event.id && item.folder === event.folder)
+      if (row) takeOut(row, true)
+    } else if (event.type === 'mail:refresh') {
+      // Whatever that window took out is settled now: moved for real, or put back
+      leaving.clear()
+      refreshFolders()
+      if (route.path.startsWith('/mail') && status.value === 'idle') load()
+    }
+  })
 
   // From a message's date: the Inbox, narrowed to that day
   async function showDay(iso: string) {
@@ -352,7 +668,7 @@ const _useMail = () => {
 
   // j/k and the arrows walk the list, the rest act on the open message
   function step(offset: number) {
-    const index = shown.value.findIndex(isSelected)
+    const index = shown.value.findIndex(isRowSelected)
     const next = shown.value[index === -1 ? 0 : index + offset]
     if (next) select(next)
     if (!ai.value.on && offset > 0 && index >= messages.value.length - 5) load(false)
@@ -365,31 +681,37 @@ const _useMail = () => {
   const overlayOpen = () => !!document.querySelector('[role="menu"], [role="listbox"], [role="dialog"]:not(:has([data-reader]))')
   const when = (handler: () => void) => () => onMail() && !overlayOpen() && handler()
   const withSelected = (handler: (message: MessageSummary) => void) => when(() => selected.value && handler(selected.value))
+  const withActing = (handler: (list: MessageSummary[]) => void) => when(() => {
+    const list = acting()
+    if (list.length) handler(list)
+  })
 
   // Off the mail pages none of these are held, so the arrows scroll the page again
   const mailKeys = {
-    'j': when(() => step(1)),
-    'k': when(() => step(-1)),
-    'arrowdown': when(() => step(1)),
-    'arrowup': when(() => step(-1)),
-    'e': withSelected(message => move(message, 'archive')),
-    '#': withSelected(remove),
-    'delete': withSelected(remove),
-    'backspace': withSelected(remove),
-    's': withSelected(toggleFlag),
+    'mail.next': when(() => step(1)),
+    'mail.prev': when(() => step(-1)),
+    'mail.archive': withActing(list => moveMany(list, 'archive')),
+    'mail.delete': withActing(removeMany),
+    'mail.flag': withActing(list => flagMany(list, !list.every(message => message.flagged))),
     // Both ways, as the menus that show it say
-    'shift_u': withSelected(message => setUnread(message, !message.unread))
+    'mail.toggleRead': withActing(list => setUnreadMany(list, !list.some(message => message.unread))),
+    'mail.pin': withSelected(marks.togglePin),
+    'mail.select': withSelected(message => check(threadOf.value.get(messageKey(message))?.head ?? message)),
+    'mail.selectAll': when(checkAll),
+    'mail.undo': when(undo)
   }
-  defineShortcuts(computed(() => route.path.startsWith('/mail') ? mailKeys : {}))
+  defineAppShortcuts(() => route.path.startsWith('/mail') ? mailKeys : {})
 
   // Escape closes the open message. A plain listener, not a shortcut: those
   // cancel the key, and an open menu or dialog has to get it first
   useEventListener('keydown', (event: KeyboardEvent) => {
-    if (event.key !== 'Escape' || event.defaultPrevented || !selectedId.value || !onMail()) return
+    if (event.key !== 'Escape' || event.defaultPrevented || (!selectedId.value && !checked.value.size) || !onMail()) return
     const target = event.target as HTMLElement | null
     // A key passed on from inside a message arrives on the document itself
     if (target instanceof Element && target.closest('input, textarea, [contenteditable="true"]')) return
     if (document.querySelector('[role="menu"], [role="listbox"], [role="dialog"]')) return
+    // Ticked rows let go first; the next Escape closes the message
+    if (checked.value.size) return clearChecked()
     selectedId.value = undefined
   })
 
@@ -414,6 +736,12 @@ const _useMail = () => {
     renameFolder,
     deleteFolder,
     messages,
+    listed,
+    thread,
+    threadInfo,
+    isRowSelected,
+    vanishing,
+    arrived,
     total,
     cursor,
     status,
@@ -432,7 +760,25 @@ const _useMail = () => {
     setUnread,
     toggleFlag,
     move,
-    remove
+    remove,
+    moveMany,
+    removeMany,
+    setUnreadMany,
+    flagMany,
+    undo,
+    checked,
+    checkedRows,
+    isChecked,
+    check,
+    checkAll,
+    clearChecked,
+    acting,
+    inboxTabs: organise,
+    tabbed,
+    snooze,
+    togglePin: marks.togglePin,
+    isPinned: marks.isPinned,
+    isReturned: marks.isReturned
   }
 }
 

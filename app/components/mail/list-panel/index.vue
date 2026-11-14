@@ -1,6 +1,11 @@
 <script setup lang="ts">
-const { folder, filter, total, status, load, refreshTop, ai } = useMail()
+import type { DropdownMenuItem } from '@nuxt/ui'
+
+const { folder, filter, total, status, load, refreshTop, ai, tabbed, checked, checkAll, shown } = useMail()
 const { isSidebarOpen } = useShell()
+const { kbds } = useShortcutKeys()
+const gallery = useAttachmentGallery()
+const triage = useTriage()
 
 // When the list is narrow the filters shrink to icons, so nothing overlaps
 const tabs = [
@@ -8,6 +13,24 @@ const tabs = [
   { label: 'Unread', value: 'unread', icon: 'i-lucide-mail-open' },
   { label: 'Flagged', value: 'flagged', icon: 'i-lucide-flag' }
 ]
+
+// What acts on the folder as a whole, behind one button: the header has no room for more
+const more = computed<DropdownMenuItem[][]>(() => [[{
+  label: checked.value.size ? 'Deselect all' : 'Select all',
+  icon: checked.value.size ? 'i-lucide-square-check-big' : 'i-lucide-square',
+  kbds: kbds('mail.selectAll'),
+  disabled: !shown.value.length,
+  onSelect: checkAll
+}, {
+  label: 'Triage one at a time',
+  icon: 'i-lucide-list-checks',
+  kbds: kbds('mail.triage'),
+  onSelect: () => triage.start()
+}], [{
+  label: 'Attachments in this folder',
+  icon: 'i-lucide-paperclip',
+  onSelect: () => gallery.open()
+}]])
 
 const refreshing = ref(false)
 async function refresh() {
@@ -38,6 +61,20 @@ async function refresh() {
         >{{ total.toLocaleString() }}</span>
       </h1>
 
+      <UDropdownMenu
+        :items="more"
+        :content="{ align: 'end' }"
+        :ui="{ content: 'min-w-60' }"
+      >
+        <UButton
+          icon="i-lucide-ellipsis"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          aria-label="More for this folder"
+        />
+      </UDropdownMenu>
+
       <UTooltip text="Check for new mail">
         <UButton
           icon="i-lucide-rotate-cw"
@@ -64,6 +101,8 @@ async function refresh() {
     </header>
 
     <MailSearchBar />
+
+    <MailInboxTabs v-if="tabbed && !ai.on" />
 
     <MailScheduledSection v-if="folder?.role === 'drafts' && !ai.on" />
 
