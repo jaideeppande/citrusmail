@@ -40,10 +40,6 @@ const STORE = 'citrusmail-drafts'
 // each draft it shows
 const WINDOW_LOCK = 'citrusmail-composer'
 const draftLock = (id: string) => `citrusmail-draft-${id}`
-// The server only holds a message back when it is due more than 30 seconds
-// from now; anything sooner goes out at once. So a shorter undo time is
-// stretched to this, with a little room for clocks that disagree
-const MIN_UNDO_SECONDS = 35
 const CLOSED_KEPT = 10
 // Local storage is small: big files aren't copied into the closed drafts
 const CLOSED_FILES_LIMIT = 512 * 1024
@@ -106,7 +102,7 @@ const _useComposer = () => {
   const { account } = useShell()
   const { settings } = useSettings()
   const prefs = usePrefs()
-  const { refresh: refreshScheduled, cancel: cancelScheduled, draftsLink } = useScheduled()
+  const { refresh: refreshScheduled, draftsLink } = useScheduled()
   const { recall } = useTranslationMemory()
   const { contacts } = useContacts()
   const tally = useAccountPref<RecipientTally>('recipients', () => ({}))
@@ -500,27 +496,72 @@ const _useComposer = () => {
 
   /** Seconds a sent message is held back so it can be undone; 0 sends at once */
   function undoSeconds(): number {
-    const wanted = Number(prefs.value.undoSend) || 0
-    return wanted > 0 ? Math.max(wanted, MIN_UNDO_SECONDS) : 0
+    return Math.max(0, Number(prefs.value.undoSend) || 0)
   }
 
-  // The message waits in the server's outbox for a moment. Undo takes it
-  // back out and puts the draft on screen as it was
-  function offerUndo(item: ScheduledMessage, kept: Draft, seconds: number) {
-    const id = `undo-send-${item.id}`
-    let over = false
-    const finish = () => {
-      if (over) return
-      over = true
+  /** What goes to the send endpoint, kept whole so a held message can still go out */
+  interface Outbound {
+    body: { message: OutgoingMessage, sendAt?: string, draft?: DraftRef }
+    kept: Draft
+    people: Address[]
+    follow: () => void
+  }
+
+  // Hands a message to the server and says how it went. A message that
+  // can't be sent comes back to the dock rather than being lost
+  async function dispatch({ body, kept, people, follow }: Outbound, scheduled: boolean): Promise<boolean> {
+    sending.value = true
+    // The taskbar and Dock have no "busy" look: half full until it's done
+    desktop()?.setProgress(0.5)
+    try {
+      const result = await $fetch<{ scheduled?: ScheduledMessage }>('/api/send', { method: 'POST', body })
+      tally.value = recordRecipients(tally.value, people)
+      if (kept.savedAs) follow()
+      if (result.scheduled) {
+        tellWindows({ type: 'scheduled:changed' })
+        await refreshScheduled()
+        toast.add({ title: `Scheduled for ${scheduleLabel(result.scheduled.sendAt)}`, icon: 'i-lucide-clock-arrow-up', actions: [{ label: 'View', color: 'neutral', variant: 'outline', to: draftsLink.value }] })
+      } else {
+        toast.add({ title: 'Message sent', icon: 'i-lucide-send', color: 'success' })
+      }
+      return true
+    } catch (error) {
+      const message = (error as { data?: { message?: string } }).data?.message
+      toast.add({ title: scheduled ? 'Message not scheduled' : 'Message not sent', description: message ?? 'Check your connection and try again.', color: 'error', icon: 'i-lucide-circle-alert' })
+      return false
+    } finally {
+      sending.value = false
+      desktop()?.setProgress(-1)
+    }
+  }
+
+  // Undo send. The message is held here, not on the server, for the seconds
+  // set in Settings → Reading, and only then handed over: Undo is a matter of
+  // not sending it. Held messages that the window closes on still go out
+  // (or, when too large to send from a closing page, wait in the dock)
+  const waiting = new Map<string, { out: Outbound, timer: ReturnType<typeof setTimeout> }>()
+
+  function holdBack(out: Outbound, seconds: number) {
+    const id = `undo-send-${newId()}`
+    const settle = () => {
+      if (!waiting.delete(id)) return false
       pending.value--
-      refreshScheduled()
+      return true
     }
     pending.value++
-    const timer = setTimeout(finish, seconds * 1000)
+    waiting.set(id, {
+      out,
+      timer: setTimeout(async () => {
+        if (!settle()) return
+        toast.remove(id)
+        // Not sent after all: the draft goes back where it can be tried again
+        if (!(await dispatch(out, false))) restore(out.kept)
+      }, seconds * 1000)
+    })
     toast.add({
       id,
       title: 'Sending…',
-      description: `${kept.subject.trim() || '(No subject)'} goes out in ${seconds} seconds.`,
+      description: `${out.kept.subject.trim() || '(No subject)'} goes out in ${seconds} ${seconds === 1 ? 'second' : 'seconds'}.`,
       icon: 'i-lucide-send',
       duration: seconds * 1000,
       actions: [{
@@ -528,21 +569,42 @@ const _useComposer = () => {
         icon: 'i-lucide-undo-2',
         color: 'neutral',
         variant: 'outline',
-        onClick: async () => {
-          clearTimeout(timer)
+        onClick: () => {
+          const entry = waiting.get(id)
+          if (!entry || !settle()) return
+          clearTimeout(entry.timer)
           toast.remove(id)
-          // Says so itself when the message has already gone
-          const message = await cancelScheduled(item)
-          if (message) {
-            // The copy in Drafts went when the message was handed over
-            restore({ ...kept, savedAs: undefined })
-            toast.add({ title: 'Sending undone', description: 'Your message is back in the composer.', icon: 'i-lucide-undo-2' })
-          }
-          finish()
+          restore(out.kept)
+          toast.add({ title: 'Sending undone', description: 'Your message is back in the composer.', icon: 'i-lucide-undo-2' })
         }
       }]
     })
   }
+
+  // A request made while the page closes can only carry a little. A held
+  // message that fits is sent on the way out; a larger one (attachments)
+  // is written back to the dock, where the next launch restores it
+  const KEEPALIVE_LIMIT = 60_000
+  useEventListener(window, 'pagehide', () => {
+    const back: Draft[] = []
+    for (const [id, { out, timer }] of waiting) {
+      clearTimeout(timer)
+      waiting.delete(id)
+      const body = JSON.stringify(out.body)
+      if (body.length <= KEEPALIVE_LIMIT) {
+        fetch('/api/send', { method: 'POST', keepalive: true, headers: { 'content-type': 'application/json' }, body }).catch(() => {})
+      } else {
+        back.push({ ...JSON.parse(JSON.stringify(out.kept)), id: newId(), baseline: '', account: account.value?.email, popped: undefined })
+      }
+    }
+    if (!back.length) return
+    try {
+      // Written straight to storage: the watcher that normally does it won't run again
+      localStorage.setItem(STORE, JSON.stringify([...stored.value, ...back]))
+    } catch {
+      // Storage is full or off: nothing more can be done from a closing page
+    }
+  })
 
   let asking = false
 
@@ -563,42 +625,21 @@ const _useComposer = () => {
     const confirmed = await confirmGuards(target).finally(() => (asking = false))
     if (!confirmed) return false
 
-    const undo = sendAt ? 0 : undoSeconds()
-    const when = sendAt ?? (undo ? new Date(Date.now() + undo * 1000) : undefined)
-    const kept: Draft = JSON.parse(JSON.stringify(target))
-    sending.value = true
-    // The taskbar and Dock have no "busy" look: half full until it's done
-    desktop()?.setProgress(0.5)
-    try {
-      const result = await $fetch<{ scheduled?: ScheduledMessage }>('/api/send', {
-        method: 'POST',
-        body: { message: outgoing(target), sendAt: when?.toISOString(), draft: target.savedAs }
-      })
-      remove(target.id)
-      tally.value = recordRecipients(tally.value, people)
-      if (kept.savedAs) follow()
-      if (result.scheduled) {
-        tellWindows({ type: 'scheduled:changed' })
-        if (undo) {
-          refreshScheduled()
-          offerUndo(result.scheduled, kept, undo)
-        } else {
-          await refreshScheduled()
-          toast.add({ title: `Scheduled for ${scheduleLabel(result.scheduled.sendAt)}`, icon: 'i-lucide-clock-arrow-up', actions: [{ label: 'View', color: 'neutral', variant: 'outline', to: draftsLink.value }] })
-        }
-      } else {
-        // Also when the server couldn't hold it back: it went at once
-        toast.add({ title: 'Message sent', icon: 'i-lucide-send', color: 'success' })
-      }
-      return true
-    } catch (error) {
-      const message = (error as { data?: { message?: string } }).data?.message
-      toast.add({ title: sendAt ? 'Message not scheduled' : 'Message not sent', description: message ?? 'Check your connection and try again.', color: 'error', icon: 'i-lucide-circle-alert' })
-      return false
-    } finally {
-      sending.value = false
-      desktop()?.setProgress(-1)
+    const out: Outbound = {
+      body: { message: outgoing(target), sendAt: sendAt?.toISOString(), draft: target.savedAs },
+      kept: JSON.parse(JSON.stringify(target)),
+      people,
+      follow
     }
+    const undo = sendAt ? 0 : undoSeconds()
+    if (undo) {
+      remove(target.id)
+      holdBack(out, undo)
+      return true
+    }
+    const sent = await dispatch(out, !!sendAt)
+    if (sent) remove(target.id)
+    return sent
   }
 
   /** Sends the draft on screen: now (with the undo time, if set) or at `sendAt` */
