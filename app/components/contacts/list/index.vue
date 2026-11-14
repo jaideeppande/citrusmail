@@ -1,7 +1,23 @@
 <script setup lang="ts">
-const { search, groups, filtered, status, selectedId } = useContactsPage()
+import type { DropdownMenuItem } from '@nuxt/ui'
+
+const { search, groups, filtered, status, selectedId, contacts, openCreate, duplicatesOpen } = useContactsPage()
 const { refresh } = useContacts()
 const { isSidebarOpen } = useShell()
+
+const menu = computed<DropdownMenuItem[][]>(() => [[
+  { label: 'New contact', icon: 'i-lucide-user-plus', onSelect: () => openCreate() }
+], [
+  { label: 'Find duplicates', icon: 'i-lucide-copy-check', disabled: contacts.value.length < 2, onSelect: () => (duplicatesOpen.value = true) },
+  { label: 'Refresh', icon: 'i-lucide-refresh-cw', onSelect: () => refresh() }
+]])
+
+// Rows only arrive one after another the first time the list fills: typing in
+// the search box would otherwise replay it on every letter
+const settled = ref(false)
+watch(() => filtered.value.length > 0, (filled) => {
+  if (filled) setTimeout(() => (settled.value = true), 600)
+}, { immediate: true })
 </script>
 
 <template>
@@ -21,6 +37,20 @@ const { isSidebarOpen } = useShell()
           <span class="text-xl font-bold tracking-tight text-highlighted">Contacts</span>
           <span class="text-sm text-muted tabular-nums">{{ filtered.length }}</span>
         </h1>
+        <UDropdownMenu
+          :items="menu"
+          :content="{ align: 'end' }"
+        >
+          <UTooltip text="More">
+            <UButton
+              icon="i-lucide-ellipsis"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              aria-label="More"
+            />
+          </UTooltip>
+        </UDropdownMenu>
       </div>
       <UInput
         v-model="search"
@@ -31,15 +61,30 @@ const { isSidebarOpen } = useShell()
       />
     </header>
 
+    <!-- Shaped like the rows they stand in for, so the list does not jump
+      when the address book answers -->
     <div
       v-if="status === 'pending' && !filtered.length"
-      class="p-4 flex flex-col gap-3"
+      class="flex-1 px-2 pt-9"
+      aria-busy="true"
     >
-      <USkeleton
+      <div
         v-for="n in 8"
         :key="n"
-        class="h-9"
-      />
+        class="flex items-center gap-3 px-3 py-2"
+      >
+        <USkeleton class="size-8 shrink-0 rounded-full" />
+        <div class="flex-1 flex flex-col gap-1.5">
+          <USkeleton
+            class="h-3.5"
+            :style="{ width: `${40 + (n * 17) % 35}%` }"
+          />
+          <USkeleton
+            class="h-3"
+            :style="{ width: `${30 + (n * 11) % 30}%` }"
+          />
+        </div>
+      </div>
     </div>
 
     <UEmpty
@@ -57,6 +102,9 @@ const { isSidebarOpen } = useShell()
       :icon="search ? 'i-lucide-search-x' : 'i-lucide-users'"
       :title="search ? 'No matches' : 'No contacts yet'"
       :description="search ? `Nobody matches “${search}”.` : 'Contacts you add here sync to your other devices.'"
+      :actions="search
+        ? [{ label: 'Clear search', icon: 'i-lucide-x', color: 'neutral', variant: 'subtle', onClick: () => { search = '' } }]
+        : [{ label: 'New contact', icon: 'i-lucide-user-plus', color: 'neutral', variant: 'subtle', onClick: () => openCreate() }]"
       variant="naked"
       class="flex-1"
     />
@@ -66,35 +114,26 @@ const { isSidebarOpen } = useShell()
       class="flex-1 overflow-y-auto px-2 pb-4"
     >
       <section
-        v-for="group in groups"
-        :key="group.letter"
+        v-for="(group, groupIndex) in groups"
+        :key="group.key"
       >
-        <h2 class="sticky top-0 z-1 px-3 pt-3 pb-1 text-xs font-semibold text-muted bg-default/90 glass-material">
-          {{ group.letter }}
-        </h2>
-        <UButton
-          v-for="contact in group.items"
-          :key="contact.id"
-          color="neutral"
-          variant="ghost"
-          :aria-current="contact.id === selectedId || undefined"
-          block
-          class="justify-start gap-3 px-3 py-2 rounded-md font-normal"
-          :class="contact.id === selectedId ? 'bg-(--lb-selected) hover:bg-(--lb-selected) text-highlighted' : 'hover:bg-elevated/60'"
-          @click="selectedId = contact.id"
-        >
-          <SenderAvatar
-            :address="{ name: contact.name, address: contact.emails[0] ?? contact.name }"
-            size="sm"
+        <h2 class="sticky top-0 z-1 flex items-center gap-1.5 px-3 pt-3 pb-1 text-xs font-semibold text-muted bg-default/90 glass-material">
+          <UIcon
+            v-if="group.key === 'favourites'"
+            name="i-ph-star-fill"
+            class="size-3 text-warning"
           />
-          <span class="flex-1 min-w-0 text-start">
-            <span class="block truncate font-medium">{{ contact.name }}</span>
-            <span
-              v-if="contact.company || contact.emails[0]"
-              class="block truncate text-xs text-muted"
-            >{{ contact.company || contact.emails[0] }}</span>
-          </span>
-        </UButton>
+          {{ group.label }}
+        </h2>
+        <ContactsRow
+          v-for="(contact, index) in group.items"
+          :key="contact.id"
+          :contact="contact"
+          :selected="contact.id === selectedId"
+          :class="!settled && 'lb-stagger'"
+          :style="{ '--lb-i': groupIndex * 3 + index }"
+          @select="selectedId = contact.id"
+        />
       </section>
     </div>
   </section>

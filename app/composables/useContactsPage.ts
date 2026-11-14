@@ -15,8 +15,12 @@ const _useContactsPage = () => {
       && (!term || [contact.name, contact.company, ...contact.emails, ...contact.phones].some(value => value?.toLowerCase().includes(term))))
   })
 
-  // Grouped under their first letter, the way an address book reads
+  const { ids: favouriteIds } = useContactFavourites()
+
+  // Grouped under their first letter, the way an address book reads, with
+  // the starred ones gathered once more at the top
   const groups = computed(() => {
+    const favourites = filtered.value.filter(contact => favouriteIds.value.includes(contact.id))
     const map = new Map<string, Contact[]>()
     for (const contact of filtered.value) {
       // Émile sorts among the E's, so it is filed there too; any script's letters count
@@ -24,7 +28,10 @@ const _useContactsPage = () => {
       const letter = /^\p{L}/u.test(base) ? base[0]!.toLocaleUpperCase() : '#'
       map.set(letter, [...(map.get(letter) ?? []), contact])
     }
-    return [...map.entries()].map(([letter, items]) => ({ letter, items }))
+    return [
+      ...(favourites.length ? [{ key: 'favourites', label: 'Favourites', items: favourites }] : []),
+      ...[...map.entries()].map(([letter, items]) => ({ key: letter, label: letter, items }))
+    ]
   })
 
   const selectedId = computed<string | undefined>({
@@ -70,7 +77,9 @@ const _useContactsPage = () => {
     }
   }
 
-  return { contacts, books, status, search, groups, filtered, selectedId, selected, editorOpen, editing, saving, openCreate, openEdit, submit, confirmRemove }
+  const duplicatesOpen = ref(false)
+
+  return { contacts, books, status, search, groups, filtered, selectedId, selected, editorOpen, editing, saving, duplicatesOpen, openCreate, openEdit, submit, confirmRemove }
 }
 
 export const useContactsPage = createAppComposable(_useContactsPage)

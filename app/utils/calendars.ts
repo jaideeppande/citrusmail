@@ -42,3 +42,8 @@ export const eventOutlineClasses: Record<Calendar['color'], string> = {
   warning: 'outline-warning/25',
   error: 'outline-error/25'
 }
+
+// The form an event or a draft opens into. It arrives on the app's own curve
+// and timing rather than the popover's stock hundred milliseconds, and leaves
+// a step quicker than it came
+export const eventFormContentClass = 'p-2 w-74 data-[state=open]:animate-[scale-in_var(--lb-dur-2)_var(--lb-ease-out)] data-[state=closed]:animate-[scale-out_var(--lb-dur-1)_var(--lb-ease-out)]'

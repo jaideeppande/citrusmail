@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { format } from 'date-fns'
-
 const props = defineProps<{
   contact: Contact
 }>()
@@ -9,12 +7,26 @@ const { compose } = useComposer()
 const { openEdit, confirmRemove, selectedId } = useContactsPage()
 
 const subtitle = computed(() => [props.contact.title, props.contact.company].filter(Boolean).join(' at '))
-const birthday = computed(() => {
-  if (!props.contact.birthday) return undefined
-  // A bare date is read as midnight UTC, the day before anywhere west of it
-  const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(props.contact.birthday) ? `${props.contact.birthday}T00:00` : props.contact.birthday)
-  return Number.isNaN(date.getTime()) ? props.contact.birthday : format(date, 'd MMMM yyyy')
-})
+// Read from its parts rather than through `Date`, which takes a bare date for
+// midnight UTC (the day before anywhere west of it) and has no way to hold a
+// birthday that gives no year
+const birthday = computed(() => formatBirthday(props.contact.birthday))
+
+const address = computed(() => props.contact.emails[0])
+const { copy, copied } = useClipboard({ copiedDuring: 1500 })
+
+function write() {
+  if (address.value) compose([{ name: props.contact.name, address: address.value }])
+}
+
+// The page keeps its selection in the URL (`?c=`), so the address alone is
+// enough for another window to open on the same person
+function popOut() {
+  openPopout(`/contacts?c=${encodeURIComponent(props.contact.id)}`)
+}
+
+// A pop-out is already a window of its own
+const canPopOut = windowKind() === 'main'
 </script>
 
 <template>
@@ -28,7 +40,54 @@ const birthday = computed(() => {
         class="lg:hidden"
         @click="selectedId = undefined"
       />
+      <ContactsStar :contact="contact" />
       <div class="ms-auto flex items-center gap-1">
+        <UTooltip
+          v-if="address"
+          text="New message"
+        >
+          <UButton
+            icon="i-lucide-mail-plus"
+            color="neutral"
+            variant="ghost"
+            aria-label="New message"
+            @click="write"
+          />
+        </UTooltip>
+        <UTooltip
+          v-if="address"
+          :text="copied ? 'Copied' : 'Copy address'"
+        >
+          <UButton
+            color="neutral"
+            variant="ghost"
+            aria-label="Copy address"
+            @click="copy(address)"
+          >
+            <UIcon
+              :key="String(copied)"
+              :name="copied ? 'i-lucide-check' : 'i-lucide-at-sign'"
+              class="size-5"
+              :class="copied && 'lb-mark-pop text-success'"
+            />
+          </UButton>
+        </UTooltip>
+        <UTooltip
+          v-if="canPopOut"
+          text="Open in new window"
+        >
+          <UButton
+            icon="i-lucide-picture-in-picture-2"
+            color="neutral"
+            variant="ghost"
+            aria-label="Open in new window"
+            @click="popOut"
+          />
+        </UTooltip>
+        <USeparator
+          orientation="vertical"
+          class="h-5 mx-1"
+        />
         <UButton
           icon="i-lucide-pencil"
           label="Edit"
@@ -65,10 +124,11 @@ const birthday = computed(() => {
             </p>
           </div>
           <UButton
-            v-if="contact.emails[0]"
+            v-if="address"
             icon="i-lucide-mail"
             label="Write"
-            @click="compose([{ name: contact.name, address: contact.emails[0] }])"
+            class="lb-press"
+            @click="write"
           />
         </div>
 
@@ -106,6 +166,8 @@ const birthday = computed(() => {
             icon="i-lucide-sticky-note"
           />
         </UCard>
+
+        <ContactsTimeline :contact="contact" />
       </div>
     </div>
   </article>

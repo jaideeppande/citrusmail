@@ -19,6 +19,24 @@ const _useEventEditor = () => {
     }
   }
 
+  // Opens an event's form from somewhere that is not the event itself (the
+  // Today panel), once the calendar has drawn it. The grid opens at seven in
+  // the morning, so the event is scrolled to first; and should it never turn
+  // up (a hidden calendar, a day the view does not show) the id is let go
+  // rather than left standing between the calendar and its shortcuts
+  function revealEvent(id: string) {
+    setTimeout(() => {
+      document.querySelector(`[data-event-id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'center' })
+      editingId.value = id
+
+      setTimeout(() => {
+        if (!anchors.value) {
+          closeEvent(id)
+        }
+      }, 1000)
+    }, 60)
+  }
+
   function registerAnchor() {
     onMounted(() => anchors.value++)
     onUnmounted(() => anchors.value--)
@@ -45,6 +63,7 @@ const _useEventEditor = () => {
     editingId,
     openEvent,
     closeEvent,
+    revealEvent,
     registerAnchor
   }
 }

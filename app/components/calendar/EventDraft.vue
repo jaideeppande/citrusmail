@@ -79,7 +79,7 @@ watch(pendingScroll, reveal)
   <UPopover
     :open="!!anchored && open"
     :content="content"
-    :ui="{ content: 'p-2 w-74' }"
+    :ui="{ content: eventFormContentClass }"
     @update:open="onUpdateOpen"
   >
     <template #anchor>

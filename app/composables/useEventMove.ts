@@ -7,6 +7,12 @@ import { addDays, differenceInCalendarDays } from 'date-fns'
 // One instance for the whole app rather than one per chip. The month view puts
 // a few hundred chips on screen, and a composable each would put its listeners
 // and its refs behind every one of them
+export const MOVE_GHOST_SUFFIX = '::moving'
+
+export function isMoveGhost(event: CalendarEvent): boolean {
+  return event.id.endsWith(MOVE_GHOST_SUFFIX)
+}
+
 const _useEventMove = () => {
   const { updateEvent } = useCalendarEvents()
 
@@ -33,6 +39,27 @@ const _useEventMove = () => {
     }
   })
 
+  // What the event leaves behind where it was picked up, once it has been
+  // carried clear of its own days: a copy under an id of its own, so a view
+  // can lay it out beside the one in flight and a chip can tell it is not the
+  // real thing. Clear of them, because a bar still overlapping its ghost would
+  // need a second lane to draw both, and the row would grow under the pointer
+  const ghost = computed<CalendarEvent | null>(() => {
+    const event = source.value
+    if (!event) {
+      return null
+    }
+
+    const days = Math.max(1, differenceInCalendarDays(new Date(event.end), new Date(event.start)))
+
+    return Math.abs(deltaDays.value) >= days
+      ? { ...event, id: `${event.id}${MOVE_GHOST_SUFFIX}` }
+      : null
+  })
+
+  // The day it would land on, as a cell's `data-date`, for the cell to light up
+  const targetDate = ref<string | null>(null)
+
   let gesture: { event: CalendarEvent, x: number, y: number, origin: Date, current: Date, moved: boolean, cancelled: boolean } | null = null
 
   function bind() {
@@ -52,6 +79,7 @@ const _useEventMove = () => {
     unbind()
     source.value = null
     deltaDays.value = 0
+    targetDate.value = null
   }
 
   // Let the trailing click pass before the popover is allowed to open again
@@ -107,6 +135,7 @@ const _useEventMove = () => {
     gesture.current = dateAtPoint(pointerEvent.clientX, pointerEvent.clientY) ?? gesture.current
 
     deltaDays.value = differenceInCalendarDays(gesture.current, gesture.origin)
+    targetDate.value = isoDate(gesture.current)
   }
 
   // The browser took the gesture away: nothing was dropped anywhere
@@ -145,6 +174,7 @@ const _useEventMove = () => {
       gesture.moved = false
       source.value = null
       deltaDays.value = 0
+      targetDate.value = null
     }
   })
 
@@ -160,6 +190,8 @@ const _useEventMove = () => {
   return {
     movingId,
     preview,
+    ghost,
+    targetDate,
     suppressed,
     onPointerdown
   }
