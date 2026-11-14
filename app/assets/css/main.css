@@ -441,6 +441,14 @@ html:is([data-motion='reduced'], [data-motion='off'])::view-transition-new(*) {
   animation: none !important;
 }
 
+/* One page giving way to another (Mail, Calendar, Contacts, Settings): the
+   browser's own cross-fade, on the app's timing rather than its default */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--lb-dur-3);
+  animation-timing-function: var(--lb-ease-in-out);
+}
+
 /* Things arriving: a fade with a few pixels of travel, from the side they
    come from. `lb-in` on its own just fades */
 @utility lb-in {

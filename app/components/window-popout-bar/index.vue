@@ -2,7 +2,8 @@
 // The thin bar of a pop-out window: what you drag it by, with the sidebar on
 // demand and a way to hand the page back to the main window
 const { sidebarShown } = useWindowChrome()
-const title = useTitle()
+// Follows the page's own title as it changes
+const title = useTitle(null, { observe: true })
 </script>
 
 <template>

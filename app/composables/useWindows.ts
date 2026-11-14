@@ -5,7 +5,8 @@
 
 const POPOUT_SIZES: [pattern: RegExp, width: number, height: number][] = [
   [/^\/compose/, 760, 760],
-  [/^\/mail\/[^?]+\?.*\bm=/, 900, 860],
+  // Wide enough that the message keeps its desktop layout
+  [/^\/mail\/[^?]+\?.*\bm=/, 1040, 860],
   [/^\/contacts/, 1040, 760]
 ]
 
