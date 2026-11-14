@@ -1,0 +1,80 @@
+/* settings features. Imported by main.css; uses the motion scale defined there (--lb-dur-*, --lb-ease-*). */
+
+/* Charts in Settings → Insights: one accent series and one grey one. The
+   grey is a step lighter than the accent in light mode and a step darker in
+   dark, so the two differ in lightness as well as hue */
+:root {
+  --lb-chart-accent: var(--ui-primary);
+  --lb-chart-neutral: var(--ui-color-neutral-400);
+}
+.dark {
+  --lb-chart-neutral: var(--ui-color-neutral-500);
+}
+
+/* A bar rising from its baseline; set --lb-i so a row of them rises as a wave */
+@utility lb-bar-grow {
+  transform-origin: bottom;
+  animation: lb-bar-grow var(--lb-dur-4) var(--lb-ease-out) both;
+  animation-delay: calc(var(--lb-i, 0) * 10ms);
+}
+@keyframes lb-bar-grow {
+  from { transform: scaleY(0); }
+}
+/* The same for a bar that runs left to right */
+@utility lb-bar-grow-x {
+  transform-origin: left;
+  animation: lb-bar-grow-x var(--lb-dur-4) var(--lb-ease-out) both;
+  animation-delay: calc(var(--lb-i, 0) * 28ms);
+}
+@keyframes lb-bar-grow-x {
+  from { transform: scaleX(0); }
+}
+
+/* Settings → Appearance → Motion: a dot that crosses its track the way the
+   rest of the app moves */
+@utility lb-motion-dot {
+  transition: left var(--lb-dur-4) var(--lb-ease-out);
+}
+
+/* A wrong PIN: the field shakes its head */
+@utility lb-shake {
+  animation: lb-shake var(--lb-dur-4) var(--lb-ease-in-out) both;
+}
+@keyframes lb-shake {
+  20% { transform: translateX(-7px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+
+/* The lock screen: the app is still behind it, too blurred to read */
+@utility lb-lock-sheet {
+  background: color-mix(in oklab, var(--lb-desk-solid, var(--ui-bg)) 86%, transparent);
+  -webkit-backdrop-filter: blur(28px) saturate(1.1);
+  backdrop-filter: blur(28px) saturate(1.1);
+}
+
+/* The tour's spotlight: a hole in a dimmed window that glides from one
+   control to the next. The dimming is the hole's own shadow */
+@utility lb-tour-hole {
+  box-shadow: 0 0 0 200vmax var(--lb-overlay), 0 0 0 2px var(--ui-primary);
+  transition:
+    top var(--lb-dur-4) var(--lb-ease-in-out),
+    left var(--lb-dur-4) var(--lb-ease-in-out),
+    width var(--lb-dur-4) var(--lb-ease-in-out),
+    height var(--lb-dur-4) var(--lb-ease-in-out);
+}
+@utility lb-tour-card {
+  transition:
+    top var(--lb-dur-4) var(--lb-ease-in-out),
+    left var(--lb-dur-4) var(--lb-ease-in-out);
+}
+
+/* A shortcut waiting for its new key */
+@utility lb-recording {
+  animation: lb-recording 1.2s var(--lb-ease-in-out) infinite alternate;
+}
+@keyframes lb-recording {
+  from { box-shadow: 0 0 0 0 color-mix(in oklab, var(--ui-primary) 35%, transparent); }
+  to { box-shadow: 0 0 0 4px color-mix(in oklab, var(--ui-primary) 0%, transparent); }
+}

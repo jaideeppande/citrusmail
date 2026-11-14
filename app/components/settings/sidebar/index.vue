@@ -17,11 +17,16 @@ const items = computed<NavigationMenuItem[]>(() => [
   ...(appConfig.citrusmail.allowAppearance ? [{ label: 'Appearance', icon: 'i-lucide-palette', to: '/settings/appearance' }] : []),
   { label: 'Reading', icon: 'i-lucide-book-open', to: '/settings/reading' },
   { label: 'Notifications', icon: 'i-lucide-bell', to: '/settings/notifications' },
+  { label: 'Shortcuts', icon: 'i-lucide-keyboard', to: '/settings/shortcuts' },
   // POP3 has no folders to file into
   ...(folders.value ? [{ label: 'Senders', icon: 'i-lucide-shield-check', to: '/settings/senders' }] : []),
   ...(folders.value ? [{ label: 'Rules', icon: 'i-lucide-list-filter', to: '/settings/rules' }] : []),
   { label: 'Tracking', icon: 'i-lucide-mail-check', to: '/settings/tracking' },
   { label: 'AI', icon: 'i-lucide-sparkles', to: '/settings/ai' },
+  { label: 'Privacy', icon: 'i-lucide-lock', to: '/settings/privacy' },
+  // Only the desktop app can open at sign-in or take mailto: links
+  ...(desktop() ? [{ label: 'Desktop', icon: 'i-lucide-monitor', to: '/settings/desktop' }] : []),
+  { label: 'Insights', icon: 'i-lucide-chart-column', to: '/settings/insights' },
   { label: 'About', icon: 'i-lucide-info', to: '/settings/about' }
 ])
 </script>

@@ -16,6 +16,8 @@ export function useNewMail() {
   const toast = useToast()
   const cursors = useLocalStorage<Cursors>('citrusmail-notify-cursors', {})
   const prefs = computed(() => ({ ...DEFAULT_NOTIFICATIONS, ...settings.value.notifications }))
+  const dnd = useDoNotDisturb()
+  const vips = useVips()
   const desktop = import.meta.client ? window.citrusDesktop : undefined
 
   async function check() {
@@ -40,9 +42,13 @@ export function useNewMail() {
     navigateTo(path)
   }
 
-  function announce(messages: NewMessage[]) {
+  function announce(arrived: NewMessage[]) {
     const p = prefs.value
-    if (!p.enabled || inQuietHours(p)) return
+    // Quiet hours and do not disturb hold everything back but mail from a
+    // VIP of the mailbox it came to
+    const quiet = inQuietHours(p)
+    const messages = arrived.filter(message => shouldNotify(message.from.address, { enabled: p.enabled, quiet, dnd: dnd.active.value, vips: vips.of(message.mailbox) }))
+    if (!messages.length) return
     playSound(p.sound, p.volume)
 
     const newest = messages[messages.length - 1]!

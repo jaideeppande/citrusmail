@@ -7,6 +7,9 @@ const version = useRuntimeConfig().public.version as string | undefined
 /** Issues and the license file have known places on GitHub */
 const github = computed(() => /^https:\/\/github\.com\/[^/]+\/[^/]+/.exec(brand.value.source)?.[0])
 
+const tour = useAppTour()
+const whatsNew = useWhatsNew()
+
 const links = computed(() => {
   const { source, credit, creditUrl, license } = brand.value
   return [
@@ -28,6 +31,23 @@ const links = computed(() => {
       >
         Version {{ version }}
       </p>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <UButton
+        label="What’s new"
+        icon="i-lucide-gift"
+        color="neutral"
+        variant="outline"
+        @click="whatsNew.open()"
+      />
+      <UButton
+        label="Take the tour"
+        icon="i-lucide-compass"
+        color="neutral"
+        variant="outline"
+        @click="tour.replay()"
+      />
     </div>
 
     <OpenSourceNote class="text-sm" />
