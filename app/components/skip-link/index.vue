@@ -5,8 +5,12 @@ function skip(event: MouseEvent) {
   const target = document.getElementById('main')
   if (!target) return
   event.preventDefault()
-  // The first thing in the page that takes focus, or the page itself
-  const first = target.querySelector<HTMLElement>('[data-id], input, button, a[href], [tabindex]:not([tabindex="-1"])')
+  // A message, if the page lists them; else the first thing in the page that
+  // takes focus and is on screen (some controls are only there on a phone);
+  // else the page itself
+  const visible = (el: HTMLElement) => el.offsetParent !== null && !el.closest('[aria-hidden="true"]')
+  const pick = (selector: string) => [...target.querySelectorAll<HTMLElement>(selector)].find(visible)
+  const first = pick('[aria-current="true"][data-id], [data-id]') ?? pick('input, button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])')
   ;(first ?? target).focus()
 }
 </script>
