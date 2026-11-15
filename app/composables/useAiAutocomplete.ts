@@ -20,7 +20,10 @@ export function useAiAutocomplete() {
     enabled: () => client.enabled('autocomplete') && !busy.value && !writing.value && Date.now() > pausedUntil,
     complete: async (context, signal) => {
       try {
-        return await client.text({
+        // Read whole rather than through text(), which trims: a continuation's
+        // leading space is what separates it from the word before it
+        let text = ''
+        for await (const part of client.stream({
           feature: 'autocomplete',
           system: autocompleteSystem(),
           prompt: autocompletePrompt({ subject: draft.value.subject, ...context }),
@@ -28,7 +31,8 @@ export function useAiAutocomplete() {
           effort: 'low',
           background: true,
           signal
-        })
+        })) text += part
+        return text.replace(/\s+$/, '')
       } catch (error) {
         if (error instanceof AiError && error.code === 'limit') pausedUntil = Date.now() + LIMIT_PAUSE
         throw error

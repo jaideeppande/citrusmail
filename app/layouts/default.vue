@@ -18,6 +18,10 @@ useAppCommands()
 // AI that works on new mail without being asked (each feature registers itself)
 useAiBackground()
 useAiMailWorkers()
+// "Needs you" narrows the Inbox list itself, so j/k and Select all skip what it hides
+const priority = useAiPriority()
+const { inboxFilter } = useMail()
+watchEffect(() => (inboxFilter.value = priority.needsYou.value ? priority.needsYouRow : undefined))
 useAiContactWorkers()
 useDesktopSettings().apply()
 

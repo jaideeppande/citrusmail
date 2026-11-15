@@ -36,11 +36,14 @@ function save() {
   writeFileSync(file, JSON.stringify(state, null, 2), { mode: 0o600 })
 }
 
-// A key is stored encrypted with the keychain's key, never in plain text.
-// Where the system offers no keychain (some Linux desktops), Electron falls
-// back to a weak built-in key, and the status says so
-const seal = key => safeStorage.encryptString(key).toString('base64')
-const open = sealed => safeStorage.decryptString(Buffer.from(sealed, 'base64'))
+// A key is stored encrypted with the keychain's key. Where the system offers
+// no keychain at all (a Linux desktop without GNOME Keyring or KWallet),
+// Electron can't encrypt, so the key is kept as Chromium keeps passwords
+// there: unencrypted in a file only this user can read. The status says so,
+// and Settings → AI warns about it
+const canSeal = () => safeStorage.isEncryptionAvailable()
+const seal = key => canSeal() ? { sealed: safeStorage.encryptString(key).toString('base64') } : { plain: Buffer.from(key).toString('base64') }
+const open = saved => saved.sealed ? safeStorage.decryptString(Buffer.from(saved.sealed, 'base64')) : Buffer.from(saved.plain, 'base64').toString()
 
 export function status() {
   const providers = ORDER.map(provider => ({
@@ -54,7 +57,8 @@ export function status() {
   return {
     providers,
     active,
-    secure: safeStorage.isEncryptionAvailable() && safeStorage.getSelectedStorageBackend?.() !== 'basic_text'
+    // Encrypted by a real keychain, not Chromium's fixed fallback key
+    secure: canSeal() && safeStorage.getSelectedStorageBackend?.() !== 'basic_text'
   }
 }
 
@@ -68,7 +72,8 @@ export function setKey({ provider, key, model, use }) {
     if (model !== undefined && !/^[\w.:/-]{0,100}$/.test(model)) throw new Error('That isn’t a model name')
     const current = state.keys[provider]
     if (!key && !current) throw new Error('Enter a key first')
-    state.keys[provider] = { sealed: key ? seal(key) : current.sealed, model: model !== undefined ? model || undefined : current?.model }
+    const stored = key ? seal(key) : { sealed: current.sealed, plain: current.plain }
+    state.keys[provider] = { ...stored, model: model !== undefined ? model || undefined : current?.model }
     if (use || !state.active) state.active = provider
   }
   save()
@@ -249,7 +254,7 @@ export async function start(id, raw, send) {
   }
   let key
   try {
-    key = open(saved.sealed)
+    key = open(saved)
   } catch {
     return send({ type: 'error', message: 'Your saved key couldn’t be read from the keychain. Enter it again in Settings → AI.' })
   }
