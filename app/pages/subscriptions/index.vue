@@ -24,6 +24,16 @@ useSeoMeta({ title: 'Subscriptions' })
       </UTooltip>
     </template>
 
+    <MailAiNewsletters
+      v-if="!query && subscriptions.length"
+      :subscriptions="subscriptions"
+      :picked="picked"
+      :pickable="pickable"
+      :busy="!!sweep"
+      @pick="pick"
+      @leave="leaveMany"
+    />
+
     <div class="flex flex-wrap items-center gap-2 mb-4 empty:hidden">
       <UInput
         v-if="subscriptions.length > 8"

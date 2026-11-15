@@ -3,6 +3,9 @@ const { listed, messages, status, cursor, load, folder, search, filter, filterin
 const { view } = useMailLayout()
 const { isMobile } = useShell()
 const prefs = usePrefs()
+const priority = useAiPriority()
+// The priority inbox's "Needs you" narrows what's listed to what asks something of you
+const rows = computed(() => priority.needsYou.value ? listed.value.filter(priority.needsYouRow) : listed.value)
 // The list-only view packs a message into one line
 const compact = computed(() => view.value === 'list' && !isMobile.value)
 
@@ -25,6 +28,7 @@ const tab = computed(() => tabbed.value ? inboxTabs.value?.tab.value : undefined
 const rowHeight = computed(() => DENSITY_ROWS[prefs.value.density][compact.value ? 'compact' : 'roomy'])
 
 const empty = computed(() => {
+  if (priority.needsYou.value && listed.value.length) return { illustration: 'inbox-zero' as const, title: 'Nothing needs you', description: 'No message here waits for your reply or an action, as far as AI can tell.' }
   if (filtering.value) return { illustration: 'no-results' as const, title: 'No matches', description: `Nothing in ${folder.value?.name ?? 'this folder'} matches${search.value ? ` “${search.value}”` : ''} with these filters.` }
   if (filter.value === 'flagged') return { illustration: 'empty-folder' as const, title: 'Nothing flagged', description: 'Press S on a message to flag it for later.' }
   if (search.value) return { illustration: 'no-results' as const, title: 'No matches', description: `Nothing in ${folder.value?.name ?? 'this folder'} matches “${search.value}”.` }
@@ -49,7 +53,7 @@ const empty = computed(() => {
   />
 
   <AppEmpty
-    v-else-if="!listed.length"
+    v-else-if="!rows.length"
     :illustration="empty.illustration"
     :title="empty.title"
     :description="empty.description"
@@ -64,7 +68,7 @@ const empty = computed(() => {
     data-tour="list"
     role="region"
     :aria-label="`Messages in ${folder?.name ?? 'this folder'}`"
-    :items="listed"
+    :items="rows"
     :virtualize="{ estimateSize: rowHeight, overscan: 8 }"
     class="flex-1 transition-opacity duration-(--lb-dur-2)"
     :class="status === 'loading' && 'opacity-60'"

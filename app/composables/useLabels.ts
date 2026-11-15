@@ -6,6 +6,12 @@ const _useLabels = () => {
   const labels = useAccountPref<MailLabel[]>('labels', () => [])
   /** Message → the ids of its labels */
   const tagged = useAccountPref<Record<string, string[]>>('labelled', () => ({}))
+  /**
+   * Label → subjects of a few messages you put it on, newest first. The
+   * messages themselves may be long gone from the list, and suggested labels
+   * need examples to learn what each label is for
+   */
+  const examples = useAccountPref<Record<string, string[]>>('label-examples', () => ({}))
 
   const byId = computed(() => new Map(labels.value.map(label => [label.id, label])))
 
@@ -32,8 +38,19 @@ const _useLabels = () => {
       else Reflect.deleteProperty(next, key)
     }
     tagged.value = next
+    if (on) remember(id, messages.map(message => message.subject).filter(Boolean))
     const count = messages.length === 1 ? '' : ` on ${messages.length} conversations`
     announce(on ? `Labelled ${label.name}${count}` : `Removed ${label.name}${count}`)
+  }
+
+  function remember(id: string, subjects: string[]) {
+    const kept = [...new Set([...subjects, ...(examples.value[id] ?? [])])].slice(0, 5)
+    examples.value = { ...examples.value, [id]: kept }
+  }
+
+  /** Up to `limit` subjects of mail that carries the label */
+  function examplesOf(id: string, limit = 3): string[] {
+    return (examples.value[id] ?? []).slice(0, limit)
   }
 
   function create(name: string, color?: LabelColor): MailLabel | undefined {
@@ -54,6 +71,8 @@ const _useLabels = () => {
 
   function remove(id: string) {
     labels.value = labels.value.filter(label => label.id !== id)
+    const { [id]: _gone, ...rest } = examples.value
+    examples.value = rest
     const next: Record<string, string[]> = {}
     for (const [key, ids] of Object.entries(tagged.value)) {
       const kept = ids.filter(item => item !== id)
@@ -69,7 +88,7 @@ const _useLabels = () => {
     return result
   })
 
-  return { labels, labelsOf, has, toggle, create, update, remove, counts }
+  return { labels, labelsOf, has, toggle, create, update, remove, counts, examplesOf }
 }
 
 export const useLabels = createAppComposable(_useLabels)

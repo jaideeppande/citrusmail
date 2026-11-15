@@ -284,6 +284,12 @@ const _useMail = () => {
     if (tabbed.value && organise.value!.tab.value === 'tracked') return tracked.value
     let list = messages.value.filter(message => !marks.isSnoozed(message))
     if (labelFilter.value) list = list.filter(message => labels.has(message, labelFilter.value!))
+    // "Needs you": what the priority check says wants a reply, an action or is urgent.
+    // Asked for here, not at the top: the priority composable leans on this one
+    if (inInbox.value) {
+      const priority = useAiPriority()
+      if (priority.needsYou.value) list = list.filter(priority.needsYouRow)
+    }
     if (tabbed.value) list = list.filter(organise.value!.accepts)
     if (threading.value) {
       const heads = new Set<string>()

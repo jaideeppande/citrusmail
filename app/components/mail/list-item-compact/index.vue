@@ -74,6 +74,11 @@ const person = computed(() => props.sent ? `To ${props.message.to.map(personName
         </span>
 
         <span class="shrink-0 flex items-center gap-1.5 text-xs text-muted tabular-nums group-hover:invisible in-data-checking:visible">
+          <MailAiPriorityTag
+            :message="message"
+            compact
+          />
+          <MailAiScamIcon :message="message" />
           <MailLabelChips
             :message="message"
             compact

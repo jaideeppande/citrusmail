@@ -8,6 +8,45 @@ export function useMessageActions(source: () => MessageSummary) {
   const nudges = useNudges()
   const labels = useLabels()
   const board = useLaterBoard()
+  const priority = useAiPriority()
+  const scam = useAiScam()
+  const suggested = useAiLabels()
+  const tasks = useAiTasks()
+
+  /** What the AI features offer on this message: correcting it, or acting on what they found */
+  function aiItems(message: MessageSummary, list: () => MessageSummary[], many: boolean): ContextMenuItem[] {
+    const items: ContextMenuItem[] = []
+    if (priority.on.value) {
+      const current = many ? undefined : priority.rowTag(message)?.kind ?? priority.of(message)?.kind
+      items.push({
+        label: 'Priority',
+        icon: 'i-lucide-sparkles',
+        children: [
+          { label: 'Not important', icon: 'i-lucide-arrow-down', onSelect: () => list().forEach(item => priority.correct(item, 'fyi')) },
+          { type: 'separator' as const },
+          ...PRIORITY_KINDS.map(kind => ({
+            label: PRIORITY_INFO[kind].label,
+            icon: PRIORITY_INFO[kind].icon,
+            type: 'checkbox' as const,
+            checked: current === kind,
+            onSelect: () => list().forEach(item => priority.correct(item, kind))
+          }))
+        ]
+      })
+    }
+    if (tasks.on.value) {
+      items.push({ label: 'Find tasks', icon: 'i-lucide-list-todo', onSelect: () => tasks.extract(list()) })
+    }
+    if (many) {
+      if (suggested.withSuggestions(list()).length) items.push({ label: 'Apply suggested labels', icon: 'i-lucide-sparkles', onSelect: () => suggested.applyAll(list()) })
+    } else {
+      for (const label of suggested.suggestionsOf(message)) {
+        items.push({ label: `Add suggested label “${label.name}”`, icon: 'i-lucide-tag', onSelect: () => suggested.apply(message, label.id) })
+      }
+      if (scam.warning(message)) items.push({ label: 'This looks safe', icon: 'i-lucide-shield-check', onSelect: () => scam.dismiss(message) })
+    }
+    return items
+  }
 
   const items = computed<ContextMenuItem[][]>(() => {
     const message = source()
@@ -19,6 +58,7 @@ export function useMessageActions(source: () => MessageSummary) {
     const path = `${folderLink(message.folder)}?m=${encodeURIComponent(message.id)}`
     // Folders you made, to move it straight into
     const targets = mail.folders.value.filter(folder => folder.path !== message.folder && folder.role !== 'drafts' && folder.role !== 'sent' && folder.role !== 'flagged')
+    const ai = aiItems(message, list, many)
 
     return [[{
       label: unread ? 'Mark as read' : 'Mark as unread',
@@ -83,7 +123,7 @@ export function useMessageActions(source: () => MessageSummary) {
       kbds: kbds('mail.delete').slice(0, 1),
       color: 'error' as const,
       onSelect: () => mail.removeMany(list())
-    }], [...(sent && !many && nudges.waitingDays(message) !== undefined
+    }], ...(ai.length ? [ai] : []), [...(sent && !many && nudges.waitingDays(message) !== undefined
       ? [{ label: 'Follow up', icon: 'i-lucide-reply', onSelect: () => nudges.followUp(message) }]
       : []), {
       label: mail.isChecked(message) ? 'Deselect' : 'Select',

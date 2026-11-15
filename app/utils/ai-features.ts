@@ -19,15 +19,15 @@ export interface AiFeature {
 }
 
 export const AI_FEATURES: AiFeature[] = [
-  { id: 'priority', label: 'Priority inbox', group: 'Reading', background: true, sends: 'Sender, subject and the start of each new message in your Inbox' },
+  { id: 'priority', label: 'Priority inbox', group: 'Reading', background: true, sends: 'Sender, subject, date and the start of each new message in your Inbox, your address, and the senders and subjects of messages you re-sorted' },
   { id: 'scam', label: 'Scam and phishing check', group: 'Reading', background: true, sends: 'Sender, subject, links and text of each new message in your Inbox' },
   { id: 'suggest-labels', label: 'Suggested labels', group: 'Reading', background: true, sends: 'Sender, subject and start of new messages, with your label names and a few examples of each' },
   { id: 'briefing', label: 'Daily briefing', group: 'Reading', background: true, sends: 'Senders, subjects and previews of mail since yesterday, and today’s event titles and times' },
-  { id: 'newsletters', label: 'Newsletter advisor', group: 'Reading', background: true, sends: 'The names of lists you’re on and how often you open their mail' },
+  { id: 'newsletters', label: 'Newsletter advisor', group: 'Reading', background: true, sends: 'The names and addresses of lists you’re on, how often they write, and how many of their messages are unread' },
   { id: 'summary', label: 'Summaries', group: 'Reading', background: false, sends: 'The message you ask about' },
   { id: 'ask-thread', label: 'Ask this conversation', group: 'Reading', background: false, sends: 'The messages in the conversation and your question' },
   { id: 'ask-mail', label: 'Ask about your mail', group: 'Reading', background: false, sends: 'Your question, then sender, date, subject and preview of matching messages' },
-  { id: 'tasks', label: 'Action items to tasks', group: 'Reading', background: false, sends: 'The message you ask about' },
+  { id: 'tasks', label: 'Action items to tasks', group: 'Reading', background: false, sends: 'The messages you ask about, your address and today’s date' },
   { id: 'translate', label: 'Translation', group: 'Reading', background: false, sends: 'The text you translate' },
   { id: 'rules', label: 'Rules in plain English', group: 'Reading', background: false, sends: 'What you type, and your folder names' },
   { id: 'reply', label: 'AI Reply', group: 'Writing', background: false, sends: 'The message you reply to, and your instructions' },
