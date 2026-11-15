@@ -185,6 +185,5 @@ async function refresh() {
       :actions="[{ label: 'Try again', icon: 'i-lucide-rotate-cw', color: 'neutral', variant: 'outline', onClick: () => load() }]"
       class="flex-1"
     />
-
   </section>
 </template>
