@@ -218,7 +218,8 @@ const _useMail = () => {
     if (q.length < 2) return
     ai.value = { on: true, status: 'loading', query: q }
     try {
-      const result = await $fetch<AiSearchResult>('/api/ai/search', { method: 'POST', body: { q } })
+      // Run here when this computer has a key; the server otherwise
+      const result = useAiClient().available.value ? await askMailHere(q) : await $fetch<AiSearchResult>('/api/ai/search', { method: 'POST', body: { q } })
       if (ai.value.query === q) ai.value = { on: true, status: 'done', query: q, result }
     } catch (error) {
       if (ai.value.query !== q) return
@@ -274,6 +275,10 @@ const _useMail = () => {
   // One label at a time narrows the folder to the messages that carry it
   const labels = useLabels()
   const labelFilter = ref<string>()
+  // A further narrowing of the Inbox set from outside (the priority inbox's
+  // "Needs you"). Handed in rather than asked for here, because what sets
+  // it leans on this composable and asking from inside the list would loop
+  const inboxFilter = shallowRef<(message: MessageSummary) => boolean>()
   watch(labels.labels, (all) => {
     if (labelFilter.value && !all.some(label => label.id === labelFilter.value)) labelFilter.value = undefined
   })
@@ -283,6 +288,9 @@ const _useMail = () => {
     if (tabbed.value && organise.value!.tab.value === 'tracked') return tracked.value
     let list = messages.value.filter(message => !marks.isSnoozed(message))
     if (labelFilter.value) list = list.filter(message => labels.has(message, labelFilter.value!))
+    if (inInbox.value && inboxFilter.value) list = list.filter(inboxFilter.value)
+    // "Needs you": what the priority check says wants a reply, an action or is urgent.
+    // Asked for here, not at the top: the priority composable leans on this one
     if (tabbed.value) list = list.filter(organise.value!.accepts)
     if (threading.value) {
       const heads = new Set<string>()
@@ -801,6 +809,7 @@ const _useMail = () => {
     acting,
     inboxTabs: organise,
     labelFilter,
+    inboxFilter,
     tabbed,
     snooze,
     togglePin: marks.togglePin,

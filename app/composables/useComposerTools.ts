@@ -1,9 +1,11 @@
 // The composer's pop-ups, opened from their own buttons and from the slash
-// commands in the editor (/template, /tone, /later, /attach, /emoji, /sign…)
+// commands in the editor (/template, /tone, /draft, /later, /attach, /emoji, /sign…)
 // and the palette
 const _useComposerTools = () => {
   const templates = ref(false)
   const tone = ref(false)
+  /** The "What should it say?" line that drafts a new message with AI */
+  const aiDraft = ref(false)
   const later = ref(false)
   /** Bumped to open the file picker, which lives in the composer's footer */
   const pickFiles = ref(0)
@@ -21,7 +23,7 @@ const _useComposerTools = () => {
   const lastField = ref<'body' | 'subject'>('body')
   const subjectInput = shallowRef<HTMLInputElement>()
 
-  return { templates, tone, later, pickFiles, pickImage, emoji, table, signature, manageSignatures, zen, lastField, subjectInput }
+  return { templates, tone, aiDraft, later, pickFiles, pickImage, emoji, table, signature, manageSignatures, zen, lastField, subjectInput }
 }
 
 export const useComposerTools = createAppComposable(_useComposerTools)

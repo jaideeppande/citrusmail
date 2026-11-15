@@ -77,6 +77,62 @@ interface CitrusDesktop {
   promptTouchId: (reason: string) => Promise<boolean>
 
   onCommand: (handler: (command: DesktopCommand) => void) => () => void
+
+  /** AI run by the desktop app itself, with keys kept in the system keychain */
+  ai?: DesktopAi
+}
+
+interface DesktopAiStatus {
+  providers: { provider: AiProvider, label: string, saved: boolean, hint?: string, model: string }[]
+  active?: AiProvider
+  /** Keys are encrypted by the system keychain (false on a Linux desktop without one) */
+  secure: boolean
+}
+
+interface DesktopAiUsageEntry {
+  requests: number
+  /** Of those, how many ran without being asked */
+  background: number
+  /** Tokens, as the provider counted them (or estimated) */
+  input: number
+  output: number
+}
+
+interface DesktopAiUsage {
+  /** Day (YYYY-MM-DD) → feature → what it used */
+  days: Record<string, Record<string, DesktopAiUsageEntry>>
+  /** Background requests allowed per day */
+  limit: number
+  backgroundToday: number
+}
+
+interface DesktopAiRequest {
+  /** Which feature asked, for the usage page and the daily limit */
+  feature: string
+  /** Ran without being asked: counts against the daily limit */
+  background?: boolean
+  system: string
+  /** One question; or `messages` for a conversation */
+  prompt?: string
+  messages?: { role: 'user' | 'assistant', content: string }[]
+  maxTokens?: number
+  effort?: 'low' | 'medium' | 'high'
+}
+
+type DesktopAiEvent
+  = | { id: string, type: 'text', text: string }
+    | { id: string, type: 'done', usage: { input: number, output: number }, provider: AiProvider, model: string }
+    | { id: string, type: 'error', message: string, code?: 'limit' | 'aborted' }
+
+interface DesktopAi {
+  status: () => Promise<DesktopAiStatus>
+  /** `key: ''` removes the provider */
+  setKey: (change: { provider: AiProvider, key?: string, model?: string, use?: boolean }) => Promise<DesktopAiStatus>
+  usage: () => Promise<DesktopAiUsage>
+  setLimit: (limit: number) => Promise<DesktopAiUsage>
+  start: (id: string, request: DesktopAiRequest) => void
+  cancel: (id: string) => void
+  onEvent: (handler: (event: DesktopAiEvent) => void) => () => void
 }
 
 interface Window {

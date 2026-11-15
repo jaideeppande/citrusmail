@@ -3,13 +3,24 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 
 // What rises from the bottom of the list while rows are ticked: how many,
 // and everything that can be done to all of them at once
-const { checkedRows, clearChecked, checkAll, shown, moveMany, removeMany, setUnreadMany, flagMany, folder, folders, threadInfo } = useMail()
+const { checked, checkedRows, clearChecked, checkAll, shown, moveMany, removeMany, setUnreadMany, flagMany, folder, folders, threadInfo } = useMail()
 const { kbds } = useShortcutKeys()
+const tasks = useAiTasks()
+const suggested = useAiLabels()
+const priority = useAiPriority()
+
+const suggestedRows = computed(() => suggested.withSuggestions(checkedRows.value))
 
 const count = computed(() => checkedRows.value.length)
 const anyUnread = computed(() => checkedRows.value.some(message => threadInfo(message)?.unread ?? message.unread))
 const allFlagged = computed(() => checkedRows.value.every(message => message.flagged))
-const all = computed(() => count.value === shown.value.length)
+// With "Needs you" on, "All" means the rows you can see
+const visible = computed(() => priority.needsYou.value ? shown.value.filter(priority.needsYouRow) : shown.value)
+const all = computed(() => count.value === visible.value.length)
+function toggleAll() {
+  if (!priority.needsYou.value) return checkAll()
+  checked.value = all.value ? new Set() : new Set(visible.value.map(messageKey))
+}
 
 const targets = computed<DropdownMenuItem[][]>(() => [folders.value
   .filter(item => item.path !== folder.value?.path && item.role !== 'drafts' && item.role !== 'sent' && item.role !== 'flagged')
@@ -119,6 +130,33 @@ useRovingFocus(bar)
           />
         </UTooltip>
 
+        <UTooltip
+          v-if="tasks.on.value"
+          text="Find tasks"
+        >
+          <UButton
+            icon="i-lucide-list-todo"
+            variant="link"
+            size="sm"
+            aria-label="Find tasks"
+            class="lb-bulk-action"
+            @click="tasks.extract(checkedRows)"
+          />
+        </UTooltip>
+        <UTooltip
+          v-if="suggestedRows.length"
+          text="Apply suggested labels"
+        >
+          <UButton
+            icon="i-lucide-sparkles"
+            variant="link"
+            size="sm"
+            aria-label="Apply suggested labels"
+            class="lb-bulk-action"
+            @click="suggested.applyAll(suggestedRows)"
+          />
+        </UTooltip>
+
         <span class="w-px h-4 bg-current/20 mx-1" />
 
         <UButton
@@ -126,7 +164,7 @@ useRovingFocus(bar)
           variant="link"
           size="sm"
           class="lb-bulk-action"
-          @click="checkAll"
+          @click="toggleAll"
         />
         <UTooltip
           text="Clear selection"

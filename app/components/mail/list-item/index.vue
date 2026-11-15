@@ -66,6 +66,7 @@ const avatarAddress = computed(() => props.sent ? props.message.to[0] : props.me
               >To </span>{{ row.person.value }}
             </span>
             <span class="shrink-0 flex items-center gap-1.5 text-xs text-muted tabular-nums">
+              <MailAiScamIcon :message="message" />
               <UIcon
                 v-if="row.pinned.value"
                 name="i-ph-push-pin-fill"
@@ -93,6 +94,7 @@ const avatarAddress = computed(() => props.sent ? props.message.to[0] : props.me
               class="flex-1 truncate text-sm"
               :class="row.unread.value ? 'font-semibold text-highlighted' : 'text-toned'"
             >{{ message.subject || '(No subject)' }}</span>
+            <MailAiPriorityTag :message="message" />
             <UBadge
               v-if="row.count.value > 1"
               :label="String(row.count.value)"
@@ -146,6 +148,11 @@ const avatarAddress = computed(() => props.sent ? props.message.to[0] : props.me
           </span>
         </span>
       </UButton>
+
+      <MailAiLabelSuggestions
+        :message="message"
+        class="-mt-1 ps-18 pe-4 pb-(--lb-row-y)"
+      />
 
       <MailRowActions
         :message="message"

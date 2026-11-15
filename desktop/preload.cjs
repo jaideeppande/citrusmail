@@ -44,7 +44,18 @@ contextBridge.exposeInMainWorld('citrusDesktop', {
   promptTouchId: call('system-touch-id'),
 
   /** Called with what was chosen in the menu bar, tray, Dock or jump list */
-  onCommand: on('command')
+  onCommand: on('command'),
+
+  /** AI: this process never sees the key, only asks for writing */
+  ai: {
+    status: call('ai-status'),
+    setKey: call('ai-key'),
+    usage: call('ai-usage'),
+    setLimit: call('ai-limit'),
+    start: say('ai-start'),
+    cancel: say('ai-cancel'),
+    onEvent: on('ai-event')
+  }
 })
 
 const mark = () => document.documentElement?.classList.add('desktop', `desktop-${process.platform}`)

@@ -12,7 +12,7 @@ const TABS = {
   senders: { title: 'Senders', description: 'People and domains that always reach your Inbox, and those that never do.' },
   rules: { title: 'Rules', description: 'Sort incoming mail into folders on its own.' },
   tracking: { title: 'Tracking', description: 'Find out when messages you send are delivered and opened.' },
-  ai: { title: 'AI', description: 'Bring your own key to draft replies, summarize long messages and ask questions of all your mail.' },
+  ai: { title: 'AI', description: 'Bring your own key. Choose what AI does, see what each feature sends, and set how much it may do on its own.' },
   privacy: { title: 'Privacy', description: 'Who can see your mail when you step away from this computer.' },
   desktop: { title: 'Desktop', description: 'How CitrusMail sits on this computer: when it starts, what it opens and how you reach it.' },
   insights: { title: 'Insights', description: 'Your mail in numbers: how much comes and goes, when, and from whom.' },

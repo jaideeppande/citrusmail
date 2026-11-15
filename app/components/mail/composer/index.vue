@@ -7,6 +7,8 @@ import type { CommandPaletteItem, DropdownMenuItem } from '@nuxt/ui'
 const { open, draft, drafts, activeId, hasDraft, standalone, closed, editor, activate, minimise, close, compose, reopenClosed } = useComposer()
 const { templates, insert } = useTemplates()
 const tools = useComposerTools()
+const client = useAiClient()
+const writing = useAiWriting()
 const { toasts } = useToast()
 const { width } = useWindowSize()
 const { kbds } = useShortcutKeys()
@@ -87,6 +89,16 @@ function pickTemplate() {
   withDraft(() => (tools.templates.value = true))
 }
 
+// A draft from a few words is for a new message: a reply on screen gets a new message beside it
+function draftWithAi() {
+  if (open.value && hasDraft.value && !draft.value.replyingTo) {
+    tools.aiDraft.value = true
+    return
+  }
+  compose()
+  setTimeout(() => (tools.aiDraft.value = true), 320)
+}
+
 // "New message" is among the app's own commands (useAppCommands); these are
 // the composer's. A pane leaves them to the window it sits in
 if (docked) {
@@ -108,6 +120,11 @@ if (docked) {
       { label: 'Insert table', icon: 'i-lucide-table', onSelect: () => withDraft(() => editor.value?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()) },
       { label: 'Manage signatures…', icon: 'i-lucide-signature', onSelect: () => (tools.manageSignatures.value = true) }
     ]
+    if (client.enabled('draft')) items.push({ label: 'Draft with AI…', icon: 'i-lucide-sparkles', onSelect: draftWithAi })
+    if (open.value && hasDraft.value) {
+      if (client.enabled('proofread')) items.push({ label: 'Fix spelling and grammar', icon: 'i-lucide-spell-check', onSelect: () => writing.proofread() })
+      if (client.enabled('subject') && !draft.value.subject.trim()) items.push({ label: 'Suggest a subject', icon: 'i-lucide-sparkles', onSelect: () => writing.suggestSubjects() })
+    }
     if (closed.value.length) {
       items.push({
         label: 'Recently closed drafts',

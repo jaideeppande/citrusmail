@@ -9,10 +9,14 @@ export function useMailEvent() {
   /** Only with a calendar connected (CalDAV) */
   const available = computed(() => !!account.value?.hasCalendar)
 
-  async function open(seed: MailEventSeed) {
+  /**
+   * `source` is the message it comes from, which the AI reads for the details
+   * when that is switched on; `filled` says the seed is already the AI's work
+   */
+  async function open(seed: MailEventSeed, options: { calendarId?: string, source?: { message: MessageDetail, hint?: Date }, filled?: boolean } = {}) {
     if (!available.value) return
     const MailEventForm = (await import('~/components/mail/event-form/index.vue')).default
-    overlay.create(MailEventForm, { props: { seed }, destroyOnClose: true }).open()
+    overlay.create(MailEventForm, { props: { seed, ...options }, destroyOnClose: true }).open()
   }
 
   /** From a message: its subject as the title, who sent it and how it starts as the notes, the first date it names as the time */
@@ -33,6 +37,9 @@ export function useMailEvent() {
       start,
       end: when?.end ?? addMinutes(start, 60),
       allDay: when?.allDay ?? false
+    }, {
+      // The form opens at once with the guess above; the AI's reading lands in it when it's back
+      source: { message, hint: date?.start }
     })
   }
 

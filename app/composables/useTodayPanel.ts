@@ -4,6 +4,7 @@
 const _useTodayPanel = () => {
   const isOpen = ref(false)
   const { kbds } = useShortcutKeys()
+  const ai = useAiClient()
 
   function open() {
     isOpen.value = true
@@ -30,7 +31,17 @@ const _useTodayPanel = () => {
       icon: 'i-lucide-sun',
       kbds: kbds('window.today').map(value => ({ value, variant: 'soft' as const })),
       onSelect: open
-    }]
+    }, ...(ai.enabled('briefing')
+      ? [{
+          label: 'Refresh briefing',
+          suffix: 'Write today’s briefing again',
+          icon: 'i-lucide-sparkles',
+          onSelect: () => {
+            open()
+            useAiBriefing().generate()
+          }
+        }]
+      : [])]
   }])
 
   return { isOpen, toggle, open, close }

@@ -57,13 +57,20 @@ const _useNudges = () => {
   /** Days a sent message has gone unanswered, when that's long enough to say so */
   const waitingDays = (message: MessageSummary) => waiting.value.get(messageKey(message))
 
-  /** Opens a reply to your own message, addressed to the people it went to */
+  /**
+   * Opens a reply to your own message, addressed to the people it went to.
+   * It starts with a short fixed note; with AI on, a follow-up written for
+   * this message replaces it as you watch (Undo brings the fixed one back)
+   */
   async function followUp(message: MessageSummary) {
+    // Taken before any await: the app context isn't there after one
     const cache = useMessageCache()
     const { start } = useComposer()
+    const client = useAiClient()
+    const writing = useAiWriting()
     const detail = await cache.open(message.folder, message.id).then(entry => entry.message).catch(() => undefined)
     const first = personName(message.to[0]).split(/[\s@]/)[0]
-    const text = detail?.text?.trim() || message.preview
+    const text = detail?.text?.trim() || (detail?.html ? new DOMParser().parseFromString(detail.html, 'text/html').body.textContent?.trim() : '') || message.preview
     start({
       to: message.to,
       cc: detail?.cc ?? [],
@@ -74,6 +81,11 @@ const _useNudges = () => {
       inReplyTo: detail?.messageId ?? message.messageId,
       references: [...(detail?.references ?? []), ...(message.messageId ? [message.messageId] : [])]
     })
+    if (client.enabled('follow-up')) {
+      // Once the composer is on screen, so the words are seen being written
+      await nextTick()
+      await writing.writeFollowUp({ to: message.to, subject: message.subject, days: waitingDays(message), original: text })
+    }
   }
 
   return { waitingDays, followUp }

@@ -9,7 +9,7 @@ An open-source mail, calendar and contacts client for any provider, built with [
 - **Contacts** over CardDAV, with groups, import and export (vCard, CSV) and a view of who you're in touch with
 - **Composer** built on the Nuxt UI `UEditor`, adapted from the [editor template](https://github.com/nuxt-ui-templates/editor), with send later, undo send, several drafts at once, tables, pictures, highlighted code and a distraction-free mode
 - **Read receipts**: Delivered, Opened or Bounced on the messages you track
-- **AI** with your own key for Anthropic (Claude), OpenAI, Google Gemini, xAI Grok or Perplexity: summaries, AI Reply, and questions across your mail
+- **AI** with your own key for Anthropic (Claude), OpenAI, Google Gemini, xAI Grok or Perplexity: a priority inbox, scam checks, an assistant, drafting and autocomplete, plain-English commands and events, and more ([what it does and sends](#ai))
 - **Translation** of messages you receive and replies you write
 - **Signatures** for each mailbox you send from, written in the app or pasted as HTML
 - **Notifications** for new mail, and one-click unsubscribe
@@ -206,6 +206,29 @@ Two things work differently from what the words might suggest:
 
 - **Undo.** Archive, delete and move wait five seconds before the server is told, and **undo send** holds a message for the time set in Settings → Reading. Undo within that time and nothing was ever sent. Closing the window sends whatever is still waiting.
 - **App lock.** The PIN hides the app from someone at your desk. It does not encrypt anything on disk.
+
+## AI
+
+AI in CitrusMail runs on your own key, from your provider of choice: Anthropic (Claude), OpenAI, Google Gemini, xAI Grok or Perplexity. Add it in **Settings → AI**.
+
+**In the desktop app, AI runs on your computer.** The app sends each request to your provider itself, and your key is kept in the system keychain (Windows Credential Manager, the macOS Keychain). The page never sees the key and the CitrusMail server is not involved. On a Linux desktop with no keychain (no GNOME Keyring or KWallet), the key is instead stored unencrypted in a file only your user account can read, as Chromium does there, and Settings → AI warns about it. In a browser, only summaries, AI Reply, tone rewrite, translation and questions about your mail are available, through the server with a key saved there.
+
+**What it does**
+
+| Where | Feature |
+| --- | --- |
+| Inbox | Priority tags (needs your reply, needs action, urgent) with a Needs you tab, learning from your corrections; scam and phishing warnings with plain reasons; suggested labels |
+| Reading | Summaries; ask questions of a conversation or of all your mail in the assistant (`Ctrl/⌘J`); turn a message into tasks on the Later board; translation |
+| Writing | Draft a new message from a line; tone rewrite and proofreading with a preview of each change; subject suggestions; AI Reply; follow-up nudges; reply to "when are you free?" with your real free times; autocomplete as you pause, `Tab` to accept |
+| Calendar | Events from plain English ("lunch with Ana Thursday 1pm"); events from an email; a daily briefing in the Today panel; meeting prep |
+| Contacts | Updated phone, title or company from someone's email signature, applied only on a click; a summary of your history with someone |
+| Everywhere | "Ask AI to do this" in the command palette: "archive last week's GitHub mail" becomes a plan you check, message by message, before anything changes. Rules can be described in words too |
+
+**What is sent, and when.** Settings → AI lists every feature with what it sends and a switch. Features marked *Runs on its own* (priority tags, scam checks, suggested labels, the briefing, signature details, autocomplete and the newsletter advisor) work on new mail and as you type, without being asked, and are on once a key is saved. The first time you save a key, the app lists them so you can turn any off. Everything else waits until you use it. Only the parts of a message a feature needs are sent; pictures and attachments are never sent.
+
+**Cost.** Your provider bills you directly. Settings → AI shows the requests and tokens each feature used today and over 30 days, as counted on your computer, and sets a daily limit on background requests (300 by default). When the limit is reached, background features pause until the next day; what you ask for yourself is never limited.
+
+**What AI can't do on its own.** Nothing that changes your mail or contacts happens without your click: commands show a plan first and go through the usual Undo, rules and events open for review, contact updates and labels are suggestions. Text the AI writes is shown as plain text, never as HTML, and every prompt tells the model that the email it reads is data, not instructions.
 
 ## Desktop app
 

@@ -48,6 +48,18 @@ Day, week, month, year and agenda. Add a second time zone and every time is show
 
 Open several drafts at once: they sit as tabs along the bottom while you read. `Ctrl/⌘Shift+D` gives one the whole window. Type `/` for commands, `:` for emoji, and Markdown as you go; add tables, pictures you can resize, and code blocks coloured by language. Choose between several signatures, see the time where your recipient is, and schedule for their morning. Undo send holds a message for the seconds you choose.
 
+## AI
+
+With your own key from Anthropic, OpenAI, Google, xAI or Perplexity, the desktop app adds AI throughout, running on your computer with the key kept in your system keychain:
+
+- **The Inbox sorts itself.** New mail is tagged when it needs a reply, an action or is urgent, and the *Needs you* tab shows just those. Correct a tag and it learns. Mail that looks like a scam carries a warning with plain reasons.
+- **The assistant** (`Ctrl/⌘J`) answers questions about the open conversation or all your mail, and can find tasks in a message for the Later board.
+- **Writing help.** Draft from one line, fix grammar with a preview of each change, get subject ideas, offer your real free times to someone asking to meet, and accept autocomplete with `Tab`.
+- **The calendar understands you.** Type "lunch with Ana Thursday 1pm at Mercer", or add an event straight from an email. The Today panel opens with a short briefing, and any meeting can be prepared for.
+- **Commands in plain English.** In the command palette, "archive last week's GitHub mail" becomes a plan you check before anything happens.
+
+Settings → AI says what each feature sends and lets you turn any of them off, and shows what they used against a daily limit.
+
 ## And
 
 - **Later**: a board of mail you've set aside, in To do, Waiting and Done.

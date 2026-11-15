@@ -15,10 +15,13 @@ const emit = defineEmits<{
   translate: []
   print: []
   event: []
+  /** Opens the assistant on this conversation */
+  ask: []
 }>()
 
 const { selectedId, setUnread, toggleFlag } = useMail()
 const { ready } = useAi()
+const ai = useAiClient()
 const { kbds } = useShortcutKeys()
 
 function act(handler: (message: MessageSummary) => void) {
@@ -104,6 +107,20 @@ defineExpose({
           :disabled="!message"
           class="lb-press"
           @click="emit('summarize')"
+        />
+      </UTooltip>
+      <UTooltip
+        v-if="ai.enabled('ask-thread')"
+        text="Ask about this"
+      >
+        <UButton
+          icon="i-lucide-message-circle-question"
+          color="neutral"
+          variant="ghost"
+          :aria-label="thread ? 'Ask about this conversation' : 'Ask about this message'"
+          :disabled="!message"
+          class="lb-press"
+          @click="emit('ask')"
         />
       </UTooltip>
       <MailReaderType />

@@ -33,7 +33,8 @@ const form = useTemplateRef('form')
 function onEnter(event: KeyboardEvent) {
   const target = event.target as HTMLElement
 
-  if (target.tagName === 'TEXTAREA' || target.closest('[role="combobox"],[role="checkbox"]')) {
+  // The meeting prep's buttons and links are pressed with Enter like any other
+  if (target.tagName === 'TEXTAREA' || target.closest('[role="combobox"],[role="checkbox"],[data-meeting-prep] :is(button,a)')) {
     return
   }
 
@@ -403,6 +404,15 @@ watch(
           :ui="{ base: 'p-0 resize-none rounded-none' }"
         />
       </UFormField>
+    </div>
+
+    <!-- Only for an event in the next week (or the day just gone), and only with AI on -->
+    <div
+      v-if="event"
+      class="contents"
+      data-meeting-prep
+    >
+      <CalendarMeetingPrep :event="event" />
     </div>
 
     <UButton

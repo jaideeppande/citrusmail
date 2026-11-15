@@ -10,6 +10,8 @@ const props = defineProps<{
 
 const { draft, version, editor, focusBody, close, minimise, popOut } = useComposer()
 const { ready } = useAi()
+const client = useAiClient()
+const writing = useAiWriting()
 const { account } = useShell()
 const { kbds } = useShortcutKeys()
 const tools = useComposerTools()
@@ -29,6 +31,8 @@ const title = computed(() => {
 // from the subject goes straight to it instead of through them
 function onSubjectKey(event: KeyboardEvent) {
   if (event.key !== 'Tab' || event.shiftKey) return
+  // "Suggest a subject" sits right after the field: Tab reaches it first
+  if (offerSubject.value) return
   event.preventDefault()
   focusBody()
 }
@@ -70,6 +74,20 @@ onBeforeUnmount(() => {
 
 const plain = computed(() => draft.value.html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&[a-z]+;/g, 'x'))
 const words = computed(() => plain.value.split(/\s+/).filter(word => /\w/.test(word)).length)
+
+/* Subject suggestions: offered quietly while the empty subject has the cursor and there is enough to go on */
+const subjectFocused = ref(false)
+function onSubjectFocusOut(event: FocusEvent) {
+  const next = event.relatedTarget as Node | null
+  if (!next || !(event.currentTarget as HTMLElement).contains(next)) subjectFocused.value = false
+}
+const offerSubject = computed(() => subjectFocused.value
+  && !draft.value.subject.trim()
+  && words.value >= 15
+  && client.enabled('subject')
+  && !writing.subjects.value.length
+  && !writing.suggestingSubjects.value
+  && !writing.busy.value)
 const minutes = computed(() => Math.max(1, Math.round(words.value / 230)))
 // Drafts are kept on this computer as they are typed: "Saved" once the typing pauses
 const saving = ref(false)
@@ -188,6 +206,8 @@ defineAppShortcuts({
     <MailComposerField
       label="Subject"
       class="lb-zen-subject"
+      @focusin="subjectFocused = true"
+      @focusout="onSubjectFocusOut"
     >
       <UInput
         ref="subject"
@@ -196,15 +216,33 @@ defineAppShortcuts({
         variant="none"
         :placeholder="zenShown ? 'Subject' : undefined"
         :autofocus="!!draft.to.length && !draft.subject"
+        class="min-w-0 flex-1"
         :ui="{ base: 'px-0 h-10 text-[15px] font-semibold text-highlighted' }"
         @keydown="onSubjectKey"
       />
+      <Transition name="lb-fade">
+        <UButton
+          v-if="offerSubject"
+          label="Suggest a subject"
+          icon="i-lucide-sparkles"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          class="shrink-0 text-muted"
+          @click="writing.suggestSubjects()"
+        />
+      </Transition>
     </MailComposerField>
+
+    <MailComposerSubjectSuggest />
 
     <template v-if="!zenShown">
       <MailComposerAi v-if="ready && draft.replyingTo" />
       <MailComposerTranslate v-if="ready && draft.translateTo" />
+      <MailComposerMeeting v-if="draft.replyingTo && account?.hasCalendar && client.enabled('meeting-reply')" />
     </template>
+    <MailComposerAiDraft />
+    <MailComposerProofread />
 
     <MailComposerBody
       :key="version"

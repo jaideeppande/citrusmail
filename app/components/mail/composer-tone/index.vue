@@ -1,9 +1,13 @@
 <script setup lang="ts">
-// Tone rewrite: the reply you wrote, made shorter, friendlier, more formal
-// or just corrected, or changed the way you say. The AI needs the message
-// being answered, so for now this works on replies only
+// Tone rewrite: the message you wrote, made shorter, friendlier, more formal
+// or changed the way you say, and spelling and grammar put right. A reply is
+// rewritten by AI Reply, which reads the message being answered; a new
+// message goes to this computer's AI on its own. Corrections come as a
+// preview to accept (mail/composer-proofread) rather than straight in
 const { draft } = useComposer()
-const { writing, previous, rewrite, undoRewrite } = useAiReply()
+const reply = useAiReply()
+const writing = useAiWriting()
+const client = useAiClient()
 const { tone: open } = useComposerTools()
 
 const instruction = ref('')
@@ -13,20 +17,28 @@ watch(open, (value) => {
 
 const isReply = computed(() => !!draft.value.replyingTo)
 const hasWords = computed(() => !!draft.value.html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').trim())
-const tip = computed(() => {
-  if (!isReply.value) return 'Rewriting works on replies for now: it reads the message you’re answering'
-  return hasWords.value ? 'Rewrite with AI' : 'Write your reply first, then rewrite it'
-})
+const busy = computed(() => reply.writing.value || !!writing.busy.value)
+const canProofread = computed(() => client.enabled('proofread'))
+const canUndo = computed(() => (isReply.value && reply.previous.value !== undefined) || writing.canUndo.value)
+const tip = computed(() => hasWords.value ? 'Rewrite with AI' : 'Write your message first, then rewrite it')
 
 function run(change: string) {
   if (!change.trim()) return
   open.value = false
-  rewrite(change.trim())
+  if (isReply.value) reply.rewrite(change.trim())
+  else writing.rewrite(change.trim())
+}
+
+function fix() {
+  open.value = false
+  if (canProofread.value) writing.proofread()
+  else if (isReply.value) reply.rewrite(GRAMMAR_EDIT.change)
 }
 
 function undo() {
   open.value = false
-  undoRewrite()
+  if (isReply.value && reply.previous.value !== undefined) reply.undoRewrite()
+  else writing.undo()
 }
 </script>
 
@@ -44,7 +56,7 @@ function undo() {
           color="neutral"
           variant="ghost"
           aria-label="Rewrite with AI"
-          :disabled="!isReply || !hasWords || writing"
+          :disabled="!hasWords || busy"
           :class="open && 'text-(--lb-ai)'"
         />
       </span>
@@ -57,7 +69,7 @@ function undo() {
             name="i-lucide-sparkles"
             class="size-3.5 text-(--lb-ai)"
           />
-          Rewrite your reply
+          {{ isReply ? 'Rewrite your reply' : 'Rewrite your message' }}
         </p>
         <ul class="p-1">
           <li
@@ -75,6 +87,22 @@ function undo() {
               block
               class="justify-start"
               @click="run(edit.change)"
+            />
+          </li>
+          <li
+            v-if="canProofread || isReply"
+            class="lb-stagger"
+            :style="{ '--lb-i': TONE_EDITS.length }"
+          >
+            <UButton
+              :label="GRAMMAR_EDIT.label"
+              :icon="GRAMMAR_EDIT.icon"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              block
+              class="justify-start"
+              @click="fix"
             />
           </li>
         </ul>
@@ -102,11 +130,11 @@ function undo() {
           />
         </form>
         <div
-          v-if="previous !== undefined"
+          v-if="canUndo"
           class="border-t border-default p-1"
         >
           <UButton
-            label="Undo the last rewrite"
+            label="Undo the last AI change"
             icon="i-lucide-undo-2"
             color="neutral"
             variant="ghost"

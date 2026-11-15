@@ -1,20 +1,47 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
 
-const { folder, filter, total, status, load, refreshTop, ai, tabbed, checked, checkAll, shown, labelFilter } = useMail()
+const { folder, filter, total, status, load, refreshTop, ai, tabbed, checked, checkedRows, checkAll, shown, selected, labelFilter } = useMail()
 const { labels } = useLabels()
 const activeLabel = computed(() => labels.value.find(label => label.id === labelFilter.value))
 const { isSidebarOpen } = useShell()
 const { kbds } = useShortcutKeys()
 const gallery = useAttachmentGallery()
 const triage = useTriage()
+const priority = useAiPriority()
+// The layout registers the list's background AI at app start; asking again here is harmless (one instance per app)
+useAiMailWorkers()
+const suggested = useAiLabels()
 
-// When the list is narrow the filters shrink to icons, so nothing overlaps
-const tabs = [
+// When the list is narrow the filters shrink to icons, so nothing overlaps.
+// "Needs you" is the priority inbox's: in the Inbox, while it's switched on
+const tabs = computed(() => [
   { label: 'All', value: 'all', icon: 'i-lucide-mails' },
   { label: 'Unread', value: 'unread', icon: 'i-lucide-mail-open' },
-  { label: 'Flagged', value: 'flagged', icon: 'i-lucide-flag' }
-]
+  { label: 'Flagged', value: 'flagged', icon: 'i-lucide-flag' },
+  ...(priority.on.value && priority.inInbox.value ? [{ label: 'Needs you', value: 'needs', icon: 'i-lucide-sparkles' }] : [])
+])
+const tab = computed({
+  get: () => priority.needsYou.value ? 'needs' : filter.value,
+  set: (value: string) => {
+    priority.needsYou.value = value === 'needs'
+    if (value === 'needs') {
+      filter.value = 'all'
+      const count = shown.value.filter(priority.needsYouRow).length
+      announce(count ? `${count} ${count === 1 ? 'conversation needs' : 'conversations need'} you` : 'Nothing needs you right now')
+    } else {
+      filter.value = value as 'all' | 'unread' | 'flagged'
+    }
+  }
+})
+
+// With "Needs you" on, everything means everything you can see
+function selectAll() {
+  if (!priority.needsYou.value) return checkAll()
+  checked.value = checked.value.size ? new Set() : new Set(shown.value.filter(priority.needsYouRow).map(messageKey))
+}
+
+const suggestedRows = computed(() => suggested.withSuggestions(shown.value))
 
 // What acts on the folder as a whole, behind one button: the header has no room for more
 const more = computed<DropdownMenuItem[][]>(() => [[{
@@ -22,7 +49,7 @@ const more = computed<DropdownMenuItem[][]>(() => [[{
   icon: checked.value.size ? 'i-lucide-square-check-big' : 'i-lucide-square',
   kbds: kbds('mail.selectAll'),
   disabled: !shown.value.length,
-  onSelect: checkAll
+  onSelect: selectAll
 }, {
   label: 'Triage one at a time',
   icon: 'i-lucide-list-checks',
@@ -32,7 +59,24 @@ const more = computed<DropdownMenuItem[][]>(() => [[{
   label: 'Attachments in this folder',
   icon: 'i-lucide-paperclip',
   onSelect: () => gallery.open()
-}]])
+}], ...(suggestedRows.value.length
+  ? [[{
+      label: `Apply suggested labels (${suggestedRows.value.length})`,
+      icon: 'i-lucide-sparkles',
+      onSelect: () => suggested.applyAll(suggestedRows.value)
+    }]]
+  : [])])
+
+const tasks = useAiTasks()
+useCommands(() => [{
+  id: 'mail-ai',
+  label: 'AI in your mail',
+  items: [
+    ...(priority.on.value && priority.inInbox.value ? [{ label: priority.needsYou.value ? 'Show all mail' : 'Show what needs you', icon: 'i-lucide-sparkles', onSelect: () => (tab.value = priority.needsYou.value ? 'all' : 'needs') }] : []),
+    ...(tasks.on.value && (checked.value.size || selected.value) ? [{ label: 'Find tasks', icon: 'i-lucide-list-todo', onSelect: () => tasks.extract(checked.value.size ? checkedRows.value : [selected.value!]) }] : []),
+    ...(suggestedRows.value.length ? [{ label: 'Apply suggested labels', icon: 'i-lucide-tag', onSelect: () => suggested.applyAll(suggestedRows.value) }] : [])
+  ]
+}])
 
 const refreshing = ref(false)
 async function refresh() {
@@ -92,7 +136,7 @@ async function refresh() {
       <MailViewToggle />
 
       <UTabs
-        v-model="filter"
+        v-model="tab"
         :items="tabs"
         :content="false"
         color="neutral"

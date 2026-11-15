@@ -57,6 +57,7 @@ export const SHORTCUTS = {
   'calendar.agenda': { label: 'Agenda view', group: 'Calendar', keys: ['a'] },
   'app.palette': { label: 'Search and commands', group: 'App', keys: ['meta_k'] },
   'app.notifications': { label: 'Notifications', group: 'App', keys: ['shift_n'] },
+  'app.assistant': { label: 'Ask AI', group: 'App', keys: ['meta_j'] },
   'app.sidebar': { label: 'Fold sidebar', group: 'App', keys: ['['] },
   'app.help': { label: 'These shortcuts', group: 'App', keys: ['?'] }
 } as const satisfies Record<string, ShortcutDef>
