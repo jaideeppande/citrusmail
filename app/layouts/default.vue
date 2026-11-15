@@ -15,6 +15,8 @@ inboxTabs.value = useInboxTabs()
 const lock = useAppLock()
 
 useAppCommands()
+// AI that works on new mail without being asked (each feature registers itself)
+useAiBackground()
 useDesktopSettings().apply()
 
 // The composer page is the whole window: nothing else belongs around it

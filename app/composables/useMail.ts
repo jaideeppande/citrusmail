@@ -218,7 +218,8 @@ const _useMail = () => {
     if (q.length < 2) return
     ai.value = { on: true, status: 'loading', query: q }
     try {
-      const result = await $fetch<AiSearchResult>('/api/ai/search', { method: 'POST', body: { q } })
+      // Run here when this computer has a key; the server otherwise
+      const result = useAiClient().available.value ? await askMailHere(q) : await $fetch<AiSearchResult>('/api/ai/search', { method: 'POST', body: { q } })
       if (ai.value.query === q) ai.value = { on: true, status: 'done', query: q, result }
     } catch (error) {
       if (ai.value.query !== q) return

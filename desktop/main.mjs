@@ -6,6 +6,7 @@
 // settings land in the app's data folder
 import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage, nativeTheme, Notification, screen, session, shell, systemPreferences, Tray } from 'electron'
 import updater from 'electron-updater'
+import * as ai from './ai.mjs'
 import { randomBytes } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
@@ -595,6 +596,31 @@ app.on('open-url', (event, url) => {
   openMailto(url)
 })
 
+/* AI -------------------------------------------------------------------- */
+
+// The page asks; this process holds the key and talks to the provider (see ai.mjs)
+ipcMain.handle('citrusmail:ai-status', event => entryOf(event) ? ai.status() : null)
+ipcMain.handle('citrusmail:ai-key', (event, change) => {
+  if (!entryOf(event)) return null
+  return ai.setKey(change ?? {})
+})
+ipcMain.handle('citrusmail:ai-usage', event => entryOf(event) ? ai.usage() : null)
+ipcMain.handle('citrusmail:ai-limit', (event, limit) => entryOf(event) ? ai.setLimit(limit) : null)
+ipcMain.on('citrusmail:ai-start', (event, id, request) => {
+  if (!entryOf(event) || typeof id !== 'string' || id.length > 64) return
+  const sender = event.sender
+  // A window closed mid-answer stops the request rather than writing to nothing
+  const stop = () => ai.cancel(id)
+  sender.once('destroyed', stop)
+  ai.start(id, request, (message) => {
+    if (!sender.isDestroyed()) sender.send('citrusmail:ai-event', { id, ...message })
+    if (message.type !== 'text') sender.removeListener('destroyed', stop)
+  })
+})
+ipcMain.on('citrusmail:ai-cancel', (event, id) => {
+  if (entryOf(event) && typeof id === 'string') ai.cancel(id)
+})
+
 /* Menu bar, tray, Dock and jump list ----------------------------------- */
 
 function buildMenu() {
@@ -771,6 +797,7 @@ app.on('web-contents-created', (_event, contents) => {
 
 app.whenReady().then(async () => {
   loadState()
+  ai.init(app.getPath('userData'))
   origin = await startServer()
   lockDownSession()
   buildMenu()
