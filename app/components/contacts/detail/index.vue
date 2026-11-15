@@ -167,6 +167,11 @@ onMounted(() => {
           </div>
         </div>
 
+        <ContactsSignatureSuggestion
+          :contact="contact"
+          @done="heading?.focus({ preventScroll: true })"
+        />
+
         <dl class="flex flex-col">
           <ContactsField
             v-for="email in contact.emails"
@@ -221,6 +226,11 @@ onMounted(() => {
             :value="contact.note"
           />
         </dl>
+
+        <ContactsRelationshipSummary
+          v-if="contact.emails.length"
+          :person="contact"
+        />
 
         <ContactsTimeline :contact="contact" />
       </div>

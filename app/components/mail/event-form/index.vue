@@ -6,6 +6,12 @@ import type { CalendarDate, Time } from '@internationalized/date'
 // everything can be put right before it is saved
 const props = defineProps<{
   seed: MailEventSeed
+  /** Start on this calendar rather than the first one showing */
+  calendarId?: string
+  /** The message it comes from: with AI on, it is read for the details */
+  source?: { message: MessageDetail, hint?: Date }
+  /** The seed is already the AI's reading (an event typed in plain English) */
+  filled?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -29,7 +35,7 @@ const startTime = shallowRef<Time>(toTime(allDay.value ? nextRoundHour() : seedS
 const endTime = shallowRef<Time>(toTime(allDay.value ? new Date(nextRoundHour().getTime() + 60 * 60_000) : seedEnd))
 
 // A hidden calendar would make the event vanish the moment it is saved
-const calendarId = ref('')
+const calendarId = ref(props.calendarId ?? '')
 watch(calendars, (list) => {
   if (calendarId.value && list.some(calendar => calendar.id === calendarId.value)) return
   calendarId.value = (list.find(calendar => !hiddenCalendars.value.includes(calendar.id)) ?? list[0])?.id ?? ''
@@ -62,6 +68,56 @@ const problem = computed(() => {
   if (range.value.end <= range.value.start) return 'It ends before it starts'
   return ''
 })
+
+/* Filled in by AI ------------------------------------------------------ */
+
+const aiMailEvent = useAiMailEvent()
+const ai = ref<'off' | 'reading' | 'filled' | 'failed'>(props.filled ? 'filled' : 'off')
+const aiNote = computed(() => ai.value === 'filled'
+  ? 'Filled in by AI, check before saving'
+  : ai.value === 'failed' ? 'The AI couldn’t read it, so this is filled in from the message' : '')
+const controller = new AbortController()
+onBeforeUnmount(() => controller.abort())
+
+// What the form opened with: the AI only fills a field still holding it, so
+// nothing typed while it reads is written over
+const opened = {
+  title: title.value,
+  description: description.value,
+  when: () => [startDate.value?.toString(), endDate.value?.toString(), startTime.value?.toString(), endTime.value?.toString(), allDay.value].join('|')
+}
+const openedWhen = opened.when()
+
+async function fillWithAi() {
+  const source = props.source
+  if (!source || !aiMailEvent.on.value) return
+  ai.value = 'reading'
+  try {
+    const fill = await aiMailEvent.fill(source.message, { hint: source.hint, signal: controller.signal })
+    if (controller.signal.aborted) return
+    if (fill.title && title.value === opened.title) title.value = fill.title
+    if (description.value === opened.description) description.value = mailEventNotes(fill, opened.description).slice(0, 5000)
+    if (fill.when && opened.when() === openedWhen) {
+      const { start, end } = fill.when
+      allDay.value = fill.when.allDay
+      startDate.value = toCalendarDate(start)
+      // Moving the start drags the end along; the end is set once that has happened
+      await nextTick()
+      endDate.value = toCalendarDate(fill.when.allDay ? subMilliseconds(end, 1) : end)
+      if (!fill.when.allDay) {
+        startTime.value = toTime(start)
+        endTime.value = toTime(end)
+      }
+    }
+    ai.value = 'filled'
+    announce('Filled in by AI, check before saving')
+  } catch (error) {
+    if (controller.signal.aborted || (error as AiError).code === 'aborted') return
+    ai.value = 'failed'
+    announce('The AI couldn’t read the message. The form is filled in from it as before.')
+  }
+}
+onMounted(fillWithAi)
 
 function save() {
   if (problem.value || !range.value) return
@@ -104,6 +160,7 @@ function save() {
             v-model="title"
             placeholder="Title"
             aria-label="Title"
+            :aria-describedby="ai === 'filled' ? 'mail-event-ai-note' : undefined"
             autofocus
             :maxlength="100"
             class="flex-1 min-w-0"
@@ -152,6 +209,26 @@ function save() {
             label="All day"
           />
         </div>
+
+        <p
+          v-if="ai !== 'off'"
+          id="mail-event-ai-note"
+          role="status"
+          class="relative flex items-center gap-1.5 overflow-hidden rounded-md bg-(--lb-ai-bg) px-2.5 py-1.5 text-xs text-muted"
+        >
+          <span
+            v-if="ai === 'reading'"
+            class="lb-ai-progress absolute inset-x-0 top-0 h-px"
+            aria-hidden="true"
+          />
+          <UIcon
+            name="i-lucide-sparkles"
+            class="size-3.5 shrink-0 text-(--lb-ai)"
+            aria-hidden="true"
+          />
+          <span v-if="ai === 'reading'">Reading the message with AI<span class="lb-ai-dots" /></span>
+          <span v-else>{{ aiNote }}</span>
+        </p>
 
         <UTextarea
           v-model="description"

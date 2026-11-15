@@ -234,3 +234,40 @@
   transition: transform var(--lb-dur-1) var(--lb-ease-out);
   &:hover, &:focus-visible { transform: scale(1.15); }
 }
+
+/* AI writing in the composer: spelling corrections waiting to be taken, and
+   ghost text after the cursor. Struck through and underlined, so a change
+   never shows by colour alone */
+@utility lb-diff-removed {
+  color: var(--ui-text-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+@utility lb-diff-added {
+  color: var(--ui-text-highlighted);
+  text-decoration: underline;
+  text-decoration-color: var(--lb-ai);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  background: color-mix(in oklab, var(--lb-ai) 12%, transparent);
+  border-radius: 2px;
+}
+
+/* The suggested words, made by the editor's autocomplete (utils/ai-autocomplete) */
+.lb-ghost {
+  color: var(--ui-text-dimmed);
+  pointer-events: none;
+  user-select: none;
+  animation: lb-ghost-in var(--lb-dur-2) var(--lb-ease-out) both;
+  &::after {
+    content: 'Tab';
+    margin-inline-start: 0.4em;
+    padding: 0 0.3em;
+    border: 1px solid var(--ui-border);
+    border-radius: 0.25rem;
+    font-size: 0.7em;
+    vertical-align: 0.1em;
+    color: var(--ui-text-muted);
+  }
+}
+@keyframes lb-ghost-in { from { opacity: 0; } }

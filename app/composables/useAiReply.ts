@@ -4,9 +4,15 @@
 export const TONE_EDITS = [
   { label: 'Shorter', icon: 'i-lucide-minimize-2', change: 'Make it noticeably shorter. Keep every fact and the meaning.' },
   { label: 'Friendlier', icon: 'i-lucide-smile', change: 'Make the tone warmer and friendlier. Keep the content the same.' },
-  { label: 'More formal', icon: 'i-lucide-briefcase', change: 'Make the tone more formal and professional. Keep the content the same.' },
-  { label: 'Fix grammar', icon: 'i-lucide-spell-check', change: 'Fix spelling, grammar and punctuation only. Change nothing else: keep the wording, tone and length.' }
+  { label: 'More formal', icon: 'i-lucide-briefcase', change: 'Make the tone more formal and professional. Keep the content the same.' }
 ]
+
+/**
+ * Corrections as a plain rewrite, for a reply when only a key saved on the
+ * server is there. With this computer's AI they come as a preview to accept
+ * instead (useAiWriting().proofread)
+ */
+export const GRAMMAR_EDIT = { label: 'Fix spelling and grammar', icon: 'i-lucide-spell-check', change: 'Fix spelling, grammar and punctuation only. Change nothing else: keep the wording, tone and length.' }
 
 export const QUICK_EDITS = [
   { label: 'Shorter', icon: 'i-lucide-minimize-2', change: 'Make it noticeably shorter.' },

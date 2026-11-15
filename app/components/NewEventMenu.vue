@@ -6,6 +6,10 @@ const props = defineProps<{
 }>()
 
 const { createAtAnchor, createFromQuick } = useEventDraft()
+const { view, pathFor } = useCalendar()
+const { addEvent } = useCalendarEvents()
+const { revealEvent } = useEventEditor()
+const aiQuick = useAiQuickEvent()
 
 const open = ref(false)
 const text = ref('')
@@ -35,6 +39,64 @@ function handOff(create: () => Promise<void>) {
   return create()
 }
 
+// With AI on, the phrase is read for a preview first and nothing is drawn
+// until Create or Edit. The phrase it was read from, so a second Enter on
+// the same words creates what the preview says
+const readText = ref('')
+
+watch(open, (value) => {
+  if (!value) {
+    aiQuick.reset()
+    readText.value = ''
+  }
+})
+
+async function onAiSubmit(phrase: string) {
+  if (aiQuick.plan.value && readText.value === phrase && aiQuick.state.value !== 'reading') {
+    await onCreate()
+    return
+  }
+
+  readText.value = phrase
+  await aiQuick.read(phrase)
+}
+
+// Saved as it reads, then shown on its day with its form open, the way an
+// event clicked on the grid opens. Handed off like a draft, so the focus goes
+// to that form rather than back to the button
+async function onCreate() {
+  aiQuick.cancel()
+  const event = aiQuick.toEvent()
+  if (!event) return
+
+  addEvent(event)
+  announce(`${event.title} added, ${formatSpokenDate(new Date(event.start))}${event.allDay ? '' : ` at ${formatTime(new Date(event.start))}`}`)
+  text.value = ''
+  readText.value = ''
+  aiQuick.reset()
+  await handOff(async () => {
+    await navigateTo(pathFor(toCalendarDate(new Date(event.start)), view.value === 'year' ? 'month' : view.value))
+    revealEvent(event.id)
+  })
+}
+
+async function onEdit() {
+  aiQuick.cancel()
+  const plan = aiQuick.plan.value
+  if (!plan) return
+
+  const phrase = readText.value
+  text.value = ''
+  readText.value = ''
+  aiQuick.reset()
+  await handOff(() => createFromQuick(plan, phrase))
+}
+
+function onDismiss() {
+  aiQuick.reset()
+  readText.value = ''
+}
+
 // The model reads the phrase in the browser, and is a download the first time
 // it does: the input holds on with a spinner until it has, and only then
 // steps aside for the ghost
@@ -42,6 +104,10 @@ async function onSubmit() {
   const phrase = text.value.trim()
   if (!phrase || loading.value) {
     return
+  }
+
+  if (aiQuick.on.value) {
+    return onAiSubmit(phrase)
   }
 
   loading.value = true
@@ -100,14 +166,41 @@ async function onSubmit() {
         >
           <UInput
             v-model="text"
-            placeholder="Movie at 7pm on Friday"
-            :loading="loading"
-            :maxlength="100"
+            :placeholder="aiQuick.on.value ? 'Lunch with Ana Thursday at 1' : 'Movie at 7pm on Friday'"
+            :loading="loading || aiQuick.state.value === 'reading'"
+            :maxlength="aiQuick.on.value ? 300 : 100"
             autofocus
             class="w-full"
           />
+          <template
+            v-if="aiQuick.on.value && !aiQuick.plan.value"
+            #help
+          >
+            <span class="flex items-center gap-1 text-xs text-muted">
+              <UIcon
+                name="i-lucide-sparkles"
+                class="size-3 text-(--lb-ai)"
+                aria-hidden="true"
+              />
+              Press Enter to read it with AI
+            </span>
+          </template>
         </UFormField>
       </form>
+
+      <Transition name="lb-fade">
+        <CalendarAiQuickPreview
+          v-if="aiQuick.plan.value"
+          :preview="aiQuick.preview.value"
+          :state="aiQuick.state.value"
+          :note="aiQuick.note.value"
+          :reminder="aiQuick.plan.value.reminder"
+          class="mx-1 mb-1"
+          @create="onCreate"
+          @edit="onEdit"
+          @dismiss="onDismiss"
+        />
+      </Transition>
     </template>
   </UPopover>
 </template>

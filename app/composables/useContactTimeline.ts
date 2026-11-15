@@ -11,6 +11,42 @@ const MAX_EVENTS = 4
 // A contact with a dozen addresses would be a dozen pairs of searches
 const MAX_ADDRESSES = 3
 
+async function page(query: Record<string, string>): Promise<MessageSummary[]> {
+  try {
+    return (await $fetch<MessagePage>('/api/messages', { query })).messages
+  } catch {
+    // One folder that does not answer should not hide the other
+    return []
+  }
+}
+
+/**
+ * The newest mail between you and one person, both ways: their messages in
+ * the Inbox and yours to them in Sent. The timeline, meeting prep and the
+ * relationship summary all read it this way
+ */
+export async function mailWith(emails: string[], folders: Folder[], limit: number): Promise<TimelineMessage[]> {
+  const addresses = emails.slice(0, MAX_ADDRESSES)
+  if (!addresses.length) return []
+
+  const inbox = folders.find(folder => folder.role === 'inbox')?.path ?? 'INBOX'
+  const sent = folders.find(folder => folder.role === 'sent')?.path
+
+  const [received, written] = await Promise.all([
+    Promise.all(addresses.map(address => page({ folder: inbox, from: address }))),
+    Promise.all(sent ? addresses.map(address => page({ folder: sent, q: address })) : [])
+  ])
+
+  // An address searched twice, or a message matching two addresses, counts once
+  const merged = new Map<string, TimelineMessage>()
+  for (const message of received.flat()) merged.set(`${message.folder}:${message.id}`, { message, direction: 'received' })
+  for (const message of written.flat()) merged.set(`${message.folder}:${message.id}`, { message, direction: 'sent' })
+
+  return [...merged.values()]
+    .sort((a, b) => new Date(b.message.date).getTime() - new Date(a.message.date).getTime())
+    .slice(0, limit)
+}
+
 /**
  * What has passed between you and one person lately: the mail in both
  * directions, and the events that name them. Fetched when a contact is
@@ -26,18 +62,9 @@ export function useContactTimeline(contact: MaybeRefOrGetter<Contact>) {
   // The newest answer wins: a search for the contact left behind may land late
   let run = 0
 
-  async function page(query: Record<string, string>): Promise<MessageSummary[]> {
-    try {
-      return (await $fetch<MessagePage>('/api/messages', { query })).messages
-    } catch {
-      // One folder that does not answer should not hide the other
-      return []
-    }
-  }
-
   async function load() {
     const current = ++run
-    const addresses = toValue(contact).emails.slice(0, MAX_ADDRESSES)
+    const addresses = toValue(contact).emails
 
     if (!addresses.length) {
       messages.value = []
@@ -46,25 +73,9 @@ export function useContactTimeline(contact: MaybeRefOrGetter<Contact>) {
     }
 
     loading.value = true
-
-    const inbox = folders.value.find(folder => folder.role === 'inbox')?.path ?? 'INBOX'
-    const sent = folders.value.find(folder => folder.role === 'sent')?.path
-
-    const [received, written] = await Promise.all([
-      Promise.all(addresses.map(address => page({ folder: inbox, from: address }))),
-      Promise.all(sent ? addresses.map(address => page({ folder: sent, q: address })) : [])
-    ])
-
+    const found = await mailWith(addresses, folders.value, MAX_MESSAGES)
     if (current !== run) return
-
-    // An address searched twice, or a message matching two addresses, counts once
-    const merged = new Map<string, TimelineMessage>()
-    for (const message of received.flat()) merged.set(`${message.folder}:${message.id}`, { message, direction: 'received' })
-    for (const message of written.flat()) merged.set(`${message.folder}:${message.id}`, { message, direction: 'sent' })
-
-    messages.value = [...merged.values()]
-      .sort((a, b) => new Date(b.message.date).getTime() - new Date(a.message.date).getTime())
-      .slice(0, MAX_MESSAGES)
+    messages.value = found
     loading.value = false
   }
 

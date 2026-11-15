@@ -6,7 +6,21 @@ const { draft, isDirty, editor, discard, close, attach } = useComposer()
 const { writing } = useAiReply()
 const { translating, fallback, run: translateReply } = useReplyTranslation()
 const { ready: aiReady } = useAi()
+const client = useAiClient()
+const aiWriting = useAiWriting()
 const tools = useComposerTools()
+
+// Tone works on replies through AI Reply (it reads the original), and on
+// new messages through this computer's AI
+const canTone = computed(() => draft.value.replyingTo ? aiReady.value : client.enabled('proofread'))
+const canDraft = computed(() => !draft.value.replyingTo && client.enabled('draft'))
+// Worth advertising before a key is saved, in the desktop app only (where AI runs)
+const draftNeedsKey = computed(() => !draft.value.replyingTo && !!client.bridge && !client.available.value)
+const aiBusy = computed(() => writing.value || !!aiWriting.busy.value)
+
+function openAiDraft() {
+  tools.aiDraft.value = !tools.aiDraft.value
+}
 
 const editorEl = useTemplateRef('editorEl')
 watchEffect(() => {
@@ -16,8 +30,9 @@ watchEffect(() => {
 const drop = useComposerDrop(() => editor.value)
 const picker = useTemplateRef('picker')
 const imagePicker = useTemplateRef('imagePicker')
-// Made once: the editor reads its extensions when it is created
-const extensions = composerExtensions()
+// Made once: the editor reads its extensions when it is created. Ghost
+// text is among them; it asks whether it is switched on each time
+const extensions = [...composerExtensions(), useAiAutocomplete()]
 
 watch(() => tools.pickFiles.value, () => picker.value?.click())
 watch(() => tools.pickImage.value, () => imagePicker.value?.click())
@@ -40,16 +55,18 @@ async function pickedImages(event: Event) {
 
 // Slash commands: "/" at the start of a line or after a space lists what the
 // composer can do, narrowed as you type. Only what applies to this message is offered
-type SlashCommand = 'template' | 'sign' | 'translate' | 'later' | 'tone' | 'attach' | 'focus' | 'emoji' | 'table' | 'image' | 'code'
+type SlashCommand = 'template' | 'sign' | 'translate' | 'later' | 'draft' | 'tone' | 'proofread' | 'attach' | 'focus' | 'emoji' | 'table' | 'image' | 'code'
 type SlashItem = EditorSuggestionMenuItem & { command?: SlashCommand }
 
 const slashItems = computed<SlashItem[]>(() => {
   const item = (command: SlashCommand, label: string, description: string, icon: string): SlashItem => ({ kind: 'slash', command, label, description, icon } as SlashItem)
   const items = [item('template', '/template', 'Insert a saved template', 'i-lucide-file-text')]
+  if (canDraft.value) items.unshift(item('draft', '/draft', 'Draft the message with AI from a few words', 'i-lucide-sparkles'))
   items.push(item('sign', '/sign', 'Choose a signature, or none', 'i-lucide-signature'))
   if (aiReady.value && draft.value.translateTo) items.push(item('translate', '/translate', `Translate your reply into ${languageName(draft.value.translateTo)}`, 'i-lucide-languages'))
   items.push(item('later', '/later', 'Choose when this goes out', 'i-lucide-calendar-clock'))
-  if (aiReady.value && draft.value.replyingTo) items.push(item('tone', '/tone', 'Rewrite your reply with AI', 'i-lucide-wand-sparkles'))
+  if (canTone.value) items.push(item('tone', '/tone', draft.value.replyingTo ? 'Rewrite your reply with AI' : 'Rewrite your message with AI', 'i-lucide-wand-sparkles'))
+  if (client.enabled('proofread')) items.push(item('proofread', '/proofread', 'Fix spelling and grammar', 'i-lucide-spell-check'))
   items.push(
     item('attach', '/attach', 'Attach files', 'i-lucide-paperclip'),
     item('focus', '/focus', tools.zen.value ? 'Leave distraction-free writing' : 'Distraction-free writing', 'i-lucide-maximize'),
@@ -66,7 +83,9 @@ function runSlash(command?: SlashCommand) {
   else if (command === 'sign') tools.signature.value = true
   else if (command === 'translate') translateReply()
   else if (command === 'later') tools.later.value = true
+  else if (command === 'draft') tools.aiDraft.value = true
   else if (command === 'tone') tools.tone.value = true
+  else if (command === 'proofread') aiWriting.proofread()
   else if (command === 'attach') picker.value?.click()
   else if (command === 'focus') tools.zen.value = !tools.zen.value
   else if (command === 'emoji') {
@@ -120,7 +139,7 @@ const body = () => document.body
       :handlers="handlers"
       aria-label="Message"
       class="lb-composer-editor flex min-h-0 flex-1 flex-col overflow-y-auto"
-      :class="[writing && 'lb-ai-writing', translating && fallback && 'lb-tr-editing']"
+      :class="[aiBusy && 'lb-ai-writing', translating && fallback && 'lb-tr-editing']"
       :ui="{ content: 'order-1 px-5 pt-3 pb-5', base: 'px-0 sm:px-0 min-h-24 text-[15px] leading-normal text-default *:my-0 [&_p]:leading-normal [&_li]:my-0 [&_:is(ul,ol,blockquote,pre,table)]:my-2' }"
     >
       <UEditorSuggestionMenu
@@ -173,7 +192,25 @@ const body = () => document.body
         <MailComposerSignature />
         <MailReceiptToggle />
         <MailComposerTemplates />
-        <MailComposerTone v-if="aiReady" />
+        <MailComposerTone v-if="canTone" />
+        <UTooltip
+          v-if="canDraft || draftNeedsKey"
+          :text="draftNeedsKey ? 'Add an AI key in Settings → AI to draft with AI' : 'Draft with AI'"
+        >
+          <!-- A disabled button gets no hover, so the tooltip sits on this wrapper -->
+          <span class="inline-flex">
+            <UButton
+              icon="i-lucide-sparkles"
+              color="neutral"
+              variant="ghost"
+              aria-label="Draft with AI"
+              :aria-expanded="tools.aiDraft.value"
+              :disabled="draftNeedsKey || aiBusy"
+              :class="tools.aiDraft.value && 'text-(--lb-ai)'"
+              @click="openAiDraft"
+            />
+          </span>
+        </UTooltip>
         <input
           ref="picker"
           type="file"

@@ -24,70 +24,104 @@ function write() {
 function add() {
   openCreate({ name: props.person.name || '', emails: [props.person.address] })
 }
+
+// The AI's few sentences on this person, opened under the row
+const ai = useAiClient()
+const summarising = ref(false)
+const relationshipPerson = computed(() => ({ name: name.value, emails: contact.value?.emails.length ? contact.value.emails : [props.person.address] }))
+const summaryId = useId()
 </script>
 
 <template>
-  <li class="group flex items-center gap-3 rounded-md px-2 py-1.5 hover:bg-elevated/50">
-    <SenderAvatar
-      :address="{ name, address: person.address }"
-      size="sm"
-    />
-    <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-      <div class="flex min-w-0 items-baseline gap-2">
-        <NuxtLink
-          v-if="contact"
-          :to="{ path: '/contacts', query: { c: contact.id } }"
-          class="lb-focus truncate rounded-sm text-sm font-medium text-highlighted underline-offset-2 hover:underline"
-        >{{ name }}</NuxtLink>
-        <span
-          v-else
-          class="truncate text-sm font-medium text-highlighted"
-        >{{ name }}</span>
-        <span
-          v-if="name !== person.address"
-          class="hidden truncate text-xs text-muted xl:inline"
-        >{{ person.address }}</span>
+  <li class="flex flex-col">
+    <div class="group flex items-center gap-3 rounded-md px-2 py-1.5 hover:bg-elevated/50">
+      <SenderAvatar
+        :address="{ name, address: person.address }"
+        size="sm"
+      />
+      <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+        <div class="flex min-w-0 items-baseline gap-2">
+          <NuxtLink
+            v-if="contact"
+            :to="{ path: '/contacts', query: { c: contact.id } }"
+            class="lb-focus truncate rounded-sm text-sm font-medium text-highlighted underline-offset-2 hover:underline"
+          >{{ name }}</NuxtLink>
+          <span
+            v-else
+            class="truncate text-sm font-medium text-highlighted"
+          >{{ name }}</span>
+          <span
+            v-if="name !== person.address"
+            class="hidden truncate text-xs text-muted xl:inline"
+          >{{ person.address }}</span>
+        </div>
+        <p class="truncate text-xs text-muted">
+          {{ detail }}
+        </p>
+        <!-- The bar repeats the numbers in the line above: never the only place they are -->
+        <div
+          v-if="bar"
+          class="mt-0.5 flex h-1.5 overflow-hidden rounded-full bg-elevated"
+          :style="{ width: `${Math.max(8, person.total / bar.max * 100)}%` }"
+          data-contact-bar
+          aria-hidden="true"
+        >
+          <span
+            class="h-full bg-(--ui-primary)"
+            :style="{ width: `${person.received / person.total * 100}%` }"
+          />
+          <span
+            class="h-full bg-(--ui-color-neutral-400) dark:bg-(--ui-color-neutral-500)"
+            :style="{ width: `${person.sent / person.total * 100}%` }"
+          />
+        </div>
       </div>
-      <p class="truncate text-xs text-muted">
-        {{ detail }}
-      </p>
-      <!-- The bar repeats the numbers in the line above: never the only place they are -->
+      <div class="flex shrink-0 items-center gap-1">
+        <UButton
+          v-if="ai.enabled('relationship')"
+          :icon="summarising ? 'i-lucide-chevron-up' : 'i-lucide-sparkles'"
+          label="Summarise"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          :aria-label="`Summarise your mail with ${name}`"
+          :aria-expanded="summarising"
+          :aria-controls="summarising ? summaryId : undefined"
+          :ui="{ leadingIcon: summarising ? undefined : 'text-(--lb-ai)' }"
+          @click="summarising = !summarising"
+        />
+        <UButton
+          v-if="!contact && books.length"
+          label="Add to contacts"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          :aria-label="`Add ${name} to contacts`"
+          @click="add"
+        />
+        <UButton
+          icon="i-lucide-square-pen"
+          label="Write"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          :aria-label="`Write to ${name}`"
+          @click="write"
+        />
+      </div>
+    </div>
+    <Transition name="lb-collapse">
       <div
-        v-if="bar"
-        class="mt-0.5 flex h-1.5 overflow-hidden rounded-full bg-elevated"
-        :style="{ width: `${Math.max(8, person.total / bar.max * 100)}%` }"
-        data-contact-bar
-        aria-hidden="true"
+        v-if="summarising"
+        :id="summaryId"
       >
-        <span
-          class="h-full bg-(--ui-primary)"
-          :style="{ width: `${person.received / person.total * 100}%` }"
-        />
-        <span
-          class="h-full bg-(--ui-color-neutral-400) dark:bg-(--ui-color-neutral-500)"
-          :style="{ width: `${person.sent / person.total * 100}%` }"
-        />
+        <div class="ps-11 pe-2 pt-0.5 pb-2">
+          <ContactsRelationshipSummary
+            :person="relationshipPerson"
+            immediate
+          />
+        </div>
       </div>
-    </div>
-    <div class="flex shrink-0 items-center gap-1">
-      <UButton
-        v-if="!contact && books.length"
-        label="Add to contacts"
-        color="neutral"
-        variant="ghost"
-        size="xs"
-        :aria-label="`Add ${name} to contacts`"
-        @click="add"
-      />
-      <UButton
-        icon="i-lucide-square-pen"
-        label="Write"
-        color="neutral"
-        variant="ghost"
-        size="xs"
-        :aria-label="`Write to ${name}`"
-        @click="write"
-      />
-    </div>
+    </Transition>
   </li>
 </template>

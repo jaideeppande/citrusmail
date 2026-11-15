@@ -99,6 +99,70 @@ async function openContact(contact: Contact) {
 
 const text = ref('')
 const adding = ref(false)
+const aiQuick = useAiQuickEvent()
+const mailEvent = useMailEvent()
+// The phrase the preview was read from: Enter again on the same words creates it
+const readText = ref('')
+
+function added(event: CalendarEvent) {
+  const start = new Date(event.start)
+  const end = new Date(event.end)
+  toast.add({
+    title: `Added “${event.title}”`,
+    description: event.allDay ? format(start, 'EEEE d MMMM') : `${format(start, 'EEEE d MMMM')}, ${formatTime(start)} – ${formatTime(end)}`,
+    icon: 'i-lucide-calendar-check',
+    actions: [{ label: 'Open', color: 'neutral', variant: 'outline', onClick: () => openEvent(event) }]
+  })
+}
+
+function onAiCreate() {
+  aiQuick.cancel()
+  const event = aiQuick.toEvent()
+  if (!event) return
+  addEvent(event)
+  tellWindows({ type: 'events:changed' })
+  announce(`${event.title} added`)
+  text.value = ''
+  readText.value = ''
+  aiQuick.reset()
+  added(event)
+}
+
+// The event form, with what was read filled in, over the panel
+function onAiEdit() {
+  aiQuick.cancel()
+  const plan = aiQuick.plan.value
+  if (!plan) return
+  const filled = aiQuick.state.value === 'ai'
+  mailEvent.open({ title: plan.title, description: plan.description, start: plan.start, end: plan.end, allDay: plan.allDay }, { calendarId: plan.calendarId ?? defaultCalendarId(), filled })
+  text.value = ''
+  readText.value = ''
+  aiQuick.reset()
+}
+
+function onAiDismiss() {
+  aiQuick.reset()
+  readText.value = ''
+}
+
+// Typing something else takes the old preview away
+watch(text, (value) => {
+  if (aiQuick.plan.value && value.trim() !== readText.value) onAiDismiss()
+})
+
+/* Meeting prep ------------------------------------------------------- */
+
+const ai = useAiClient()
+const prepFor = ref<string>()
+const prepAvailable = computed(() => ai.enabled('meeting-prep'))
+const canPrep = (item: AgendaItem) => prepAvailable.value && item.state !== 'past' && canPrepare(item.event)
+
+// Closing the brief puts the focus back on its button
+async function closePrep(id: string) {
+  prepFor.value = undefined
+  await nextTick()
+  document.querySelector<HTMLElement>(`[data-prep-id="${CSS.escape(id)}"]`)?.focus()
+}
 
 // The same reading of a phrase the calendar's quick event gives, saved
 // straight away rather than drawn on a grid: the panel is over some other
@@ -106,6 +170,17 @@ const adding = ref(false)
 async function onQuickAdd() {
   const phrase = text.value.trim()
   if (!phrase || adding.value || !calendars.value.length) {
+    return
+  }
+
+  // With AI on, a preview first, then Create or Edit
+  if (aiQuick.on.value) {
+    if (aiQuick.plan.value && readText.value === phrase && aiQuick.state.value !== 'reading') {
+      onAiCreate()
+      return
+    }
+    readText.value = phrase
+    await aiQuick.read(phrase)
     return
   }
 
@@ -131,13 +206,7 @@ async function onQuickAdd() {
 
     addEvent(event)
     text.value = ''
-
-    toast.add({
-      title: `Added “${event.title}”`,
-      description: quick?.allDay ? format(start, 'EEEE d MMMM') : `${format(start, 'EEEE d MMMM')}, ${formatTime(start)} – ${formatTime(end)}`,
-      icon: 'i-lucide-calendar-check',
-      actions: [{ label: 'Open', color: 'neutral', variant: 'outline', onClick: () => openEvent(event) }]
-    })
+    added(event)
   } finally {
     adding.value = false
   }
@@ -145,6 +214,8 @@ async function onQuickAdd() {
 </script>
 
 <template>
+  <TodayPanelBriefing @navigate="emit('navigate')" />
+
   <AppEmpty
     v-if="!hasCalendar"
     illustration="no-calendar"
@@ -163,17 +234,30 @@ async function onQuickAdd() {
     >
       <UInput
         v-model="text"
-        icon="i-lucide-plus"
+        :icon="aiQuick.on.value ? 'i-lucide-sparkles' : 'i-lucide-plus'"
         placeholder="Lunch with Ana at 1pm"
-        aria-label="Add an event"
+        :aria-label="aiQuick.on.value ? 'Add an event, read with AI when you press Enter' : 'Add an event'"
         variant="soft"
-        :loading="adding"
+        :loading="adding || aiQuick.state.value === 'reading'"
         :disabled="!calendars.length"
-        :maxlength="100"
+        :maxlength="aiQuick.on.value ? 300 : 100"
         autofocus
         class="w-full"
-        :ui="{ base: 'bg-(--control-bg)' }"
+        :ui="{ base: 'bg-(--control-bg)', leadingIcon: aiQuick.on.value ? 'text-(--lb-ai)' : undefined }"
       />
+      <Transition name="lb-fade">
+        <CalendarAiQuickPreview
+          v-if="aiQuick.plan.value"
+          :preview="aiQuick.preview.value"
+          :state="aiQuick.state.value"
+          :note="aiQuick.note.value"
+          :reminder="aiQuick.plan.value.reminder"
+          class="mt-1.5"
+          @create="onAiCreate"
+          @edit="onAiEdit"
+          @dismiss="onAiDismiss"
+        />
+      </Transition>
     </form>
 
     <section
@@ -218,12 +302,42 @@ async function onQuickAdd() {
         tag="div"
         class="relative flex flex-col gap-0.5"
       >
-        <TodayPanelEvent
+        <div
           v-for="item in section.items"
           :key="item.event.id"
-          :item="item"
-          @open="openEvent(item.event)"
-        />
+          class="group/row flex flex-col gap-1"
+        >
+          <div class="relative">
+            <TodayPanelEvent
+              :item="item"
+              @open="openEvent(item.event)"
+            />
+            <UButton
+              v-if="canPrep(item) && prepFor !== item.event.id"
+              label="Prep"
+              icon="i-lucide-sparkles"
+              color="neutral"
+              variant="soft"
+              size="xs"
+              :data-prep-id="item.event.id"
+              :aria-label="`Prepare for ${item.event.title}`"
+              class="pointer-events-none absolute end-1.5 top-1/2 -translate-y-1/2 opacity-0 transition-opacity duration-(--lb-dur-1) group-hover/row:pointer-events-auto group-hover/row:opacity-100 focus-visible:opacity-100"
+              :ui="{ leadingIcon: 'text-(--lb-ai)' }"
+              @click="prepFor = item.event.id"
+            />
+          </div>
+          <div
+            v-if="prepFor === item.event.id"
+            class="ms-2"
+          >
+            <CalendarMeetingPrep
+              :event="item.event"
+              immediate
+              @navigate="emit('navigate')"
+              @close="closePrep(item.event.id)"
+            />
+          </div>
+        </div>
       </TransitionGroup>
     </section>
   </template>
