@@ -26,11 +26,14 @@ const _useAiBriefing = () => {
   const { folders } = useMail()
   const { eventsForDay, ensureRange, isRangePending } = useCalendarEvents()
   const prefs = usePrefs()
+  const priority = useAiPriority()
 
   const stored = useAccountPref<StoredBriefing | null>('ai-briefing', () => null)
   const on = computed(() => ai.enabled('briefing'))
   const busy = ref(false)
   const error = ref('')
+  /** The day an attempt failed: the panel doesn't try again on its own that day */
+  let failedOn = ''
   let controller: AbortController | undefined
 
   const today = () => isoDate(new Date())
@@ -65,9 +68,29 @@ const _useAiBriefing = () => {
       : []
 
     const self = [account.value?.email ?? '', ...(account.value?.mailboxes?.map(mailbox => mailbox.email) ?? [])].filter(Boolean)
+    const fresh = (message: MessageSummary) => Date.parse(message.date) >= since
+
+    // With the priority inbox on, its verdicts pick the mail: what it says
+    // needs you, read or not, and anything unread it hasn't looked at yet
+    let mail = unread.filter(fresh)
+    let verdicts: BriefingInput['verdicts']
+    if (priority.on.value) {
+      const unreadKeys = new Set(unread.map(labelKey))
+      const merged = [...new Map([...recent, ...unread].map(message => [labelKey(message), message])).values()]
+        .filter(fresh)
+        .filter((message) => {
+          const verdict = priority.of(message)
+          return verdict ? needsReader(verdict.kind) : unreadKeys.has(labelKey(message))
+        })
+        .sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
+      mail = merged
+      verdicts = merged.slice(0, MAX_MAIL).map(message => priority.of(message))
+    }
+
     return {
       now,
-      mail: unread.filter(message => Date.parse(message.date) >= since).slice(0, MAX_MAIL),
+      mail: mail.slice(0, MAX_MAIL),
+      verdicts,
       waiting: waitingOnOthers(written, recent, { self, days: prefs.value.nudgeDays || 2, now: now.getTime() }),
       events
     }
@@ -109,6 +132,7 @@ const _useAiBriefing = () => {
       error.value = (failure as AiError).code === 'limit'
         ? 'Today’s AI limit is reached. Raise it in Settings → AI.'
         : (failure as Error).message || 'The briefing couldn’t be written.'
+      failedOn = today()
       announce('The briefing couldn’t be written', true)
     } finally {
       if (controller === mine) {
@@ -120,7 +144,7 @@ const _useAiBriefing = () => {
 
   /** The panel opened: the day's briefing, if it isn't written yet and the morning has begun */
   function ensureToday() {
-    if (!on.value || current.value || busy.value || error.value) return
+    if (!on.value || current.value || busy.value || failedOn === today()) return
     if (new Date().getHours() < MORNING) return
     generate(true)
   }

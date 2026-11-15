@@ -120,7 +120,6 @@ function onAiCreate() {
   const event = aiQuick.toEvent()
   if (!event) return
   addEvent(event)
-  tellWindows({ type: 'events:changed' })
   announce(`${event.title} added`)
   text.value = ''
   readText.value = ''
@@ -140,9 +139,11 @@ function onAiEdit() {
   aiQuick.reset()
 }
 
-function onAiDismiss() {
+const quickForm = useTemplateRef('quickForm')
+function onAiDismiss(refocus = false) {
   aiQuick.reset()
   readText.value = ''
+  if (refocus) quickForm.value?.querySelector('input')?.focus()
 }
 
 // Typing something else takes the old preview away
@@ -228,6 +229,7 @@ async function onQuickAdd() {
 
   <template v-else>
     <form
+      ref="quickForm"
       class="lb-stagger"
       :style="{ '--lb-i': 0 }"
       @submit.prevent="onQuickAdd"
@@ -255,7 +257,7 @@ async function onQuickAdd() {
           class="mt-1.5"
           @create="onAiCreate"
           @edit="onAiEdit"
-          @dismiss="onAiDismiss"
+          @dismiss="onAiDismiss(true)"
         />
       </Transition>
     </form>

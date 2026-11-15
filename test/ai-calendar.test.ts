@@ -194,6 +194,12 @@ describe('daily briefing', () => {
     expect(briefingPrompt({ now, mail: [], waiting: [], events: [] })).toContain('New mail:\nnone')
   })
 
+  it('tags mail with the priority inbox’s verdict when there is one', () => {
+    const prompt = briefingPrompt({ now, mail, verdicts: [{ kind: 'reply', reason: 'Asks you to sign' }, undefined], waiting: [], events: [] })
+    expect(prompt).toContain('m1. [reply: Asks you to sign] 2026-11-15 08:00')
+    expect(prompt).toContain('m2. 2026-11-15 08:00')
+  })
+
   it('ties bullets to what their id names, and drops ids that name nothing', () => {
     const answer = briefingSchema.parse({ bullets: [
       { text: '- **Ana** wants the contract signed by Friday.', ref: 'm1' },

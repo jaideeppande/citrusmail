@@ -92,9 +92,12 @@ async function onEdit() {
   await handOff(() => createFromQuick(plan, phrase))
 }
 
+// The preview goes, and the focus goes back to the words it came from
+const quickForm = useTemplateRef('quickForm')
 function onDismiss() {
   aiQuick.reset()
   readText.value = ''
+  quickForm.value?.querySelector('input')?.focus()
 }
 
 // The model reads the phrase in the browser, and is a download the first time
@@ -159,7 +162,10 @@ async function onSubmit() {
 
       <USeparator class="my-2" />
 
-      <form @submit.prevent="onSubmit">
+      <form
+        ref="quickForm"
+        @submit.prevent="onSubmit"
+      >
         <UFormField
           label="Create quick event"
           class="px-1 pb-1"

@@ -47,9 +47,11 @@ export function useAiQuickEvent() {
     const mine = new AbortController()
     controller = mine
     note.value = ''
-    plan.value = rulesPlan(await parseQuickEvent(phrase), phrase)
-    if (mine.signal.aborted) return
     state.value = 'reading'
+    // The quick reading first, shown while the AI works on it
+    const quick = await parseQuickEvent(phrase)
+    if (mine.signal.aborted) return
+    plan.value = rulesPlan(quick, phrase)
     const now = new Date()
     try {
       const answer = await ai.json({
@@ -81,7 +83,7 @@ export function useAiQuickEvent() {
   function cancel() {
     controller?.abort()
     controller = undefined
-    if (state.value === 'reading') state.value = 'rules'
+    if (state.value === 'reading') state.value = plan.value ? 'rules' : 'idle'
   }
 
   function reset() {
