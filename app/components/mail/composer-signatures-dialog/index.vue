@@ -121,12 +121,11 @@ function drop() {
             </UEditor>
           </div>
         </div>
-        <UEmpty
+        <AppEmpty
           v-else
-          icon="i-lucide-signature"
+          illustration="empty-folder"
           title="No other signatures yet"
           description="Add one for replies, a team or a language, and pick it as you write."
-          variant="naked"
           class="flex-1"
           :actions="[{ label: 'New signature', icon: 'i-lucide-plus', onClick: create }]"
         />

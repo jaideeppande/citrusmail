@@ -538,6 +538,8 @@ const _useComposer = () => {
     } catch (error) {
       const message = (error as { data?: { message?: string } }).data?.message
       toast.add({ title: scheduled ? 'Message not scheduled' : 'Message not sent', description: message ?? 'Check your connection and try again.', color: 'error', icon: 'i-lucide-circle-alert' })
+      // Kept in the notification centre too, so a send that failed while you looked away isn't missed
+      useNotificationCentre().push({ kind: 'failed', title: scheduled ? 'Message not scheduled' : 'Message not sent', body: `${kept.subject.trim() || '(No subject)'}${message ? ` · ${message}` : ''}`, key: `failed:${kept.id}` })
       announce(scheduled ? 'Message not scheduled' : 'Message not sent', true)
       return false
     } finally {

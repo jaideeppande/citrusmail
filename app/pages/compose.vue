@@ -61,19 +61,17 @@ watch([started, hasDraft, pending], () => {
       v-else-if="started"
       class="lb-in grid flex-1 place-items-center p-8"
     >
-      <UEmpty
+      <AppEmpty
         v-if="pending"
-        icon="i-lucide-send"
+        illustration="welcome"
         title="On its way"
         description="This window closes once it’s done."
-        variant="naked"
       />
-      <UEmpty
+      <AppEmpty
         v-else-if="stayed"
-        icon="i-lucide-check"
+        illustration="all-read"
         title="All done here"
         description="You can close this window."
-        variant="naked"
         :actions="[{ label: 'New message', icon: 'i-lucide-pen-line', onClick: () => compose() }]"
       />
     </div>

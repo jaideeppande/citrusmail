@@ -21,8 +21,9 @@ export const MailImage = Image.extend({
       width: {
         default: null,
         parseHTML: (element: HTMLElement) => {
+          // Pixels only: a width in % or em means nothing to the handles
           const value = element.getAttribute('width') ?? element.style.width
-          const pixels = Number.parseInt(value ?? '', 10)
+          const pixels = /^\s*\d+(\.\d+)?(px)?\s*$/.test(value ?? '') ? Number.parseInt(value!, 10) : Number.NaN
           return Number.isFinite(pixels) && pixels > 0 ? pixels : null
         },
         renderHTML: (attributes: { width?: number | null }) => attributes.width ? { width: attributes.width } : {}

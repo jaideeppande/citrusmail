@@ -120,6 +120,8 @@ const _useMail = () => {
       status.value = 'idle'
       if (reset) {
         cachePage(page)
+        // When people tend to answer you, for the composer's suggested send times
+        useReplyHours().noteIncoming(arrived)
         prefetch(arrived.slice(0, 3).map(message => ({ folder: message.folder, id: message.id })))
       }
     } catch {

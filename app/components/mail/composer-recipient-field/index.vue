@@ -21,6 +21,8 @@ interface Suggestion {
   description?: string
   address: Address
   score: number
+  /** A group of yours: choosing it adds everyone in it */
+  members?: Address[]
 }
 
 // People written to from here, then contacts, then anyone in the loaded
@@ -46,13 +48,30 @@ const suggestions = computed(() => {
   return [...seen.values()].sort((a, b) => b.score - a.score)
 })
 
+// Your groups, offered first while their name is being typed
+const { groupSuggestions } = useContactGroups()
+const groups = computed<Suggestion[]>(() => searchTerm.value.trim()
+  ? groupSuggestions(searchTerm.value).map(item => ({ label: item.label, value: `group:${item.group.id}`, address: { name: item.group.name, address: '' }, score: Infinity, members: item.members }))
+  : [])
+const items = computed(() => [...groups.value, ...suggestions.value])
+
 const selected = computed({
   get: () => model.value.map(address => address.address),
   set: (values: string[]) => {
-    model.value = values.map((value) => {
+    const next: Address[] = []
+    for (const value of values) {
+      const group = groups.value.find(item => item.value === value)
+      if (group) {
+        // Everyone in the group who isn't on the line yet
+        next.push(...group.members!.filter(member => !values.includes(member.address) && !next.some(address => address.address === member.address)))
+        announce(`Added ${group.label}`)
+        searchTerm.value = ''
+        continue
+      }
       const known = model.value.find(address => address.address === value)
-      return known ?? suggestions.value.find(item => item.value === value)?.address ?? { address: value }
-    })
+      next.push(known ?? suggestions.value.find(item => item.value === value)?.address ?? { address: value })
+    }
+    model.value = next
   }
 })
 
@@ -81,7 +100,7 @@ watch(searchTerm, (term) => {
     <UInputMenu
       v-model="selected"
       v-model:search-term="searchTerm"
-      :items="suggestions"
+      :items="items"
       value-key="value"
       :filter-fields="['label', 'value']"
       multiple
@@ -105,7 +124,17 @@ watch(searchTerm, (term) => {
         </span>
       </template>
       <template #item-leading="{ item }">
+        <span
+          v-if="(item as Suggestion).members"
+          class="inline-flex items-center justify-center size-6 rounded-full bg-elevated"
+        >
+          <UIcon
+            name="i-lucide-users"
+            class="size-3.5 text-muted"
+          />
+        </span>
         <SenderAvatar
+          v-else
           :address="(item as { address: Address }).address"
           size="xs"
         />
