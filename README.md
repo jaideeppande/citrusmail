@@ -5,16 +5,20 @@ An open-source mail, calendar and contacts client for any provider, built with [
 ![CitrusMail showing an inbox with a message open](.github/screenshot.webp)
 
 - **Mail** over IMAP, POP3 or [JMAP](#jmap), sending over SMTP (or through the JMAP server)
-- **Calendar** over CalDAV, using the [Nuxt UI calendar template](https://github.com/nuxt-ui-templates/calendar): day, week, month and year views, drag and drop, and quick events
-- **Contacts** over CardDAV
-- **Composer** built on the Nuxt UI `UEditor`, adapted from the [editor template](https://github.com/nuxt-ui-templates/editor), with send later
+- **Calendar** over CalDAV, using the [Nuxt UI calendar template](https://github.com/nuxt-ui-templates/calendar): day, week, month, year and agenda views, drag and drop, quick events, a second time zone and a way to offer free times by mail
+- **Contacts** over CardDAV, with groups, import and export (vCard, CSV) and a view of who you're in touch with
+- **Composer** built on the Nuxt UI `UEditor`, adapted from the [editor template](https://github.com/nuxt-ui-templates/editor), with send later, undo send, several drafts at once, tables, pictures, highlighted code and a distraction-free mode
 - **Read receipts**: Delivered, Opened or Bounced on the messages you track
 - **AI** with your own key for Anthropic (Claude), OpenAI, Google Gemini, xAI Grok or Perplexity: summaries, AI Reply, and questions across your mail
 - **Translation** of messages you receive and replies you write
 - **Signatures** for each mailbox you send from, written in the app or pasted as HTML
 - **Notifications** for new mail, and one-click unsubscribe
 - **Windows and layouts**: any page in a window of its own, a window split into up to four panes, and sets of windows saved under a name ([more](#windows-and-layouts))
-- **Triage** built for the keyboard: conversations, bulk actions, undo, snooze, pins, saved searches, a one-at-a-time triage mode and a command palette on `Ctrl/⌘K`
+- **Triage** built for the keyboard: conversations, bulk actions, undo, snooze, pins, labels, a Later board, search across every folder, a one-at-a-time triage mode and a command palette on `Ctrl/⌘K`
+- **Accessible**: every screen works from the keyboard and with a screen reader, with high-contrast, larger-text and reduced-motion settings
+- **Yours to style**: sixteen ready-made looks and a theme editor with live contrast checks ([THEMING.md](THEMING.md))
+
+A tour of what's there, with pictures: [docs/TOUR.md](docs/TOUR.md).
 
 ## Three ways to use it
 
@@ -170,13 +174,22 @@ Press `?` anywhere in the app to see every shortcut, and `Ctrl/⌘K` to search f
 | `j` / `k` | Next / previous | `g` then `i` `d` `t` | Inbox, Drafts, Sent |
 | `r` / `a` / `f` | Reply / all / forward | `g` then `c` `p` `s` | Calendar, Contacts, Settings |
 | `e` / `#` | Archive / delete | `Shift+O` | Open in a new window |
+| `l` | Label | `Ctrl/⌘Shift+F` | Search every folder |
 | `z` | Undo the last move or delete | `Shift+L` | Next layout |
 | `x` / `Shift+A` | Select / select all | `Shift+F` | Focus mode |
 | `h` / `p` | Snooze / pin to top | `Shift+D` | Today panel |
-| `Shift+T` | Triage mode | `[` | Fold the sidebar |
+| `Shift+T` | Triage mode | `Shift+N` | Notifications |
+| `Ctrl/⌘Shift+D` | Writing mode | `g` then `l` | Later board |
+| `Ctrl/⌘Shift+E` | Emoji | `[` | Fold the sidebar |
 | `⌘↵` | Send | `?` | These shortcuts |
 
-On the calendar: `d` `w` `m` `y` for day, week, month and year, `t` for today, `n` for a new event, `←` / `→` to move.
+On the calendar: `d` `w` `m` `y` `a` for day, week, month, year and agenda, `t` for today, `n` for a new event, `←` / `→` to move. With an event focused, the arrow keys go to the next one and `Alt` with an arrow moves it.
+
+## Accessibility
+
+- **Keyboard.** Everything can be reached and done without a mouse. The first `Tab` offers a link straight past the sidebar; toolbars move with the arrow keys; dialogs and panels keep focus inside while open and give it back when they close. Calendar events can be moved by keyboard, and anything that can be dragged also has a menu.
+- **Screen readers.** Controls are labelled, lists and grids use their proper roles, and what happens is said out loud: "Archived", "3 selected", "Message sent".
+- **Seeing.** Secondary text meets WCAG AA contrast in light and dark. **Settings → Accessibility** adds Increase contrast (or follows the system's), larger text and controls, and less or no motion.
 
 ## Windows and layouts
 
@@ -187,7 +200,7 @@ On the calendar: `d` `w` `m` `y` for day, week, month and year, `t` for today, `
 
 ## Kept on this computer
 
-A mail server has no notion of some of what CitrusMail does, so these are kept in this browser or desktop app, per mailbox, and don't follow you to another device: pins, snoozes (a snoozed message stays in its folder and is only hidden here), saved searches, templates, favourite contacts, window layouts, your own shortcuts, the motion and density choices, do not disturb and VIPs, and the app lock.
+A mail server has no notion of some of what CitrusMail does, so these are kept in this browser or desktop app, per mailbox, and don't follow you to another device: pins, snoozes (a snoozed message stays in its folder and is only hidden here), saved searches, labels, the Later board, the notification history, templates, extra signatures, contact groups, photos and time zones, favourite contacts, window layouts, your own shortcuts, surface colours from the theme editor, the motion, density and contrast choices, do not disturb and VIPs, and the app lock.
 
 Two things work differently from what the words might suggest:
 
