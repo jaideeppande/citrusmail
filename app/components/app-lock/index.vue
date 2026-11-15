@@ -6,7 +6,6 @@ const { config, locked, cooldown, triesLeft, unlock, unlockWithTouchId, reset } 
 const { signOutAll } = useMailboxes()
 const brand = useBrand()
 // Mounted once in every window, so the palette has these wherever it opens
-useAccessibilityCommands()
 
 const sheet = useTemplateRef<HTMLElement>('sheet')
 const pin = ref<number[]>([])

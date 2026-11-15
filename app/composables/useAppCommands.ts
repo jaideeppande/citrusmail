@@ -20,6 +20,9 @@ export function useAppCommands() {
   const themeSchedule = useThemeSchedule()
   const triage = useTriage()
 
+  // Contrast, larger text and the like: Settings → Accessibility in the palette
+  useAccessibilityCommands()
+
   const keys = (id: ShortcutId) => kbds(id).map(value => ({ value, variant: 'soft' as const }))
 
   useCommands((): Group[] => {

@@ -95,9 +95,9 @@ const response = computed(() => data.value?.responseMs === undefined
       <USkeleton class="h-32" />
     </div>
 
-    <UEmpty
+    <AppEmpty
       v-else-if="empty"
-      icon="i-lucide-chart-column"
+      illustration="no-results"
       title="Nothing to count yet"
       description="Once there’s mail in your Inbox and Sent, this page shows how much, when, and from whom."
     />

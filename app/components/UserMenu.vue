@@ -12,6 +12,7 @@ const { account } = useShell()
 const { settings } = useSettings()
 const { others, switchTo, signOutOf, signOutAll, add } = useMailboxes()
 const { waiting } = useNotificationCentre()
+const { accentOf } = useMailboxAccents()
 const newIn = (email: string) => {
   const count = waiting.value[email.toLowerCase()]
   return count ? `${count} new` : undefined
@@ -42,6 +43,9 @@ const items = computed<DropdownMenuItem[][]>(() => [[{
   // Mail that came in there since it was last open, then its address
   description: [newIn(mailbox.email), mailbox.name ? mailbox.email : undefined].filter(Boolean).join(' · ') || undefined,
   avatar: { alt: mailbox.name || mailbox.email, size: '2xs', chip: waiting.value[mailbox.email.toLowerCase()] ? { color: 'primary' as const, size: 'sm' as const } : undefined },
+  // Its own accent, when it has one: you can tell which mailbox you're about to open
+  slot: 'mailbox' as const,
+  accent: accentOf(mailbox.email),
   kbds: index < 3 ? ['ctrl', String(index + 2)] : undefined,
   onSelect: () => switchTo(mailbox.email)
 })), {
@@ -80,6 +84,18 @@ defineShortcuts(Object.fromEntries([0, 1, 2].map(index => [`ctrl_${index + 2}`, 
     :content="{ align: collapsed ? 'start' : 'center', side: collapsed ? 'right' : 'top', collisionPadding: 12 }"
     :ui="{ content: collapsed ? 'min-w-64' : 'w-(--reka-dropdown-menu-trigger-width) min-w-64' }"
   >
+    <template #mailbox-leading="{ item }">
+      <span class="relative flex">
+        <UAvatar v-bind="(item as { avatar: object }).avatar" />
+        <span
+          v-if="(item as { accent?: string }).accent"
+          class="absolute -end-0.5 -bottom-0.5 size-2 rounded-full ring-2 ring-(--ui-bg)"
+          :style="{ background: (item as { accent?: string }).accent }"
+          aria-hidden="true"
+        />
+      </span>
+    </template>
+
     <UButton
       :avatar="{ alt: label, src: settings.avatar, size: 'xs', chip: others.length ? { color: 'neutral', text: String(others.length + 1), size: 'md' } : undefined }"
       :label="collapsed ? undefined : label"

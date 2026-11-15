@@ -20,9 +20,9 @@ onMounted(() => {
       class="h-32"
     />
 
-    <UEmpty
+    <AppEmpty
       v-else-if="!rules.length"
-      icon="i-lucide-list-filter"
+      illustration="empty-folder"
       title="No rules yet"
       description="A rule moves mail out of your Inbox as it arrives, like receipts into a Receipts folder."
       :actions="[{ label: 'New rule', icon: 'i-lucide-plus', onClick: () => edit() }]"
