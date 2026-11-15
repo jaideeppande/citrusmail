@@ -18,6 +18,7 @@ useAppCommands()
 // AI that works on new mail without being asked (each feature registers itself)
 useAiBackground()
 useAiMailWorkers()
+useAiContactWorkers()
 useDesktopSettings().apply()
 
 // The composer page is the whole window: nothing else belongs around it
