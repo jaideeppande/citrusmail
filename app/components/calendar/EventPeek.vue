@@ -14,6 +14,15 @@ const { calendars } = useCalendarEvents()
 const { editingId } = useEventEditor()
 const { draft } = useEventDraft()
 const route = useRoute()
+const { second, local } = useCalendarZones()
+
+// The same span on the second zone's clock, for a timed event
+const secondWhen = computed(() => {
+  const event = peek.value?.event
+  if (!event || event.allDay || !second.value) return ''
+
+  return calZoneSecondRange(new Date(event.start), new Date(event.end), local, second.value)
+})
 
 const calendar = computed(() => calendars.value.find(calendar => calendar.id === peek.value?.event.calendarId))
 
@@ -83,7 +92,7 @@ onUnmounted(hide)
         v-if="peek"
         :key="peek.event.id"
         role="tooltip"
-        class="fixed z-50 pointer-events-none flex flex-col gap-1.5 rounded-md bg-default px-3 py-2.5 text-xs shadow-lg ring ring-default"
+        class="fixed z-50 pointer-events-none flex flex-col gap-1 rounded-md bg-default px-3 py-2.5 text-xs shadow-(--lb-shadow) ring ring-default"
         :style="style"
       >
         <p class="text-sm font-semibold text-highlighted break-words line-clamp-2">
@@ -95,6 +104,16 @@ onUnmounted(hide)
             class="size-3.5 shrink-0 text-dimmed"
           />
           {{ when }}
+        </p>
+        <p
+          v-if="secondWhen"
+          class="flex items-center gap-1.5 text-muted tabular-nums"
+        >
+          <UIcon
+            name="i-lucide-globe"
+            class="size-3.5 shrink-0 text-dimmed"
+          />
+          {{ secondWhen }}
         </p>
         <p
           v-if="calendar"
@@ -110,7 +129,7 @@ onUnmounted(hide)
         </p>
         <p
           v-if="description"
-          class="pt-1.5 border-t border-default text-muted whitespace-pre-line break-words line-clamp-4"
+          class="pt-1 text-muted whitespace-pre-line break-words line-clamp-4"
         >
           {{ description }}
         </p>

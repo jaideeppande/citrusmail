@@ -88,7 +88,7 @@ const tick = (index: number) => (props.days.length - 1 - index) % 7 === 0
     >
       <!-- The scale: its top and zero, nothing between -->
       <div
-        class="flex h-36 w-7 shrink-0 flex-col justify-between text-end text-[11px] leading-none text-dimmed tabular-nums"
+        class="flex h-36 w-7 shrink-0 flex-col justify-between text-end text-[11px] leading-none text-muted tabular-nums"
         aria-hidden="true"
       >
         <span class="-translate-y-1/2">{{ max.toLocaleString() }}</span>
@@ -122,7 +122,7 @@ const tick = (index: number) => (props.days.length - 1 - index) % 7 === 0
           </UTooltip>
         </div>
         <div
-          class="mt-1.5 flex text-[11px] leading-none text-dimmed"
+          class="mt-1.5 flex text-[11px] leading-none text-muted"
           aria-hidden="true"
         >
           <span

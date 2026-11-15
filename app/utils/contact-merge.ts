@@ -41,13 +41,22 @@ export function normalisePhone(phone: string): string {
   return digits.length > 9 ? digits.slice(-9) : digits
 }
 
-function keysOf(contact: Contact): { reason: DuplicateReason, value: string }[] {
+function keysOf(contact: Pick<Contact, 'name' | 'emails' | 'phones'>): { reason: DuplicateReason, value: string }[] {
   const name = normaliseName(contact.name)
   return [
     ...contact.emails.map(email => ({ reason: 'email' as const, value: normaliseEmail(email) })),
     { reason: 'name' as const, value: name },
     ...contact.phones.map(phone => ({ reason: 'phone' as const, value: normalisePhone(phone) }))
   ].filter(key => key.value)
+}
+
+/**
+ * What a contact can be recognised by, as `reason:value` strings: two
+ * contacts sharing one of them look like the same person. An import asks
+ * this of people who are not in the address book yet
+ */
+export function duplicateKeys(contact: Pick<Contact, 'name' | 'emails' | 'phones'>): string[] {
+  return keysOf(contact).map(key => `${key.reason}:${key.value}`)
 }
 
 // How much a contact says, to pick the one worth keeping

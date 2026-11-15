@@ -32,7 +32,7 @@ interface Gesture {
 // the pointer
 const DEFAULT_HOUR = 9
 // What an unnamed draft is called, on the ghost and once it is saved
-export const DEFAULT_TITLE = 'New Event'
+export const DEFAULT_TITLE = 'New event'
 
 const _useEventDraft = () => {
   const { view, date, pathFor } = useCalendar()
@@ -128,10 +128,13 @@ const _useEventDraft = () => {
       return
     }
 
+    const title = draft.value.title || DEFAULT_TITLE
+    announce(`${title} added, ${formatSpokenDate(draft.value.start)}${draft.value.allDay ? '' : ` at ${formatTime(draft.value.start)}`}`)
+
     addEvent({
       id: crypto.randomUUID(),
       calendarId: draft.value.calendarId,
-      title: draft.value.title || DEFAULT_TITLE,
+      title,
       description: draft.value.description || undefined,
       start: toLocalISO(draft.value.start),
       end: toLocalISO(draft.value.end),

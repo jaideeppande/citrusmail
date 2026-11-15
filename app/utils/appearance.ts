@@ -4,10 +4,12 @@ export const APPEARANCE_MODES = [
   { label: 'Light', value: 'light', icon: 'i-lucide-sun' },
   { label: 'Dark', value: 'dark', icon: 'i-lucide-moon' }
 ]
+// Default is the app's own 15px (app.config.ts); every rem scales from it
 export const APPEARANCE_SIZES = [
-  { label: 'Small', value: '15px' },
-  { label: 'Default', value: '16px' },
-  { label: 'Large', value: '17px' }
+  { label: 'Small', value: '14px' },
+  { label: 'Default', value: '15px' },
+  { label: 'Large', value: '16px' },
+  { label: 'Larger', value: '17px' }
 ]
 export const APPEARANCE_CORNERS = [
   { label: 'Square', value: '0rem' },

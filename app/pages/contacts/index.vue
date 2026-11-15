@@ -2,7 +2,7 @@
 useSeoMeta({ title: 'Contacts' })
 
 const { account } = useShell()
-const { selected, selectedId, editorOpen, editing, submit, books, duplicatesOpen, openCreate, contacts, status } = useContactsPage()
+const { selected, selectedId, group, openCreate, contacts, status } = useContactsPage()
 useContactsCommands()
 
 // With nobody in the address book the list already says so and offers the
@@ -19,14 +19,14 @@ const detailOpen = computed({
 </script>
 
 <template>
-  <div class="relative flex-1 flex min-w-0">
+  <div class="relative flex min-w-0 flex-1">
     <ServiceNotConnected
       v-if="!account?.hasContacts"
       class="flex-1"
     />
 
     <template v-else>
-      <ContactsList class="w-full lg:w-80 xl:w-96 shrink-0 lg:border-e border-default" />
+      <ContactsList class="w-full shrink-0 border-default lg:w-80 lg:border-e xl:w-88" />
 
       <template v-if="!isMobile">
         <!-- Keyed by the person, so picking another brings the pane in afresh
@@ -35,13 +35,19 @@ const detailOpen = computed({
           v-if="selected"
           :key="selected.id"
           :contact="selected"
-          class="lb-in-right flex-1 min-w-0"
+          class="lb-in-right min-w-0 flex-1"
+        />
+        <ContactsGroup
+          v-else-if="group"
+          :key="group.id"
+          :group="group"
+          class="lb-in min-w-0 flex-1"
         />
         <UEmpty
           v-else
           icon="i-lucide-contact"
           title="No contact selected"
-          :description="hasContacts ? 'Pick someone from the list to see their details.' : 'Add someone to start your address book.'"
+          :description="hasContacts ? 'Pick someone from the list to see their details.' : 'Add someone, or import an address book from another app.'"
           :actions="[{ label: 'New contact', icon: 'i-lucide-user-plus', color: 'neutral', variant: 'subtle', onClick: () => openCreate() }]"
           variant="naked"
           class="lb-in flex-1"
@@ -63,14 +69,7 @@ const detailOpen = computed({
         </template>
       </USlideover>
 
-      <ContactsEditor
-        v-model:open="editorOpen"
-        :contact="editing"
-        :books="books"
-        @save="submit"
-      />
-
-      <ContactsDuplicates v-model:open="duplicatesOpen" />
+      <ContactsDialogs />
     </template>
   </div>
 </template>

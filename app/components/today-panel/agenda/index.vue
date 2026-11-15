@@ -183,7 +183,7 @@ async function onQuickAdd() {
       :style="{ '--lb-i': sectionIndex + 1 }"
       :aria-label="section.label"
     >
-      <h3 class="px-2 pb-1 text-xs font-semibold text-muted">
+      <h3 class="px-2 pb-0.5 text-xs font-semibold text-muted">
         {{ section.label }}
       </h3>
 
@@ -207,7 +207,7 @@ async function onQuickAdd() {
 
       <p
         v-else-if="!section.items.length"
-        class="px-2 py-1.5 text-sm text-dimmed"
+        class="px-2 py-1.5 text-sm text-muted"
       >
         {{ section.empty }}
       </p>
@@ -248,7 +248,7 @@ async function onQuickAdd() {
         <UIcon
           name="i-lucide-cake"
           class="size-4"
-          :class="birthday.inDays === 0 ? 'text-primary' : 'text-dimmed'"
+          :class="birthday.inDays === 0 ? 'text-primary' : 'text-muted'"
         />
       </span>
       <span class="flex-1 min-w-0 truncate text-sm">

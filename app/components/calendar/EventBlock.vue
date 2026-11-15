@@ -187,14 +187,15 @@ const compact = computed(() => props.positioned.height < 40)
       type="button"
       data-event
       :data-event-id="event.id"
-      class="absolute flex flex-col items-start overflow-hidden rounded-xs px-3 py-1 text-xs text-start select-none touch-none focus-visible:outline-3"
+      class="absolute flex flex-col items-start overflow-hidden rounded-xs ps-3 pe-1.5 py-1 text-xs leading-tight text-start select-none touch-none focus-visible:outline-3"
       :class="[
         eventBlockClasses[color],
         eventOutlineClasses[color],
         dragging ? 'lb-event-lifted z-20' : 'transition-colors z-5'
       ]"
       :style="style"
-      :aria-label="`${event.title}, ${previewTimes}`"
+      :aria-label="eventLabel(event, calendar?.name)"
+      aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight Alt+Shift+ArrowUp Alt+Shift+ArrowDown"
       @click.stop
       @pointerdown="onPointerdown"
       @pointermove="onPointermove"
@@ -206,10 +207,10 @@ const compact = computed(() => props.positioned.height < 40)
         :class="calendarDotClasses[color]"
       />
 
-      <span class="w-full font-medium truncate">{{ event.title }}</span>
+      <span class="w-full font-semibold truncate">{{ event.title }}</span>
       <span
         v-if="!compact || dragging"
-        class="w-full truncate opacity-80 tabular-nums"
+        class="w-full truncate tabular-nums"
       >
         {{ previewTimes }}
       </span>

@@ -10,9 +10,12 @@ const props = withDefaults(defineProps<{
   event: CalendarEvent
   disabled?: boolean
   anchored?: boolean
-}>(), { anchored: true })
+  // The agenda's rows are the width of the page, so its form opens under one
+  side?: 'bottom' | 'right'
+}>(), { anchored: true, side: undefined })
 
 const { formSide } = useCalendar()
+const contentSide = computed(() => props.side ?? formSide.value)
 const { removeEvent, updateEvent } = useCalendarEvents()
 const { editingId, openEvent, closeEvent } = useEventEditor()
 const { rest, hide } = useEventPeek()
@@ -86,6 +89,7 @@ function onUpdateOpen(value: boolean) {
 function onRemove() {
   closeEvent(props.event.id)
   removeEvent(props.event.id)
+  announce(`${props.event.title} deleted`)
 }
 
 const items = computed<ContextMenuItem[]>(() => [{
@@ -132,7 +136,7 @@ const items = computed<ContextMenuItem[]>(() => [{
         <UPopover
           :open="open"
           :ui="{ content: eventFormContentClass }"
-          :content="{ side: formSide }"
+          :content="{ side: contentSide, collisionPadding: 16 }"
           @update:open="onUpdateOpen"
         >
           <slot :open="open" />

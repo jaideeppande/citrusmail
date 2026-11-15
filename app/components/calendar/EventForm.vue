@@ -43,6 +43,7 @@ function onEnter(event: KeyboardEvent) {
 }
 
 const { calendars } = useCalendarEvents()
+const { second, local } = useCalendarZones()
 
 // The form only mounts while its popover is open, so it is what tells
 // `useEventEditor` the event still has somewhere to be edited
@@ -137,6 +138,15 @@ function range(data: FormState): { start: Date, end: Date } | null {
 
   return { start: toDateTime(data.startDate, data.startTime), end: toDateTime(data.endDate, data.endTime) }
 }
+
+// The span as it reads in the second zone, under the times it was set in
+const secondWhen = computed(() => {
+  if (!second.value || state.allDay) return ''
+
+  const period = range(state)
+
+  return period && period.end > period.start ? calZoneSecondRange(period.start, period.end, local, second.value) : ''
+})
 
 let timer: ReturnType<typeof setTimeout> | undefined
 let pending: CalendarEvent | null = null
@@ -269,14 +279,14 @@ watch(
     <!-- The inspector's own shape: a label column stating each field,
       the value beside it as text until it is focused -->
     <div class="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1.5 px-3 py-2 rounded-md bg-(--control-bg)">
-      <span class="text-sm text-muted text-end w-16">All Day:</span>
+      <span class="text-sm text-muted text-end w-16">All day</span>
       <UCheckbox
         v-model="state.allDay"
         aria-label="All day"
         class="justify-self-start"
       />
 
-      <span class="text-sm text-muted text-end w-16">Starts:</span>
+      <span class="text-sm text-muted text-end w-16">Starts</span>
       <!-- The start's own errors (a segment cleared) show here, or Enter fails without a word -->
       <UFormField
         name="startDate"
@@ -322,7 +332,7 @@ watch(
         </div>
       </UFormField>
 
-      <span class="text-sm text-muted text-end w-16">Ends:</span>
+      <span class="text-sm text-muted text-end w-16">Ends</span>
       <UFormField
         name="endDate"
         :error-pattern="/^end(Date|Time)$/"
@@ -366,13 +376,24 @@ watch(
           />
         </div>
       </UFormField>
+
+      <template v-if="secondWhen">
+        <UIcon
+          name="i-lucide-globe"
+          class="justify-self-end size-3.5 text-muted"
+          aria-hidden="true"
+        />
+        <p class="text-xs text-muted tabular-nums">
+          <span class="sr-only">In {{ calZoneCity(second) }}: </span>{{ secondWhen }}
+        </p>
+      </template>
     </div>
 
     <div class="px-3 py-2 rounded-md bg-(--control-bg)">
       <UFormField name="description">
         <UTextarea
           v-model="state.description"
-          placeholder="Add Notes"
+          placeholder="Add notes"
           variant="none"
           :maxlength="1000"
           :rows="2"
@@ -387,7 +408,7 @@ watch(
     <UButton
       v-if="event"
       icon="i-lucide-trash-2"
-      label="Delete Event"
+      label="Delete event"
       color="error"
       variant="soft"
       size="sm"

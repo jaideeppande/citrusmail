@@ -5,6 +5,7 @@ const TABS = {
   profile: { title: 'Profile', description: 'How you appear to the people you write to.' },
   signature: { title: 'Signature', description: 'Added under the messages you write.' },
   appearance: { title: 'Appearance', description: 'How CitrusMail looks for you.' },
+  accessibility: { title: 'Accessibility', description: 'Easier to see, hear and use: contrast, size, motion and sound.' },
   reading: { title: 'Reading', description: 'How messages open, and when pictures from the web load in them.' },
   notifications: { title: 'Notifications', description: 'When and how CitrusMail tells you about new mail.' },
   shortcuts: { title: 'Shortcuts', description: 'The keys that do things, and which ones you’d rather they were.' },
@@ -39,6 +40,7 @@ useSeoMeta({ title: () => `${TABS[tab.value].title} · Settings` })
       <SettingsProfile v-if="tab === 'profile'" />
       <SettingsSignature v-else-if="tab === 'signature'" />
       <SettingsAppearance v-else-if="tab === 'appearance'" />
+      <SettingsAccessibility v-else-if="tab === 'accessibility'" />
       <SettingsReading v-else-if="tab === 'reading'" />
       <SettingsNotifications v-else-if="tab === 'notifications'" />
       <SettingsShortcuts v-else-if="tab === 'shortcuts'" />

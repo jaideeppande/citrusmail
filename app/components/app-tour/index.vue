@@ -55,7 +55,13 @@ async function show(to: number) {
   await nextTick()
   measure()
   card.value?.querySelector<HTMLElement>('[data-tour-next]')?.focus()
+  // The card's buttons keep the focus, so its words are said for it
+  const current = steps.value[to]
+  if (current) announce(`Step ${to + 1} of ${steps.value.length}: ${current.title}. ${current.text}`)
 }
+
+/** Where the keyboard was before the tour, given back when it ends */
+let returnTo: HTMLElement | null = null
 
 function next() {
   if (index.value >= steps.value.length - 1) return finish()
@@ -71,7 +77,13 @@ function previous() {
 let waiting: ReturnType<typeof setTimeout> | undefined
 watch(active, (on) => {
   clearTimeout(waiting)
-  if (!on) return (steps.value = [])
+  if (!on) {
+    steps.value = []
+    if (returnTo?.isConnected) returnTo.focus()
+    returnTo = null
+    return
+  }
+  returnTo = document.activeElement as HTMLElement | null
   let tries = 0
   const begin = () => {
     const found = TOUR_STEPS.filter(item => find(item.target))
@@ -136,9 +148,6 @@ const px = (box: Record<string, number>) => Object.fromEntries(Object.entries(bo
       <div
         v-if="step"
         class="fixed inset-0 z-900 [-webkit-app-region:no-drag]"
-        role="dialog"
-        aria-modal="true"
-        :aria-label="`Tour, step ${index + 1} of ${steps.length}: ${step.title}`"
       >
         <div
           class="lb-tour-hole pointer-events-none fixed rounded-[10px]"
@@ -146,6 +155,10 @@ const px = (box: Record<string, number>) => Object.fromEntries(Object.entries(bo
         />
         <div
           ref="card"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="app-tour-title"
+          aria-describedby="app-tour-text"
           class="lb-tour-card fixed w-80 rounded-lg bg-default p-4 shadow-(--lb-shadow) ring ring-default"
           :style="px(place)"
         >
@@ -153,12 +166,18 @@ const px = (box: Record<string, number>) => Object.fromEntries(Object.entries(bo
             :key="step.target"
             class="lb-in"
           >
-            <h2 class="text-sm font-semibold text-highlighted">
+            <p class="text-xs font-medium text-muted">
+              Step {{ index + 1 }} of {{ steps.length }}
+            </p>
+            <h2
+              id="app-tour-title"
+              class="mt-0.5 text-sm font-semibold text-highlighted"
+            >
               {{ step.title }}
             </h2>
             <p
+              id="app-tour-text"
               class="mt-1 text-sm text-muted"
-              aria-live="polite"
             >
               {{ step.text }}
             </p>
@@ -180,7 +199,16 @@ const px = (box: Record<string, number>) => Object.fromEntries(Object.entries(bo
               color="neutral"
               variant="ghost"
               size="sm"
+              aria-label="Skip the tour"
               @click="finish"
+            />
+            <UButton
+              v-if="index > 0"
+              label="Back"
+              color="neutral"
+              variant="outline"
+              size="sm"
+              @click="previous"
             />
             <UButton
               :label="index === steps.length - 1 ? 'Done' : 'Next'"

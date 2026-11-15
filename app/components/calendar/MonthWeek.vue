@@ -225,10 +225,11 @@ function label(day: Date): string {
       v-for="({ day }, index) in cells"
       :key="`number-${day.getTime()}`"
       :to="pathFor(toCalendarDate(day), 'day')"
+      :aria-label="`${formatSpokenDate(day)}${isToday(day) ? ', today' : ''}, open the day`"
       class="select-none row-start-1 justify-self-end inline-flex items-center justify-center h-6 min-w-6 m-0.5 px-1 py-1 text-xs pointer-coarse:h-8 pointer-coarse:min-w-8 pointer-coarse:text-sm font-semibold rounded-full transition-colors focus-visible:outline-3"
       :class="isToday(day)
         ? 'text-inverted bg-primary active:bg-primary/75 outline-primary/25'
-        : [inFocus(day) ? 'text-default' : 'text-dimmed', 'hover:bg-(--control-bg) active:bg-(--control-bg) outline-inverted/25']"
+        : [inFocus(day) ? 'text-default' : 'text-muted', 'hover:bg-(--control-bg) active:bg-(--control-bg) outline-inverted/25']"
       :style="{ gridColumn: index + 1 }"
     >
       {{ label(day) }}
@@ -305,6 +306,7 @@ function label(day: Date): string {
             color="neutral"
             variant="ghost"
             size="xs"
+            :aria-label="`${more.hidden} more events on ${formatSpokenDate(day)}`"
             class="self-start mx-0.5 px-1.5 py-0.5 justify-start text-muted font-normal"
             :class="open && 'bg-elevated'"
             :style="{ gridColumn: index + 1, gridRow: more.slot + 2 }"

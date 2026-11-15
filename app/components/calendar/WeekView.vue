@@ -10,17 +10,42 @@ const { movingId, preview, ghost, targetDate } = useEventMove()
 // somewhere else first
 registerHost()
 
+const { second, local } = useCalendarZones()
+const { active: finding } = useFindTime()
+const { onKeydown } = useEventKeyboard({ grid: 'time' })
+
 const mounted = useMounted()
 
 // Small screens get a 3-day range from the date (see useCalendar)
 const days = computed(() => eachDay(range.value))
 
+// A second time zone takes a hour column of its own, outside the local one
+// so the local hours stay against the grid they measure
+const labelColumns = computed(() => second.value ? 2 : 1)
+
 const gridStyle = computed(() => ({
-  gridTemplateColumns: `3.5rem repeat(${days.value.length}, minmax(0, 1fr))`
+  gridTemplateColumns: `${second.value ? '3rem 3.5rem' : '3.5rem'} repeat(${days.value.length}, minmax(0, 1fr))`
 }))
+
+// What each local hour line reads over there, on the first day shown: a day
+// the clocks change on is the only one where it differs, and a half-hour zone
+// reads “17:30” on every line
+const secondHours = computed(() => {
+  const zone = second.value
+  const first = days.value[0]
+  if (!zone || !first) return []
+
+  return calZoneHourLabels(hours.map(hour => new Date(first.getFullYear(), first.getMonth(), first.getDate(), hour)), zone)
+})
+
+const zoneCodes = computed(() => second.value
+  ? { local: calZoneCode(local), second: calZoneCode(second.value), localName: calZoneCity(local), secondName: calZoneCity(second.value) }
+  : null)
 
 // The draft joins the events it is being drawn among, so the layout gives it
 // a real slot and the day reflows around it the way it would for a real one
+const hours = Array.from({ length: 23 }, (_, index) => index + 1)
+
 const timedEvents = computed(() => {
   const drafted = draftEvent.value && !draftEvent.value.allDay ? draftEvent.value : null
 
@@ -50,8 +75,6 @@ const allDayEvents = computed(() => layoutAllDay(
 const loading = computed(() => status.value === 'pending'
   && !allDayEvents.value.length
   && timedEvents.value.every(day => !day.length))
-
-const hours = Array.from({ length: 23 }, (_, index) => index + 1)
 
 // The day header rides over the scroller, so the grid has to pad itself by
 // the header band plus the header's own height. Only the all-day row varies,
@@ -125,7 +148,119 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="relative flex-1 flex flex-col min-h-0">
+  <div
+    class="relative flex-1 flex flex-col min-h-0"
+    :data-finding="finding || undefined"
+    @keydown="onKeydown"
+  >
+    <!-- Ahead of the scroller in the page so Tab reaches the all-day events
+      before the day's timed ones, the order they are read in. Outside the scroller like the month view's weekday bar: sitting
+      inside it, the scroll area (a backdrop root, it carries a view
+      transition name) would be all the blur has to sample. Named for the
+      same reason as the header, so it stays above the grid snapshot during a
+      view transition and keeps blurring it -->
+    <!-- The grid scrolls, so its columns are a scrollbar narrower than this
+      band and the day headers drifted right of their own columns by the last
+      one. Reserving the same gutter here lines them back up; the band keeps
+      painting full width, only the grids inside it are pulled in -->
+    <div
+      ref="chrome"
+      class="absolute top-[calc(var(--ui-header-height)+0.5rem)] inset-x-0 z-30 glass-material bg-(--glass-bg) border-b border-default overflow-hidden [scrollbar-gutter:stable] [view-transition-name:weekdays]"
+    >
+      <div
+        class="grid"
+        :style="gridStyle"
+      >
+        <!-- Which zone each hour column is in, when there are two -->
+        <template v-if="zoneCodes">
+          <span
+            class="self-end pb-1 pe-1.5 text-end text-[10px] font-medium tracking-wide text-muted"
+            :title="zoneCodes.secondName"
+          >
+            <span aria-hidden="true">{{ zoneCodes.second }}</span>
+            <span class="sr-only">Second column: {{ zoneCodes.secondName }} time</span>
+          </span>
+          <span
+            class="self-end pb-1 pe-2 text-end text-[10px] font-semibold tracking-wide text-toned"
+            :title="zoneCodes.localName"
+          >
+            <span aria-hidden="true">{{ zoneCodes.local }}</span>
+            <span class="sr-only">{{ zoneCodes.localName }} time</span>
+          </span>
+        </template>
+        <div v-else />
+
+        <div
+          v-for="day in days"
+          :key="day.getTime()"
+          class="flex items-center justify-center gap-1 py-2 text-sm border-s border-default"
+          :class="isWeekend(day) && 'bg-(--weekend-bg)'"
+        >
+          <span class="sr-only">{{ formatSpokenDate(day) }}{{ isToday(day) ? ', today' : '' }}</span>
+          <span
+            aria-hidden="true"
+            class="text-muted"
+          >
+            {{ formatWeekday(day) }}
+          </span>
+          <span
+            aria-hidden="true"
+            class="flex items-center justify-center size-6 font-semibold rounded-full tabular-nums"
+            :class="isToday(day) ? 'bg-primary text-inverted' : 'text-highlighted'"
+          >
+            {{ day.getDate() }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Full-height rows rather than a gap and a bottom padding around the
+        chips: the row still stands at its size with nothing in it, and the
+        column separators reach the border closing it -->
+      <div
+        class="grid border-t border-default"
+        :style="{ ...gridStyle, gridTemplateRows: `repeat(${allDayLanes}, ${ALL_DAY_LANE_HEIGHT}px)` }"
+      >
+        <span
+          class="row-span-full self-center text-[10px] text-muted text-end pe-2"
+          :style="{ gridColumn: `1 / span ${labelColumns}` }"
+        >
+          all-day
+        </span>
+
+        <!-- The day the gesture started on, behind the bars so they keep
+          their own pointers -->
+        <div
+          v-for="(day, index) in days"
+          :key="`all-day-${day.getTime()}`"
+          :data-date="isoDate(day)"
+          :data-drop-target="targetDate === isoDate(day) || undefined"
+          class="lb-drop-day row-span-full border-s border-default"
+          :class="isWeekend(day) && 'bg-(--weekend-bg)'"
+          :style="{ gridColumn: index + labelColumns + 1 }"
+          @pointerdown="!finding && onGridPointerdown($event, { kind: 'allDay', day })"
+          @dblclick="!finding && onGridDblclick($event, { kind: 'allDay', day })"
+        />
+
+        <template
+          v-for="{ event, colStart, colSpan, lane } in allDayEvents"
+          :key="event.id"
+        >
+          <CalendarEventDraft
+            v-if="event.id === DRAFT_EVENT_ID"
+            variant="chip"
+            anchored
+            class="mx-1 mt-1 h-5"
+            :style="{ gridColumn: `${colStart + labelColumns + 1} / span ${colSpan}`, gridRow: lane + 1 }"
+          />
+          <CalendarEventChip
+            v-else
+            :event="event"
+            class="mx-1 mt-1 h-5"
+            :style="{ gridColumn: `${colStart + labelColumns + 1} / span ${colSpan}`, gridRow: lane + 1 }"
+          />
+        </template>
+      </div>
+    </div>
     <!-- Starts at the page top, the grid padding leaves the chrome band free
       so events scroll behind the blur. `z-0` keeps a dragged event under the
       floating header the way `isolate` did, without turning this into a
@@ -148,14 +283,32 @@ onMounted(async () => {
         class="grid pb-(--toolbar-clearance)"
         :style="{ ...gridStyle, paddingTop: chromeOffset, marginTop: mounted ? undefined : startPull }"
       >
+        <!-- The second zone's hours, quieter than the local ones beside them -->
         <div
+          v-if="second"
+          aria-hidden="true"
+          class="relative"
+          :style="{ height: `${24 * HOUR_HEIGHT}px` }"
+        >
+          <span
+            v-for="(label, index) in secondHours"
+            :key="index"
+            class="absolute end-1.5 -translate-y-1/2 text-[10px] text-muted tabular-nums"
+            :style="{ top: `${(index + 1) * HOUR_HEIGHT}px` }"
+          >
+            {{ label }}
+          </span>
+        </div>
+
+        <div
+          aria-hidden="true"
           class="relative"
           :style="{ height: `${24 * HOUR_HEIGHT}px` }"
         >
           <span
             v-for="hour in hours"
             :key="hour"
-            class="absolute end-2 -translate-y-1/2 text-[11px] text-dimmed tabular-nums"
+            class="absolute end-2 -translate-y-1/2 text-[11px] text-muted tabular-nums"
             :style="{ top: `${hour * HOUR_HEIGHT}px` }"
           >
             {{ formatHour(hour) }}
@@ -172,88 +325,5 @@ onMounted(async () => {
         />
       </div>
     </UScrollArea>
-
-    <!-- Outside the scroller like the month view's weekday bar: sitting
-      inside it, the scroll area (a backdrop root, it carries a view
-      transition name) would be all the blur has to sample. Named for the
-      same reason as the header, so it stays above the grid snapshot during a
-      view transition and keeps blurring it -->
-    <!-- The grid scrolls, so its columns are a scrollbar narrower than this
-      band and the day headers drifted right of their own columns by the last
-      one. Reserving the same gutter here lines them back up; the band keeps
-      painting full width, only the grids inside it are pulled in -->
-    <div
-      ref="chrome"
-      class="absolute top-[calc(var(--ui-header-height)+0.5rem)] inset-x-0 z-30 glass-material bg-(--glass-bg) border-b border-default overflow-hidden [scrollbar-gutter:stable] [view-transition-name:weekdays]"
-    >
-      <div
-        class="grid"
-        :style="gridStyle"
-      >
-        <div />
-
-        <div
-          v-for="day in days"
-          :key="day.getTime()"
-          class="flex items-center justify-center gap-1 py-2 text-sm border-s border-default"
-          :class="isWeekend(day) && 'bg-(--weekend-bg)'"
-        >
-          <span class="text-muted">
-            {{ formatWeekday(day) }}
-          </span>
-          <span
-            class="flex items-center justify-center size-6 font-semibold rounded-full"
-            :class="isToday(day) ? 'bg-primary text-inverted' : 'text-highlighted'"
-          >
-            {{ day.getDate() }}
-          </span>
-        </div>
-      </div>
-
-      <!-- Full-height rows rather than a gap and a bottom padding around the
-        chips: the row still stands at its size with nothing in it, and the
-        column separators reach the border closing it -->
-      <div
-        class="grid border-t border-default"
-        :style="{ ...gridStyle, gridTemplateRows: `repeat(${allDayLanes}, ${ALL_DAY_LANE_HEIGHT}px)` }"
-      >
-        <span class="row-span-full self-center text-[10px] text-dimmed text-end pe-2">
-          all-day
-        </span>
-
-        <!-- The day the gesture started on, behind the bars so they keep
-          their own pointers -->
-        <div
-          v-for="(day, index) in days"
-          :key="`all-day-${day.getTime()}`"
-          :data-date="isoDate(day)"
-          :data-drop-target="targetDate === isoDate(day) || undefined"
-          class="lb-drop-day row-span-full border-s border-default"
-          :class="isWeekend(day) && 'bg-(--weekend-bg)'"
-          :style="{ gridColumn: index + 2 }"
-          @pointerdown="onGridPointerdown($event, { kind: 'allDay', day })"
-          @dblclick="onGridDblclick($event, { kind: 'allDay', day })"
-        />
-
-        <template
-          v-for="{ event, colStart, colSpan, lane } in allDayEvents"
-          :key="event.id"
-        >
-          <CalendarEventDraft
-            v-if="event.id === DRAFT_EVENT_ID"
-            variant="chip"
-            anchored
-            class="mx-1 mt-1 h-5"
-            :style="{ gridColumn: `${colStart + 2} / span ${colSpan}`, gridRow: lane + 1 }"
-          />
-          <CalendarEventChip
-            v-else
-            :event="event"
-            class="mx-1 mt-1 h-5"
-            :style="{ gridColumn: `${colStart + 2} / span ${colSpan}`, gridRow: lane + 1 }"
-          />
-        </template>
-      </div>
-    </div>
   </div>
 </template>

@@ -18,7 +18,7 @@ defineProps<{
     </p>
     <p
       v-if="note"
-      class="text-xs text-dimmed"
+      class="text-xs text-muted"
     >
       {{ note }}
     </p>

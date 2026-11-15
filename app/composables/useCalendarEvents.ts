@@ -129,6 +129,17 @@ const _useCalendarEvents = () => {
     return eventsKey({ start: startOfDay(range.start), end: startOfDay(range.end) }) in pendingRanges.value
   }
 
+  // For the lists that scroll through the days (the agenda, the mini calendar
+  // in the mail sidebar): the same, asked for in the fixed blocks `eventChunks`
+  // cuts, so however the two overlap nothing is fetched twice
+  async function ensureDays(range: DateRange): Promise<void> {
+    await Promise.all(eventChunks(range).map(loadRange))
+  }
+
+  function isDaysPending(range: DateRange): boolean {
+    return eventChunks(range).some(chunk => eventsKey(chunk) in pendingRanges.value)
+  }
+
   // Local mutations are layered over whatever the server returns: the
   // in-memory store is per-instance on serverless, so a response may not
   // include a mutation another instance acknowledged
@@ -455,6 +466,8 @@ const _useCalendarEvents = () => {
     loadRange,
     ensureRange,
     isRangePending,
+    ensureDays,
+    isDaysPending,
     reload,
     pendingRanges,
     warmRange,

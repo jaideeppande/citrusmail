@@ -32,7 +32,7 @@ const busiest = computed(() => {
 
     <div class="flex gap-2">
       <div
-        class="flex h-24 w-7 shrink-0 flex-col justify-between text-end text-[11px] leading-none text-dimmed tabular-nums"
+        class="flex h-24 w-7 shrink-0 flex-col justify-between text-end text-[11px] leading-none text-muted tabular-nums"
         aria-hidden="true"
       >
         <span class="-translate-y-1/2">{{ max.toLocaleString() }}</span>
@@ -61,7 +61,7 @@ const busiest = computed(() => {
           </UTooltip>
         </div>
         <div
-          class="mt-1.5 flex text-[11px] leading-none text-dimmed"
+          class="mt-1.5 flex text-[11px] leading-none text-muted"
           aria-hidden="true"
         >
           <span

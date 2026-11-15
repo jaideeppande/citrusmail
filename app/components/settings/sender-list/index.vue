@@ -73,7 +73,7 @@ const sorted = computed(() => [...props.entries].sort())
     </TransitionGroup>
     <p
       v-if="!entries.length"
-      class="mt-3 text-sm text-dimmed"
+      class="mt-3 text-sm text-muted"
     >
       {{ empty }}
     </p>

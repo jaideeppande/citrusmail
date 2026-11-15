@@ -7,7 +7,7 @@ definePageMeta({
   // remount the page (and reset the month view scroll) on every URL sync
   key: route => route.params.view as string,
   validate(route) {
-    if (!['day', 'week', 'month', 'year'].includes(route.params.view as string)) {
+    if (!['day', 'week', 'month', 'year', 'agenda'].includes(route.params.view as string)) {
       return false
     }
 
@@ -30,24 +30,58 @@ definePageMeta({
 const { view, date, title, monthLabelsVisible, prevDate, nextDate, pathFor, setDirection, isSidebarOpen } = useCalendar()
 const { online, queue } = useCalendarEvents()
 const { account } = useShell()
+const { second, pickerOpen } = useCalendarZones()
+const findTime = useFindTime()
+const { kbds } = useShortcutKeys()
 useCalendarCommands()
 
 useSeoMeta({ title: 'Calendar' })
+
+const route = useRoute()
+
+// The agenda is read off the route itself, so it shows whether or not the
+// shared calendar state has learnt its name yet
+const currentView = computed<CalendarViewName>(() => route.params.view === 'agenda' ? 'agenda' : view.value)
+const agenda = computed(() => currentView.value === 'agenda')
 
 const views = [
   { label: 'Day', value: 'day' },
   { label: 'Week', value: 'week' },
   { label: 'Month', value: 'month' },
-  { label: 'Year', value: 'year' }
+  { label: 'Year', value: 'year' },
+  { label: 'Agenda', value: 'agenda' }
 ] satisfies TabsItem[]
+
+// The agenda reads on from its date, so it is titled by the month it opens
+// in and steps a week at a time
+const heading = computed(() => agenda.value
+  ? { months: formatMonth(toDate(date.value)), year: String(date.value.year) }
+  : title.value)
+
+const prevPath = computed(() => agenda.value ? calendarPath(date.value.subtract({ days: 7 }), 'agenda') : pathFor(prevDate.value))
+const nextPath = computed(() => agenda.value ? calendarPath(date.value.add({ days: 7 }), 'agenda') : pathFor(nextDate.value))
+const todayPath = computed(() => calendarPath(todayDate(), currentView.value))
+
+const menu = computed(() => [[{
+  label: 'Find a time',
+  icon: 'i-lucide-calendar-search',
+  onSelect: () => findTime.start()
+}, {
+  label: 'Time zones…',
+  icon: 'i-lucide-globe',
+  suffix: second.value ? calZoneCity(second.value) : undefined,
+  onSelect: () => {
+    pickerOpen.value = true
+  }
+}]])
 
 // The room the title has, handed to the month labels that dock on it so they
 // cut off where it does rather than running under the switcher
-const heading = useTemplateRef('heading')
-const { width: headingWidth } = useElementSize(heading)
+const headingEl = useTemplateRef('headingEl')
+const { width: headingWidth } = useElementSize(headingEl)
 
 function onViewChange(value: string | number) {
-  navigateTo(pathFor(date.value, value as CalendarView))
+  navigateTo(calendarPath(date.value, value as CalendarViewName))
 }
 </script>
 
@@ -100,12 +134,12 @@ function onViewChange(value: string | number) {
           before the leaving one starts out, always opaque under a partly
           transparent copy of itself -->
         <h1
-          ref="heading"
+          ref="headingEl"
           class="flex items-baseline gap-1.5 text-xl sm:text-2xl tracking-tight min-w-0 flex-1 transition-opacity duration-0"
           :class="view === 'month' && monthLabelsVisible ? 'opacity-0 delay-150' : 'opacity-100'"
         >
-          <span class="font-bold text-highlighted truncate">{{ title.months }}</span>
-          <span class="font-normal text-muted hidden sm:inline">{{ title.year }}</span>
+          <span class="font-semibold text-highlighted truncate">{{ heading.months }}</span>
+          <span class="font-normal text-muted hidden sm:inline">{{ heading.year }}</span>
         </h1>
       </div>
 
@@ -113,29 +147,35 @@ function onViewChange(value: string | number) {
         width for the labels, each in a 24px circle with the track hugging
         them. On a touch screen the track pads out to stand as tall as the
         buttons beside it -->
-      <UTabs
-        :items="views"
-        :content="false"
-        :model-value="view"
-        color="neutral"
-        size="sm"
-        class="mx-auto sm:w-52 sm:pointer-coarse:w-56 lg:w-60"
-        :ui="{
-          list: 'max-sm:pointer-coarse:p-1.5',
-          indicator: 'max-sm:pointer-coarse:inset-y-1.5',
-          trigger: 'p-1 lg:p-1.5 max-sm:size-6 max-sm:p-0 max-sm:grow-0 max-sm:justify-center'
-        }"
-        @update:model-value="onViewChange"
+      <!-- Reka's tabs: a tablist whose arrows move between the views -->
+      <nav
+        aria-label="Calendar view"
+        class="mx-auto"
       >
-        <template #default="{ item }">
-          <!-- The letter is for the eye; a screen reader hears the whole name -->
-          <span
-            class="sm:hidden"
-            aria-hidden="true"
-          >{{ item.label.charAt(0) }}</span>
-          <span class="max-sm:sr-only">{{ item.label }}</span>
-        </template>
-      </UTabs>
+        <UTabs
+          :items="views"
+          :content="false"
+          :model-value="currentView"
+          color="neutral"
+          size="sm"
+          class="sm:w-64 sm:pointer-coarse:w-68 lg:w-76"
+          :ui="{
+            list: 'max-sm:pointer-coarse:p-1.5',
+            indicator: 'max-sm:pointer-coarse:inset-y-1.5',
+            trigger: 'p-1 lg:p-1.5 max-sm:size-6 max-sm:p-0 max-sm:grow-0 max-sm:justify-center'
+          }"
+          @update:model-value="onViewChange"
+        >
+          <template #default="{ item }">
+            <!-- The letter is for the eye; a screen reader hears the whole name -->
+            <span
+              class="sm:hidden"
+              aria-hidden="true"
+            >{{ item.label.charAt(0) }}</span>
+            <span class="max-sm:sr-only">{{ item.label }}</span>
+          </template>
+        </UTabs>
+      </nav>
 
       <!-- Only the title grows below `md`, so the switcher and the controls
         stay together on the end rather than drifting apart -->
@@ -156,40 +196,66 @@ function onViewChange(value: string | number) {
           <div class="flex items-center gap-1">
             <UTooltip
               text="Previous"
-              :kbds="['arrowleft']"
+              :kbds="kbds('calendar.prev')"
             >
               <UButton
                 icon="i-lucide-chevron-left"
                 aria-label="Previous"
                 prefetch-on="interaction"
-                :to="pathFor(prevDate)"
+                :to="prevPath"
                 @click="setDirection('left')"
               />
             </UTooltip>
             <UTooltip
               text="Today"
-              :kbds="['t']"
+              :kbds="kbds('calendar.today')"
             >
               <UButton
                 label="Today"
                 class="hidden sm:inline-flex"
-                :to="pathFor(todayDate())"
+                :to="todayPath"
               />
             </UTooltip>
             <UTooltip
               text="Next"
-              :kbds="['arrowright']"
+              :kbds="kbds('calendar.next')"
             >
               <UButton
                 icon="i-lucide-chevron-right"
                 aria-label="Next"
                 prefetch-on="interaction"
-                :to="pathFor(nextDate)"
+                :to="nextPath"
                 @click="setDirection('right')"
               />
             </UTooltip>
           </div>
         </UTheme>
+
+        <UTooltip text="Find a time">
+          <UButton
+            icon="i-lucide-calendar-search"
+            color="neutral"
+            :variant="findTime.active.value ? 'soft' : 'ghost'"
+            size="sm"
+            aria-label="Find a time"
+            :aria-pressed="findTime.active.value"
+            class="max-md:hidden"
+            @click="findTime.active.value ? findTime.stop() : findTime.start()"
+          />
+        </UTooltip>
+
+        <UDropdownMenu
+          :items="menu"
+          :content="{ align: 'end' }"
+        >
+          <UButton
+            icon="i-lucide-ellipsis"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            aria-label="Calendar options"
+          />
+        </UDropdownMenu>
       </div>
     </header>
 
@@ -197,10 +263,14 @@ function onViewChange(value: string | number) {
       wrapper would create a stacking context and keep the month labels from
       painting above the translucent header -->
     <div class="flex-1 flex flex-col min-h-0">
-      <CalendarMonthView v-if="view === 'month'" />
+      <CalendarAgenda v-if="agenda" />
+      <CalendarMonthView v-else-if="view === 'month'" />
       <CalendarYearView v-else-if="view === 'year'" />
       <CalendarWeekView v-else />
     </div>
+
+    <CalendarFindTimeBar />
+    <CalendarZonePicker />
 
     <!-- One card for every event on the page, shown beside whichever the
       pointer rests on -->
@@ -218,7 +288,7 @@ function onViewChange(value: string | number) {
         variant="soft"
         size="sm"
         class="sm:hidden glass-material"
-        :to="pathFor(todayDate())"
+        :to="todayPath"
       />
 
       <div class="ms-auto">

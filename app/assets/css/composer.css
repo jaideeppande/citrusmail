@@ -4,11 +4,23 @@
    bottom right, above the dock's tabs. On a narrow window it takes the screen */
 @utility lb-dock-panel {
   width: min(46rem, calc(100vw - 2rem));
-  height: min(44rem, calc(100dvh - 6.5rem));
+  height: min(44rem, calc(100dvh - 6rem));
   overflow: hidden;
   border-radius: 0.75rem;
   box-shadow: 0 0 0 1px var(--ui-border), var(--lb-shadow, 0 12px 32px -16px rgb(28 25 23 / 0.28));
   transform-origin: bottom right;
+  transition: margin-bottom var(--lb-dur-3) var(--lb-ease-out), height var(--lb-dur-3) var(--lb-ease-out);
+  /* A notice at the bottom centre would cover the footer: the panel steps up
+     out of its way while one shows (see mail/composer) */
+  &[data-lifted] {
+    margin-bottom: 4.5rem;
+    height: min(44rem, calc(100dvh - 10.5rem));
+  }
+  /* A short window: the panel takes what there is, and the From line goes */
+  @media (height < 36rem) {
+    height: calc(100dvh - 4.25rem);
+    &[data-lifted] { height: calc(100dvh - 8.75rem); }
+  }
   @media (width < 40rem) {
     position: fixed;
     inset: 0;
@@ -16,6 +28,19 @@
     height: auto;
     border-radius: 0;
   }
+  /* Distraction-free writing fills the window instead */
+  &.lb-zen {
+    width: auto;
+    height: auto;
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+/* Lines that give way when the window is short */
+@utility lb-compact-hide {
+  @media (height < 36rem) { display: none; }
 }
 
 /* Open drafts as tabs standing on the bottom edge of the window */
@@ -24,7 +49,7 @@
   flex: 0 1 15rem;
   align-items: center;
   min-width: 7rem;
-  max-width: 15rem;
+  max-width: 13rem;
   border-radius: 0.5rem 0.5rem 0 0;
   background: var(--ui-bg);
   box-shadow: 0 0 0 1px var(--ui-border), var(--lb-shadow, 0 12px 32px -16px rgb(28 25 23 / 0.28));
@@ -64,4 +89,145 @@
   outline: none;
   transition: min-height var(--lb-dur-3) var(--lb-ease-out);
   &[data-open="true"] { min-height: 6rem; }
+}
+
+/* The "+3" at the end of the dock, for tabs that don't fit */
+@utility lb-dock-more {
+  box-shadow: var(--lb-shadow, 0 12px 32px -16px rgb(28 25 23 / 0.28));
+}
+
+/* Distraction-free writing: the draft on screen as a quiet full-window page.
+   A centred column, only the subject and the words; the recipients and the
+   toolbar come back while the pointer or the cursor is at their edge */
+@utility lb-zen {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--ui-bg);
+  animation: lb-zen-in var(--lb-dur-3) var(--lb-ease-out) both;
+  &[data-leaving] { animation: lb-zen-out var(--lb-dur-2) var(--lb-ease-in-out) both; }
+
+  & [data-zen-edge] {
+    opacity: 0;
+    transition: opacity var(--lb-dur-2) var(--lb-ease-out);
+  }
+  & [data-zen-edge]:is(:hover, :focus-within) { opacity: 1; }
+  & [data-zen-edge="top"] {
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    z-index: 2;
+    background: var(--ui-bg);
+    box-shadow: 0 1px 0 var(--ui-border), 0 12px 24px -20px rgb(0 0 0 / 0.3);
+  }
+  & [data-zen-edge="bottom"] { border-top-color: transparent; }
+
+  & .lb-zen-subject {
+    width: 100%;
+    max-width: 42rem;
+    margin: clamp(2.5rem, 10vh, 6rem) auto 0;
+    border-bottom: 0;
+    background: transparent;
+  }
+  & .lb-zen-subject > span { display: none; }
+  & .lb-zen-subject input { height: 3rem; font-size: 1.625rem; letter-spacing: -0.01em; }
+
+  & .lb-composer-editor > :not(footer) {
+    width: 100%;
+    max-width: 42rem;
+    margin-inline: auto;
+  }
+  & .lb-composer-editor .ProseMirror { font-size: 17px; line-height: 1.75; }
+  & .lb-composer-editor .ProseMirror p { line-height: 1.75; }
+}
+@keyframes lb-zen-in { from { opacity: 0; transform: scale(0.985); } }
+@keyframes lb-zen-out { to { opacity: 0; transform: scale(0.985); } }
+
+@utility lb-zen-status {
+  border-top: 1px solid transparent;
+}
+
+/* What the composer's editor shows beyond words: tables, pictures that can
+   be resized, and code coloured by language (from the theme's own colours,
+   so it reads in light and dark) */
+@utility lb-composer-editor {
+  & table {
+    border-collapse: collapse;
+    table-layout: auto;
+    margin-block: 0.5rem;
+  }
+  & :is(td, th) {
+    position: relative;
+    min-width: 3rem;
+    padding: 0.25rem 0.625rem;
+    border: 1px solid var(--ui-border-accented);
+    vertical-align: top;
+    text-align: start;
+  }
+  & th { background: var(--ui-bg-elevated); font-weight: 600; }
+  & .selectedCell::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: color-mix(in oklab, var(--ui-primary) 14%, transparent);
+    pointer-events: none;
+  }
+  & .tableWrapper { overflow-x: auto; }
+
+  & pre code .hljs-comment, & pre code .hljs-quote, & pre code .hljs-meta { color: var(--ui-text-muted); font-style: italic; }
+  & pre code :is(.hljs-keyword, .hljs-selector-tag, .hljs-doctag, .hljs-type, .hljs-built_in, .hljs-template-tag) { color: var(--ui-error); }
+  & pre code :is(.hljs-string, .hljs-regexp, .hljs-template-variable, .hljs-link) { color: var(--ui-success); }
+  & pre code :is(.hljs-number, .hljs-literal, .hljs-symbol, .hljs-bullet) { color: var(--ui-info); }
+  & pre code :is(.hljs-title, .hljs-section, .hljs-selector-id, .hljs-selector-class) { color: var(--ui-secondary); }
+  & pre code :is(.hljs-attr, .hljs-attribute, .hljs-property, .hljs-name, .hljs-tag, .hljs-variable, .hljs-params) { color: var(--ui-warning); }
+  & pre code .hljs-addition { color: var(--ui-success); background: color-mix(in oklab, var(--ui-success) 12%, transparent); }
+  & pre code .hljs-deletion { color: var(--ui-error); background: color-mix(in oklab, var(--ui-error) 12%, transparent); }
+  & pre code .hljs-strong { font-weight: 700; }
+  & pre code .hljs-emphasis { font-style: italic; }
+}
+
+/* A picture in the message (see utils/composer-extensions). Its corner
+   handles show while it is selected */
+.lb-image {
+  position: relative;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin-block: 0.5rem;
+  line-height: 0;
+  border-radius: 0.375rem;
+  background: transparent !important;
+  & img { display: block; max-width: 100%; height: auto; border-radius: inherit; }
+  &.ProseMirror-selectednode { outline: 2px solid var(--ui-primary); outline-offset: 2px; }
+}
+.lb-image-handle {
+  position: absolute;
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 2px solid var(--ui-primary);
+  border-radius: 3px;
+  background: var(--ui-bg);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--lb-dur-1) ease;
+  &[data-corner="nw"] { top: -0.375rem; left: -0.375rem; cursor: nwse-resize; }
+  &[data-corner="ne"] { top: -0.375rem; right: -0.375rem; cursor: nesw-resize; }
+  &[data-corner="sw"] { bottom: -0.375rem; left: -0.375rem; cursor: nesw-resize; }
+  &[data-corner="se"] { bottom: -0.375rem; right: -0.375rem; cursor: nwse-resize; }
+  :is(.lb-image.ProseMirror-selectednode, .lb-image[data-resizing]) > & { opacity: 1; pointer-events: auto; }
+}
+
+/* Outbox timeline: the next seven days, a marker per scheduled message */
+@utility lb-timeline-track {
+  position: relative;
+  height: 2.75rem;
+  background-image: linear-gradient(to right, var(--ui-border) 1px, transparent 1px);
+  background-size: calc(100% / 7) 100%;
+}
+@utility lb-timeline-marker {
+  position: absolute;
+  top: 1.125rem;
+  translate: -50% 0;
+  transition: transform var(--lb-dur-1) var(--lb-ease-out);
+  &:hover, &:focus-visible { transform: scale(1.15); }
 }

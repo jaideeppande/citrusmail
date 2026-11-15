@@ -1,26 +1,13 @@
 <script setup lang="ts">
 const appConfig = useAppConfig()
 const colorMode = useColorMode()
-const { $appearance } = useNuxtApp()
-const { save } = useSettings()
+const { $appearance, $theme } = useNuxtApp()
+const editor = useThemeEditor()
+const { mailboxes } = useMailboxes()
 
-const theme = appConfig.citrusmail.theme
 const fonts = computed(() => appConfig.citrusmail.fonts.map(font => ({ ...font, style: { fontFamily: font.value } })))
 
-// Changes show at once and are saved a moment later
-function set<K extends keyof Appearance>(key: K, value: Appearance[K]) {
-  $appearance.value = { ...$appearance.value, [key]: value }
-  persist()
-}
-const persist = useDebounceFn(() => save({ appearance: { ...$appearance.value } }, 'Appearance saved'), 800)
-
-/** Several choices at once, as a preset makes them */
-function apply(patch: Appearance) {
-  $appearance.value = { ...$appearance.value, ...patch }
-  persist()
-}
-
-// How much moves and how tightly lists are packed are kept on this computer
+// How tightly lists are packed and how far you can zoom are kept on this computer
 const prefs = usePrefs()
 const isDesktop = !!desktop()
 
@@ -36,142 +23,170 @@ const mode = computed({
     if (value === 'scheduled') return
     if (schedule.value.on) turnOff(value)
     else colorMode.preference = value
+    announce(`${APPEARANCE_MODES.find(item => item.value === value)?.label} theme`)
   }
 })
 
-function reset() {
-  $appearance.value = {}
-  save({ appearance: {} }, 'Back to the default look')
+function setDensity(value: Density) {
+  prefs.value = { ...prefs.value, density: value }
+  announce(`${APPEARANCE_DENSITY.find(item => item.value === value)?.label} density`)
 }
 </script>
 
 <template>
-  <div class="flex flex-col gap-8">
-    <UFormField label="Theme">
+  <div class="flex flex-col gap-10">
+    <SettingsSection title="Theme">
       <UTabs
         v-model="mode"
         :items="modes"
         :content="false"
         color="neutral"
         size="sm"
+        aria-label="Theme"
         class="max-w-full"
         :class="schedule.on ? 'w-md' : 'w-80'"
       />
-      <SettingsThemeSchedule class="mt-4" />
-    </UFormField>
+      <SettingsThemeSchedule />
+    </SettingsSection>
 
-    <UFormField
-      label="Look"
-      description="An accent, a font and corners that go together. Change any of them below."
+    <SettingsSection
+      title="Look"
+      description="A complete look in one choice. Change any part of it below, or every color in the theme editor."
     >
-      <SettingsThemePresets
-        :appearance="$appearance"
-        class="mt-2"
-        @choose="apply({ primary: $event.primary, font: $event.font, radius: $event.radius })"
-      />
-    </UFormField>
+      <template #actions>
+        <UButton
+          label="Customise…"
+          icon="i-lucide-swatch-book"
+          color="neutral"
+          variant="outline"
+          size="sm"
+          to="/settings/theme"
+        />
+      </template>
+      <SettingsThemePresets />
+    </SettingsSection>
 
-    <UFormField
-      label="Accent"
-      description="Buttons, links, the unread dot and the selected message."
+    <SettingsSection title="Details">
+      <div class="grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-x-4 gap-y-5">
+        <span
+          id="appearance-accent"
+          class="pt-1.5 text-sm text-toned"
+        >Accent</span>
+        <div>
+          <SettingsAccentPicker
+            :model-value="$appearance.primary"
+            label="Accent"
+            @update:model-value="editor.set('primary', $event)"
+          />
+          <p class="mt-2 text-sm text-muted">
+            Buttons, links, the unread dot and the selected message.
+          </p>
+        </div>
+
+        <label
+          for="appearance-font"
+          class="pt-1.5 text-sm text-toned"
+        >Font</label>
+        <USelect
+          id="appearance-font"
+          :model-value="$appearance.font ?? $theme.font"
+          :items="fonts"
+          class="w-72 max-w-full"
+          @update:model-value="editor.set('font', $event as string)"
+        >
+          <template #item-label="{ item }">
+            <span :style="item.style">{{ item.label }}</span>
+          </template>
+        </USelect>
+
+        <span
+          id="appearance-size"
+          class="pt-1.5 text-sm text-toned"
+        >Text size</span>
+        <UTabs
+          :model-value="$appearance.fontSize ?? $theme.fontSize"
+          :items="APPEARANCE_SIZES"
+          :content="false"
+          color="neutral"
+          size="sm"
+          aria-labelledby="appearance-size"
+          class="w-96 max-w-full"
+          @update:model-value="editor.set('fontSize', $event as string)"
+        />
+
+        <span
+          id="appearance-corners"
+          class="pt-1.5 text-sm text-toned"
+        >Corners</span>
+        <UTabs
+          :model-value="$appearance.radius ?? $theme.radius"
+          :items="APPEARANCE_CORNERS"
+          :content="false"
+          color="neutral"
+          size="sm"
+          aria-labelledby="appearance-corners"
+          class="w-80 max-w-full"
+          @update:model-value="editor.set('radius', $event as string)"
+        />
+
+        <span
+          id="appearance-density"
+          class="pt-1.5 text-sm text-toned"
+        >Density</span>
+        <div>
+          <UTabs
+            :model-value="prefs.density"
+            :items="APPEARANCE_DENSITY"
+            :content="false"
+            color="neutral"
+            size="sm"
+            aria-labelledby="appearance-density"
+            class="w-md max-w-full"
+            @update:model-value="setDensity($event as Density)"
+          />
+          <p class="mt-2 text-sm text-muted">
+            How much room each message gets in the list. Kept on this computer.
+          </p>
+        </div>
+      </div>
+    </SettingsSection>
+
+    <SettingsSection
+      v-if="mailboxes.length > 1"
+      title="Accent for each mailbox"
+      description="So it’s plain at a glance which mailbox is open. Kept on this computer."
     >
-      <SettingsAccentPicker
-        :model-value="$appearance.primary"
-        class="mt-1"
-        @update:model-value="set('primary', $event)"
-      />
-    </UFormField>
+      <SettingsMailboxAccents />
+    </SettingsSection>
 
-    <UFormField label="Font">
-      <USelect
-        :model-value="$appearance.font ?? theme.font"
-        :items="fonts"
-        class="w-72"
-        @update:model-value="set('font', $event as string)"
-      >
-        <template #item-label="{ item }">
-          <span :style="item.style">{{ item.label }}</span>
-        </template>
-      </USelect>
-    </UFormField>
+    <SettingsMotionChoice />
 
-    <UFormField label="Text size">
-      <UTabs
-        :model-value="$appearance.fontSize ?? theme.fontSize"
-        :items="APPEARANCE_SIZES"
-        :content="false"
-        color="neutral"
-        size="sm"
-        class="w-80 max-w-full"
-        @update:model-value="set('fontSize', $event as string)"
-      />
-    </UFormField>
-
-    <UFormField label="Corners">
-      <UTabs
-        :model-value="$appearance.radius ?? theme.radius"
-        :items="APPEARANCE_CORNERS"
-        :content="false"
-        color="neutral"
-        size="sm"
-        class="w-80 max-w-full"
-        @update:model-value="set('radius', $event as string)"
-      />
-    </UFormField>
-
-    <UFormField
-      label="Density"
-      description="How much room each message gets in the list."
-    >
-      <UTabs
-        :model-value="prefs.density"
-        :items="APPEARANCE_DENSITY"
-        :content="false"
-        color="neutral"
-        size="sm"
-        class="w-md max-w-full mt-1"
-        @update:model-value="prefs = { ...prefs, density: $event as Density }"
-      />
-    </UFormField>
-
-    <UFormField
-      label="Motion"
-      description="System follows your computer’s own Reduce motion setting."
-    >
-      <UTabs
-        :model-value="prefs.motion"
-        :items="APPEARANCE_MOTION"
-        :content="false"
-        color="neutral"
-        size="sm"
-        class="w-96 max-w-full mt-1"
-        @update:model-value="prefs = { ...prefs, motion: $event as MotionLevel }"
-      />
-      <SettingsMotionPreview class="mt-3" />
-    </UFormField>
-
-    <UFormField
+    <SettingsSection
       v-if="isDesktop"
-      label="Zoom"
+      title="Zoom"
       description="This window. Other windows keep their own."
     >
-      <SettingsZoom class="mt-1" />
-    </UFormField>
+      <SettingsZoom />
+    </SettingsSection>
 
-    <UFormField
-      label="Background"
+    <SettingsSection
+      title="Background"
       description="A picture of your own behind the app. The page you read on stays solid."
     >
-      <SettingsBackground class="mt-2" />
-    </UFormField>
+      <SettingsBackground />
+    </SettingsSection>
 
-    <UButton
-      label="Reset to default"
-      icon="i-lucide-rotate-ccw"
-      color="neutral"
-      variant="outline"
-      class="self-start"
-      @click="reset"
-    />
+    <div class="flex flex-wrap items-center gap-3 border-t border-default pt-6">
+      <UButton
+        label="Reset to default"
+        icon="i-lucide-rotate-ccw"
+        color="neutral"
+        variant="outline"
+        @click="editor.resetAll()"
+      />
+      <p class="text-sm text-muted">
+        Puts back the look this app came with. Your background stays.
+      </p>
+    </div>
   </div>
 </template>

@@ -13,7 +13,7 @@ const presses = (key: string) => key.length > 1 && key.includes('-') && !key.inc
   <span class="flex flex-wrap items-center justify-end gap-1">
     <span
       v-if="!keys.length"
-      class="text-sm text-dimmed"
+      class="text-sm text-muted"
     >No key</span>
     <template
       v-for="(key, index) in keys"
@@ -21,7 +21,7 @@ const presses = (key: string) => key.length > 1 && key.includes('-') && !key.inc
     >
       <span
         v-if="index"
-        class="text-xs text-dimmed"
+        class="text-xs text-muted"
       >or</span>
       <template
         v-for="(press, step) in presses(key)"
@@ -29,7 +29,7 @@ const presses = (key: string) => key.length > 1 && key.includes('-') && !key.inc
       >
         <span
           v-if="step"
-          class="text-xs text-dimmed"
+          class="text-xs text-muted"
         >then</span>
         <span class="flex items-center gap-0.5">
           <UKbd

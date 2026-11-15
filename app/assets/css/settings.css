@@ -78,3 +78,130 @@
   from { box-shadow: 0 0 0 0 color-mix(in oklab, var(--ui-primary) 35%, transparent); }
   to { box-shadow: 0 0 0 4px color-mix(in oklab, var(--ui-primary) 0%, transparent); }
 }
+
+/* ---------------------------------------------------------------- */
+/* Increase contrast (Settings → Accessibility, or the system's own
+   setting while that one is left alone). Text that was quiet is raised to
+   7:1 on the page, lines become visible lines, and the focus ring is
+   thicker. Measured with app/utils/contrast.ts, for every grey CitrusMail
+   offers: see test/contrast.test.ts */
+html[data-contrast='high'] {
+  --ui-text: var(--ui-color-neutral-800);
+  --ui-text-highlighted: var(--ui-color-neutral-950);
+  --ui-text-toned: var(--ui-color-neutral-800);
+  --ui-text-muted: var(--ui-color-neutral-700);
+  --ui-text-dimmed: var(--ui-color-neutral-700);
+  --ui-border: var(--ui-color-neutral-500);
+  --ui-border-muted: var(--ui-color-neutral-500);
+  --ui-border-accented: var(--ui-color-neutral-600);
+  --lb-sheet-border: var(--ui-color-neutral-600);
+  --lb-chart-neutral: var(--ui-color-neutral-500);
+}
+html.dark[data-contrast='high'] {
+  --ui-text: var(--ui-color-neutral-100);
+  --ui-text-highlighted: #fff;
+  --ui-text-toned: var(--ui-color-neutral-200);
+  --ui-text-muted: var(--ui-color-neutral-300);
+  --ui-text-dimmed: var(--ui-color-neutral-300);
+  --ui-border: var(--ui-color-neutral-500);
+  --ui-border-muted: var(--ui-color-neutral-500);
+  --ui-border-accented: var(--ui-color-neutral-400);
+  --lb-sheet-border: var(--ui-color-neutral-400);
+  --lb-chart-neutral: var(--ui-color-neutral-400);
+}
+html[data-contrast='high'] :focus-visible {
+  outline: 3px solid var(--ui-primary) !important;
+  outline-offset: 2px;
+}
+
+/* The same, asked for by the computer rather than in Settings */
+@media (prefers-contrast: more) {
+  html[data-contrast='normal'] {
+    --ui-text: var(--ui-color-neutral-800);
+    --ui-text-highlighted: var(--ui-color-neutral-950);
+    --ui-text-toned: var(--ui-color-neutral-800);
+    --ui-text-muted: var(--ui-color-neutral-700);
+    --ui-text-dimmed: var(--ui-color-neutral-700);
+    --ui-border: var(--ui-color-neutral-500);
+    --ui-border-muted: var(--ui-color-neutral-500);
+    --ui-border-accented: var(--ui-color-neutral-600);
+    --lb-sheet-border: var(--ui-color-neutral-600);
+    --lb-chart-neutral: var(--ui-color-neutral-500);
+  }
+  html.dark[data-contrast='normal'] {
+    --ui-text: var(--ui-color-neutral-100);
+    --ui-text-highlighted: #fff;
+    --ui-text-toned: var(--ui-color-neutral-200);
+    --ui-text-muted: var(--ui-color-neutral-300);
+    --ui-text-dimmed: var(--ui-color-neutral-300);
+    --ui-border: var(--ui-color-neutral-500);
+    --ui-border-muted: var(--ui-color-neutral-500);
+    --ui-border-accented: var(--ui-color-neutral-400);
+    --lb-sheet-border: var(--ui-color-neutral-400);
+    --lb-chart-neutral: var(--ui-color-neutral-400);
+  }
+  html[data-contrast='normal'] :focus-visible {
+    outline: 3px solid var(--ui-primary) !important;
+    outline-offset: 2px;
+  }
+}
+
+/* ---------------------------------------------------------------- */
+/* Larger text and controls (Settings → Accessibility): one step (an eighth)
+   above the text size chosen in Appearance, and nothing to click smaller
+   than 32px. Only Nuxt UI buttons are held to it (their root is
+   [data-slot=base]); switches, checkboxes and radios keep their own shape,
+   since their label is part of what you click */
+html[data-text='large'] {
+  font-size: calc(var(--lb-font-size, 15px) * 1.125);
+}
+html[data-text='large'] :is(button, a)[data-slot='base']:not([role='switch'], [role='checkbox'], [role='radio']) {
+  min-height: 2rem;
+  min-width: 2rem;
+}
+html[data-text='large'] :is(button, a)[data-slot='base']:not([role='switch'], [role='checkbox'], [role='radio']):not(:has([data-slot='label'])) {
+  justify-content: center;
+}
+
+/* ---------------------------------------------------------------- */
+/* The accent eases from one color to the next when it changes (a new
+   accent, a preset, a mailbox of a different color), instead of jumping.
+   Registered so the browser knows it's a color it can blend */
+@property --ui-primary {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #0c7a57;
+}
+html:not([data-motion='off']) {
+  transition: --ui-primary var(--lb-dur-4) var(--lb-ease-in-out);
+}
+
+/* ---------------------------------------------------------------- */
+/* The theme editor's preview: a miniature of the app in pixels, so it keeps
+   its proportions whatever the text size, drawn with the theme's own tokens */
+@utility lb-theme-preview {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--ui-text);
+  background: var(--lb-desk);
+}
+@utility lb-theme-preview-sheet {
+  background: var(--ui-bg);
+  border-radius: var(--lb-sheet-radius);
+  box-shadow: 0 0 0 1px var(--lb-sheet-border), var(--lb-sheet-shadow);
+}
+
+/* The theme editor's color wells: a round swatch instead of the browser's box */
+@utility lb-color-well {
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 9999px;
+  background: none;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px var(--ui-border-accented);
+  &::-webkit-color-swatch-wrapper { padding: 0; }
+  &::-webkit-color-swatch { border: 1px solid var(--ui-border-accented); border-radius: 9999px; }
+}

@@ -22,6 +22,7 @@ const companions = computed(() => {
 
 function include(address: Address) {
   draft.value.to = [...draft.value.to, address]
+  announce(`${personName(address)} added`)
 }
 </script>
 
@@ -38,6 +39,7 @@ function include(address: Address) {
         color="neutral"
         variant="link"
         size="sm"
+        aria-label="Add Cc recipients"
         @click="showCc = true"
       />
       <UButton
@@ -46,23 +48,35 @@ function include(address: Address) {
         color="neutral"
         variant="link"
         size="sm"
+        aria-label="Add Bcc recipients"
         @click="showBcc = true"
       />
     </div>
   </MailComposerRecipientField>
+  <MailComposerZones />
   <Transition name="lb-collapse">
     <div
       v-if="companions.length"
       class="border-b border-default"
     >
-      <div class="flex flex-wrap items-center gap-1.5 px-5 py-1.5 ps-22">
-        <span class="text-xs text-muted">Also include:</span>
-        <TransitionGroup name="lb-pop">
+      <div class="flex flex-wrap items-center gap-1.5 px-5 py-1 ps-22">
+        <span
+          id="lb-also-include"
+          class="text-xs text-muted"
+        >Also include:</span>
+        <TransitionGroup
+          name="lb-pop"
+          tag="div"
+          role="group"
+          aria-labelledby="lb-also-include"
+          class="contents"
+        >
           <UButton
             v-for="person in companions"
             :key="person.address"
             :label="personName(person)"
             :title="person.address"
+            :aria-label="`Add ${personName(person)} (${person.address})`"
             icon="i-lucide-plus"
             color="neutral"
             variant="outline"
