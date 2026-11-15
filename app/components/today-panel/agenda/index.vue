@@ -145,13 +145,13 @@ async function onQuickAdd() {
 </script>
 
 <template>
-  <UEmpty
+  <AppEmpty
     v-if="!hasCalendar"
-    icon="i-lucide-calendar-off"
+    illustration="no-calendar"
+    size="sm"
     title="No calendar here yet"
     description="Once this mailbox has a calendar, your day shows up here."
     :actions="[{ label: 'Open calendar', icon: 'i-lucide-calendar', color: 'neutral', variant: 'subtle', to: calendarPath, onClick: () => emit('navigate') }]"
-    variant="naked"
     class="lb-in py-8"
   />
 
