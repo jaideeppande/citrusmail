@@ -72,7 +72,9 @@ const _useCalendarEvents = () => {
     watch(range, () => {
       // The month view streams events in chunks as it scrolls instead, and the
       // year view only holds the month it zooms into
-      if (view.value === 'month' || view.value === 'year') {
+      // The agenda loads its own days as it scrolls, in `ensureDays` blocks.
+      // Compared as a string so it reads the same once the shared view knows it
+      if (view.value === 'month' || view.value === 'year' || (view.value as string) === 'agenda') {
         return
       }
 

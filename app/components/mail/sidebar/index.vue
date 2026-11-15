@@ -131,6 +131,8 @@ function onDrop(event: DragEvent) {
 
     <MailSavedSearches :collapsed="collapsed" />
 
+    <CalendarMiniBusy v-if="!collapsed" />
+
     <MailSidebarExtras :collapsed="collapsed" />
   </template>
 
