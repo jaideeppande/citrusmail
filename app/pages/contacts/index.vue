@@ -9,7 +9,8 @@ useContactsCommands()
 // way in; the pane beside it only repeats it once there is someone to pick
 const hasContacts = computed(() => contacts.value.length > 0 || status.value === 'pending')
 
-const isMobile = useMediaQuery('(max-width: 1023px)')
+// Not a phone inside a pane of a split layout, however narrow the pane
+const { isMobile } = useShell()
 const detailOpen = computed({
   get: () => !!selected.value,
   set: (open) => {
@@ -43,13 +44,12 @@ const detailOpen = computed({
           :group="group"
           class="lb-in min-w-0 flex-1"
         />
-        <UEmpty
+        <AppEmpty
           v-else
-          icon="i-lucide-contact"
+          illustration="no-selection"
           title="No contact selected"
           :description="hasContacts ? 'Pick someone from the list to see their details.' : 'Add someone, or import an address book from another app.'"
           :actions="[{ label: 'New contact', icon: 'i-lucide-user-plus', color: 'neutral', variant: 'subtle', onClick: () => openCreate() }]"
-          variant="naked"
           class="lb-in flex-1"
         />
       </template>

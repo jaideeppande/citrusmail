@@ -5,6 +5,7 @@
 @import "./calendar.css";
 @import "./settings.css";
 @import "./first-run.css";
+@import "./contacts.css";
 
 @theme static {
   /* Set at runtime from the theme's `font` */

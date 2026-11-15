@@ -149,13 +149,13 @@ const sections = computed(() => {
             </p>
           </div>
 
-          <UEmpty
+          <AppEmpty
             v-else-if="failed && !snapshot"
-            icon="i-lucide-cloud-off"
+            illustration="offline"
+            tone="error"
             title="Couldn’t read your mail"
             description="The mail server didn’t answer."
             :actions="[{ label: 'Try again', icon: 'i-lucide-refresh-cw', color: 'neutral', variant: 'subtle', onClick: () => load(true) }]"
-            variant="naked"
           />
 
           <template v-else-if="result">

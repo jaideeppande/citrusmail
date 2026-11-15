@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import type { ContextMenuItem } from '@nuxt/ui'
 
+// The context menu wraps the row and renders nothing of its own, so the
+// list's stagger class and style go to the <li> by hand
+defineOptions({ inheritAttrs: false })
+
 const props = defineProps<{
   contact: Contact
   selected: boolean
@@ -73,6 +77,7 @@ function onDragStart(event: DragEvent) {
 <template>
   <UContextMenu :items="menu">
     <li
+      v-bind="$attrs"
       class="group relative"
       draggable="true"
       :data-contact-dragging="dragging || undefined"

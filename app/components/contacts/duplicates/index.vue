@@ -49,12 +49,11 @@ async function confirmMerge(targets: DuplicateGroup[]) {
     :ui="{ content: 'sm:max-w-3xl', body: 'p-0 sm:p-0', footer: 'justify-between gap-3' }"
   >
     <template #body>
-      <UEmpty
+      <AppEmpty
         v-if="!groups.length"
-        icon="i-lucide-check-check"
+        illustration="all-read"
         title="No duplicates found"
         description="Everyone in your address book is there once."
-        variant="naked"
         class="py-10"
       />
 

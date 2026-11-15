@@ -192,34 +192,32 @@ watch(() => [route.query.group, route.query.book], () => clearChecks())
       </div>
     </div>
 
-    <UEmpty
+    <AppEmpty
       v-else-if="status === 'error' && !filtered.length"
-      icon="i-lucide-cloud-off"
+      illustration="offline"
+      tone="error"
       title="Couldn’t load contacts"
       description="The address book didn’t answer."
       :actions="[{ label: 'Try again', icon: 'i-lucide-refresh-cw', color: 'neutral', variant: 'subtle', onClick: () => refresh() }]"
-      variant="naked"
       class="flex-1"
     />
 
-    <UEmpty
+    <AppEmpty
       v-else-if="!filtered.length && group && !search"
-      icon="i-lucide-users"
+      illustration="no-contacts"
       title="Nobody in this group yet"
       description="Drag people here from the list, or use “Add to group” on a contact."
-      variant="naked"
       class="flex-1"
     />
 
-    <UEmpty
+    <AppEmpty
       v-else-if="!filtered.length"
-      :icon="search ? 'i-lucide-search-x' : 'i-lucide-users'"
+      :illustration="search ? 'no-results' : 'no-contacts'"
       :title="search ? 'No matches' : 'No contacts yet'"
       :description="search ? `Nobody matches “${search}”.` : 'Contacts you add here sync to your other devices.'"
       :actions="search
         ? [{ label: 'Clear search', icon: 'i-lucide-x', color: 'neutral', variant: 'subtle', onClick: () => { search = '' } }]
         : [{ label: 'New contact', icon: 'i-lucide-user-plus', color: 'neutral', variant: 'subtle', onClick: () => openCreate() }, { label: 'Import…', icon: 'i-lucide-upload', color: 'neutral', variant: 'ghost', onClick: () => { importOpen = true } }]"
-      variant="naked"
       class="flex-1"
     />
 
