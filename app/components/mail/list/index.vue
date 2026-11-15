@@ -25,50 +25,36 @@ const tab = computed(() => tabbed.value ? inboxTabs.value?.tab.value : undefined
 const rowHeight = computed(() => DENSITY_ROWS[prefs.value.density][compact.value ? 'compact' : 'roomy'])
 
 const empty = computed(() => {
-  if (filtering.value) return { icon: 'i-lucide-search-x', title: 'No matches', description: `Nothing in ${folder.value?.name ?? 'this folder'} matches${search.value ? ` “${search.value}”` : ''} with these filters.` }
-  if (filter.value === 'flagged') return { icon: 'i-lucide-flag', title: 'Nothing flagged', description: 'Press S on a message to flag it for later.' }
-  if (search.value) return { icon: 'i-lucide-search-x', title: 'No matches', description: `Nothing in ${folder.value?.name ?? 'this folder'} matches “${search.value}”.` }
-  if (labelFilter.value) return { icon: 'i-lucide-tag', title: 'Nothing with this label here', description: `No message in ${folder.value?.name ?? 'this folder'} carries it. Labels follow a message to other folders.` }
-  if (filter.value === 'unread') return { icon: 'i-lucide-check-check', title: 'All read', description: 'You’re caught up.' }
-  if (tab.value === 'screen') return { icon: 'i-lucide-user-round-check', title: 'No one new', description: 'Mail from people who haven’t written to you before waits here until you allow or block them.' }
-  if (tab.value === 'tracked') return { icon: 'i-lucide-mail-check', title: 'Nothing tracked', description: 'Messages you send with tracking on show here with what’s come back.' }
-  if (tab.value === 'newsletters') return { icon: 'i-lucide-newspaper', title: 'No newsletters', description: 'Mail from the lists you’re on shows here.' }
-  if (tab.value === 'notifications') return { icon: 'i-lucide-bell', title: 'No notifications', description: 'Receipts, alerts and other mail sent by machines shows here.' }
+  if (filtering.value) return { illustration: 'no-results' as const, title: 'No matches', description: `Nothing in ${folder.value?.name ?? 'this folder'} matches${search.value ? ` “${search.value}”` : ''} with these filters.` }
+  if (filter.value === 'flagged') return { illustration: 'empty-folder' as const, title: 'Nothing flagged', description: 'Press S on a message to flag it for later.' }
+  if (search.value) return { illustration: 'no-results' as const, title: 'No matches', description: `Nothing in ${folder.value?.name ?? 'this folder'} matches “${search.value}”.` }
+  if (labelFilter.value) return { illustration: 'no-results' as const, title: 'Nothing with this label here', description: `No message in ${folder.value?.name ?? 'this folder'} carries it. Labels follow a message to other folders.` }
+  if (filter.value === 'unread') return { illustration: 'all-read' as const, title: 'All read', description: 'You’re caught up.' }
+  if (tab.value === 'screen') return { illustration: 'screen' as const, title: 'No one new', description: 'Mail from people who haven’t written to you before waits here until you allow or block them.' }
+  if (tab.value === 'tracked') return { illustration: 'no-subscriptions' as const, title: 'Nothing tracked', description: 'Messages you send with tracking on show here with what’s come back.' }
+  if (tab.value === 'newsletters') return { illustration: 'no-subscriptions' as const, title: 'No newsletters', description: 'Mail from the lists you’re on shows here.' }
+  if (tab.value === 'notifications') return { illustration: 'no-notifications' as const, title: 'No notifications', description: 'Receipts, alerts and other mail sent by machines shows here.' }
   // Everything dealt with is worth a moment
-  if (folder.value?.role === 'inbox' && !messages.value.length) return { icon: 'i-lucide-sun', title: 'Inbox zero', description: 'Nothing left to deal with. New mail shows up here on its own.', zero: true }
-  if (messages.value.length) return { icon: 'i-lucide-alarm-clock', title: 'Nothing here right now', description: 'What’s left in this folder is snoozed or under another tab.' }
-  return { icon: folderIcon(folder.value), title: `${folder.value?.name ?? 'This folder'} is empty`, description: undefined }
+  if (folder.value?.role === 'inbox' && !messages.value.length) return { illustration: 'inbox-zero' as const, title: 'Inbox zero', description: 'Nothing left to deal with. New mail shows up here on its own.' }
+  if (messages.value.length) return { illustration: 'snoozed' as const, title: 'Nothing here right now', description: 'What’s left in this folder is snoozed or under another tab.' }
+  return { illustration: folder.value?.role === 'drafts' ? 'no-drafts' as const : 'empty-folder' as const, title: `${folder.value?.name ?? 'This folder'} is empty`, description: undefined }
 })
 </script>
 
 <template>
-  <div
+  <SkeletonMessageRow
     v-if="status === 'loading' && !messages.length"
-    class="flex-1 flex flex-col"
-  >
-    <div
-      v-for="n in 8"
-      :key="n"
-      class="flex gap-3 ps-6 pe-4 py-3.5 border-b border-default lb-stagger"
-      :style="{ '--lb-i': n - 1 }"
-    >
-      <USkeleton class="size-8 rounded-full shrink-0" />
-      <div class="flex-1 flex flex-col gap-2">
-        <USkeleton class="h-3.5 w-2/5" />
-        <USkeleton class="h-3.5 w-4/5" />
-        <USkeleton class="h-3 w-11/12" />
-      </div>
-    </div>
-  </div>
+    :compact="compact"
+    class="flex-1"
+  />
 
-  <UEmpty
+  <AppEmpty
     v-else-if="!listed.length"
-    :icon="empty.icon"
+    :illustration="empty.illustration"
     :title="empty.title"
     :description="empty.description"
-    variant="naked"
-    class="flex-1 lb-in-up"
-    :class="empty.zero && 'lb-inbox-zero'"
+    :size="compact ? 'md' : 'sm'"
+    class="flex-1"
   />
 
   <UScrollArea

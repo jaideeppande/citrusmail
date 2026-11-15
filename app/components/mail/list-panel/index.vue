@@ -132,13 +132,13 @@ async function refresh() {
 
     <MailList v-else-if="status !== 'error'" />
 
-    <UEmpty
+    <AppEmpty
       v-else
-      icon="i-lucide-wifi-off"
+      illustration="offline"
+      tone="error"
       title="Couldn’t load this folder"
       description="The mail server didn’t answer. It may be busy, or your connection dropped."
       :actions="[{ label: 'Try again', icon: 'i-lucide-rotate-cw', color: 'neutral', variant: 'outline', onClick: () => load() }]"
-      variant="naked"
       class="flex-1"
     />
   </section>

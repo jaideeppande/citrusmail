@@ -18,7 +18,9 @@ const server = defineModel<ServerSettings>('server', { required: true })
       <UInput
         v-model="server.host"
         placeholder="imap.example.com"
-        aria-label="Server"
+        autocomplete="off"
+        spellcheck="false"
+        :aria-label="`${title}: server`"
       />
       <UInputNumber
         v-model="server.port"
@@ -27,13 +29,13 @@ const server = defineModel<ServerSettings>('server', { required: true })
         :increment="false"
         :decrement="false"
         :format-options="{ useGrouping: false }"
-        aria-label="Port"
+        :aria-label="`${title}: port`"
       />
     </div>
     <USelect
       v-model="server.security"
       :items="securityItems"
-      aria-label="Security"
+      :aria-label="`${title}: security`"
     />
   </fieldset>
 </template>

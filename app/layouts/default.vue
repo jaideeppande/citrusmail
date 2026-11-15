@@ -78,6 +78,8 @@ watch(unread, (count) => {
       <!-- The sheet: everything you read and write sits on one page with a
         hairline edge, set into the desk on desktop and edge to edge on a phone.
         A split layout puts more sheets beside it -->
+      <AppOffline v-if="!isPane" />
+
       <WindowPanes v-if="isMain">
         <!-- `isolate`: pages put layers of their own under their content (the
           calendar grid does), and those must stay above the sheet -->

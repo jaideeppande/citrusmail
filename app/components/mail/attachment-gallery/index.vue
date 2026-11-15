@@ -122,13 +122,13 @@ function retry() {
           </p>
         </div>
 
-        <UEmpty
+        <AppEmpty
           v-if="!items.length && !waiting"
-          icon="i-lucide-paperclip"
+          :illustration="failed ? 'error' : 'no-attachments'"
+          :tone="failed ? 'error' : 'neutral'"
           :title="failed ? 'Couldn’t read the attachments' : 'No attachments here'"
           :description="failed ? 'The mail server didn’t answer.' : 'None of the messages loaded in this folder has a file attached.'"
           :actions="failed ? [{ label: 'Try again', icon: 'i-lucide-rotate-cw', color: 'neutral', variant: 'subtle', onClick: retry }] : []"
-          variant="naked"
           class="flex-1"
         />
 

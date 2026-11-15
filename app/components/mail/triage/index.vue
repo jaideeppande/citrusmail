@@ -148,8 +148,8 @@ const summary = computed(() => {
       aria-modal="true"
       aria-label="Triage"
       tabindex="-1"
-      @keydown="trap"
       class="fixed inset-0 z-40 flex flex-col items-center gap-4 px-6 py-6 bg-(--lb-desk-solid)/92 backdrop-blur-sm outline-none"
+      @keydown="trap"
     >
       <header class="w-full max-w-3xl flex items-center gap-4">
         <span class="text-sm font-medium text-toned tabular-nums whitespace-nowrap">{{ triage.finished.value ? total : position }} of {{ total }}</span>
@@ -233,12 +233,12 @@ const summary = computed(() => {
                 :remote="detail.remoteShown"
                 class="lb-in"
               />
-              <UEmpty
+              <AppEmpty
                 v-else-if="failed"
-                icon="i-lucide-mail-x"
+                illustration="error"
+                tone="error"
                 title="Couldn’t open this message"
                 description="It may have been moved or deleted from another device."
-                variant="naked"
               />
               <div
                 v-else

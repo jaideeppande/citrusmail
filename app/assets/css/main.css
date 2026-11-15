@@ -4,6 +4,7 @@
 @import "./composer.css";
 @import "./calendar.css";
 @import "./settings.css";
+@import "./first-run.css";
 
 @theme static {
   /* Set at runtime from the theme's `font` */
@@ -730,16 +731,6 @@ html[data-density='compact'] { --lb-row-compact: 2rem; }
   &:active { transform: scale(.94); }
 }
 
-/* Inbox zero: the sun comes up once, slowly */
-@utility lb-inbox-zero {
-  & :is(svg, [class*="i-lucide"]):first-of-type {
-    color: var(--ui-primary);
-    animation: lb-sunrise 900ms var(--lb-ease-out) both;
-  }
-}
-@keyframes lb-sunrise {
-  from { opacity: 0; transform: translateY(10px) rotate(-30deg) scale(.8); }
-}
 
 /* Triage: one card at a time. A decision sends the card off to the left and
    down a touch; the next comes in from the right. Going back reverses it */
