@@ -112,7 +112,8 @@ const _useAiWriting = () => {
         if (shown !== undefined && !mine.signal.aborted) target.html = textToHtmlBlocks(shown)
       }
       remember(target.id, before)
-      return text
+      // Stopped, and the answer simply ended there: what was written stays, unfinished
+      return mine.signal.aborted ? undefined : text
     } catch (error) {
       if (mine.signal.aborted && text && target.html !== before) {
         // Stopped by hand: the words so far stay, and Undo still goes back
@@ -296,7 +297,6 @@ const _useAiWriting = () => {
       return
     }
     proofreading.value = undefined
-    const html = target.html
     const result = await locked('proofread', async (signal) => {
       const answer = await client.text({
         feature: 'proofread',
@@ -310,7 +310,11 @@ const _useAiWriting = () => {
       if (fixed.every(text => text === undefined)) throw new AiError('The AI’s answer didn’t make sense. Try again, or try another provider.', 'invalid')
       return fixed
     })
-    if (!result || draft.value.id !== target.id) return
+    if (!result || draft.value.id !== target.id || !editor.value) return
+    // Read again now the editor is free: locking and unlocking it can tidy
+    // its HTML, and the corrections must match exactly what is on screen
+    const now = editor.value.getJSON()
+    if (JSON.stringify(blockSegments(now)) !== JSON.stringify(segments)) return
     const changed = segments.flatMap((before, index) => {
       const after = result[index]
       if (after === undefined || after === before) return []
@@ -322,7 +326,7 @@ const _useAiWriting = () => {
       announce('No mistakes found')
       return
     }
-    proofreading.value = { draftId: target.id, doc, html, fixed: result, changed }
+    proofreading.value = { draftId: target.id, doc: now, html: draft.value.html, fixed: result, changed }
     const count = changed.reduce((sum, item) => sum + Math.max(1, item.changes.length), 0)
     announce(`${count} ${count === 1 ? 'correction' : 'corrections'} suggested. Review them above the editor.`)
   }
@@ -331,7 +335,10 @@ const _useAiWriting = () => {
     const proposal = proofreading.value
     if (!proposal || proposal.draftId !== draft.value.id) return
     proofreading.value = undefined
-    if (draft.value.html !== proposal.html) return
+    if (!editor.value || JSON.stringify(editor.value.getJSON()) !== JSON.stringify(proposal.doc)) {
+      toast.add({ title: 'The message changed', description: 'Check the spelling again to see corrections for it.', icon: 'i-lucide-spell-check' })
+      return
+    }
     replaceDoc(applyBlockSegments(proposal.doc, proposal.fixed))
     remember(proposal.draftId, proposal.html)
     landed.value = 'proofread'

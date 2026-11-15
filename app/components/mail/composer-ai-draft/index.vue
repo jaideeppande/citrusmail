@@ -12,14 +12,22 @@ const asking = computed(() => tools.aiDraft.value && !busy.value && !draft.value
 const shownLanded = computed(() => landed.value === 'draft' || landed.value === 'follow-up' || landed.value === 'meeting')
 const shown = computed(() => asking.value || !!busy.value || (shownLanded.value && canUndo.value))
 
+// Focus goes into the line when it opens, and back to what opened it (the
+// sparkles button) when it closes; from the editor's /draft, back to the words
 const field = useTemplateRef('field')
+let returnTo: HTMLElement | undefined
 watch(asking, (value) => {
-  if (value) nextTick(() => field.value?.inputRef?.focus())
+  if (!value) return
+  const active = document.activeElement as HTMLElement | null
+  returnTo = active && active !== document.body && !active.closest('.ProseMirror') ? active : undefined
+  nextTick(() => field.value?.inputRef?.focus())
 }, { immediate: true })
 
 function close() {
   tools.aiDraft.value = false
-  editor.value?.commands.focus()
+  if (returnTo?.isConnected) returnTo.focus()
+  else editor.value?.commands.focus()
+  returnTo = undefined
 }
 
 function done() {
