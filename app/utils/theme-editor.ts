@@ -150,13 +150,11 @@ export function parseThemeJson(text: string): { theme?: ThemeOverride, errors: s
  */
 export function splitTheme(theme: ThemeOverride): { synced: Appearance, local: ThemeOverride } {
   const synced: Appearance = {}
-  const local: ThemeOverride = { ...theme }
   for (const key of SYNCED_KEYS) {
     const value = theme[key]
-    if (!value || !SYNCED_SHAPES[key].test(value)) continue
-    synced[key] = value
-    delete local[key]
+    if (value && SYNCED_SHAPES[key].test(value)) synced[key] = value
   }
+  const local = Object.fromEntries(Object.entries(theme).filter(([key]) => !(key in synced))) as ThemeOverride
   return { synced, local }
 }
 

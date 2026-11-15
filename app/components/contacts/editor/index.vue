@@ -134,6 +134,7 @@ function clearListError(field: 'emails' | 'phones', index: number) {
             :address="state.emails.find(email => email.trim())"
             size="2xl"
             :disabled="!hasEmail"
+            :plain="extrasTouched.photo && !photo"
             disabled-reason="Add an email address first: the photo is kept with it"
             @update:model-value="setPhoto"
           />

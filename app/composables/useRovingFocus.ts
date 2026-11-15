@@ -49,9 +49,10 @@ export function useRovingFocus(target: MaybeElementRef, options: { vertical?: bo
     list[next]!.focus()
   }
 
-  useEventListener(target, 'focusin', onFocusIn)
-  useEventListener(target, 'keydown', onKeydown)
-  useMutationObserver(target, () => arrange(), { childList: true, subtree: true })
+  const el = computed(() => container())
+  useEventListener(el, 'focusin', onFocusIn)
+  useEventListener(el, 'keydown', onKeydown)
+  useMutationObserver(el, () => arrange(), { childList: true, subtree: true })
   onMounted(() => nextTick(arrange))
 
   return { arrange }

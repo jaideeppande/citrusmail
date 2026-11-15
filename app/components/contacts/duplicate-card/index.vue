@@ -20,7 +20,7 @@ const birthday = computed(() => formatBirthday(props.contact.birthday))
   >
     <p
       class="text-[11px] font-medium tracking-wide uppercase"
-      :class="merged ? 'text-primary' : 'text-dimmed'"
+      :class="merged ? 'text-primary' : 'text-muted'"
     >
       {{ label }}
     </p>
@@ -42,7 +42,8 @@ const birthday = computed(() => formatBirthday(props.contact.birthday))
       >
         <UIcon
           name="i-lucide-mail"
-          class="size-3 shrink-0 text-dimmed"
+          class="size-3 shrink-0 text-muted"
+          aria-hidden="true"
         />
         <span class="truncate">{{ email }}</span>
       </li>
@@ -53,7 +54,8 @@ const birthday = computed(() => formatBirthday(props.contact.birthday))
       >
         <UIcon
           name="i-lucide-phone"
-          class="size-3 shrink-0 text-dimmed"
+          class="size-3 shrink-0 text-muted"
+          aria-hidden="true"
         />
         <span class="truncate tabular-nums">{{ phone }}</span>
       </li>
@@ -63,7 +65,8 @@ const birthday = computed(() => formatBirthday(props.contact.birthday))
       >
         <UIcon
           name="i-lucide-cake"
-          class="size-3 shrink-0 text-dimmed"
+          class="size-3 shrink-0 text-muted"
+          aria-hidden="true"
         />
         <span class="truncate">{{ birthday }}</span>
       </li>
@@ -73,13 +76,14 @@ const birthday = computed(() => formatBirthday(props.contact.birthday))
       >
         <UIcon
           name="i-lucide-sticky-note"
-          class="mt-0.5 size-3 shrink-0 text-dimmed"
+          class="mt-0.5 size-3 shrink-0 text-muted"
+          aria-hidden="true"
         />
         <span class="line-clamp-2 break-words">{{ contact.note }}</span>
       </li>
       <li
         v-if="!contact.emails.length && !contact.phones.length && !birthday && !contact.note"
-        class="text-dimmed"
+        class="text-muted"
       >
         Nothing but the name
       </li>

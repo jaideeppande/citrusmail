@@ -11,6 +11,8 @@ const props = defineProps<{
   disabled?: boolean
   /** Shown as the tooltip when it cannot be changed */
   disabledReason?: string
+  /** Initials only: a photo was just taken away, and the one still saved must not show through */
+  plain?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -60,6 +62,11 @@ function clear() {
           v-if="modelValue"
           :src="modelValue"
           :alt="name"
+          :size="size ?? '3xl'"
+        />
+        <UAvatar
+          v-else-if="plain"
+          :alt="name || '?'"
           :size="size ?? '3xl'"
         />
         <SenderAvatar

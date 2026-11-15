@@ -37,7 +37,7 @@ watch(step, async () => {
 
 const STEPS = ['Choose a file', 'Match columns', 'Review', 'Import'] as const
 const stepIndex = computed(() => ({ pick: 0, map: 1, review: 2, running: 3, done: 3 })[step.value])
-const steps = computed(() => STEPS.filter((_, index) => index !== 1 || !!sheet.value && !sheet.value.recognised))
+const steps = computed(() => STEPS.filter((_, index) => index !== 1 || (!!sheet.value && !sheet.value.recognised)))
 
 const input = useTemplateRef('input')
 const dragging = ref(false)

@@ -21,8 +21,7 @@ const _useThemeEditor = () => {
 
   function setSynced(patch: Appearance) {
     const next = { ...$appearance.value, ...patch }
-    for (const key of SYNCED_KEYS) if (!next[key]) delete next[key]
-    $appearance.value = next
+    $appearance.value = Object.fromEntries(Object.entries(next).filter(([key, value]) => value || !(SYNCED_KEYS as string[]).includes(key)))
     persist()
   }
 

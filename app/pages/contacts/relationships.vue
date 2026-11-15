@@ -54,18 +54,21 @@ const sections = computed(() => {
   }, {
     id: 'owe',
     title: 'You owe a reply',
+    bar: false,
     empty: 'Nobody has been waiting on you for more than two days.',
     people: data.oweReply,
     detail: (person: PersonStats) => `They wrote ${formatAgo(person.lastReceived!, at())}${person.lastSent ? `, you last wrote ${formatAgo(person.lastSent, at())}` : ''}`
   }, {
     id: 'waiting',
     title: 'Waiting on them',
+    bar: false,
     empty: 'Nobody has left you waiting for more than two days.',
     people: data.waiting,
     detail: (person: PersonStats) => `You wrote ${formatAgo(person.lastSent!, at())}${person.lastReceived ? `, they last wrote ${formatAgo(person.lastReceived, at())}` : ', no answer yet'}`
   }, {
     id: 'lost',
     title: 'Lost touch',
+    bar: false,
     empty: `Nobody you exchanged ${LOST_MIN_MESSAGES} or more messages with has gone quiet for ${LOST_AFTER_DAYS} days.`,
     people: data.lostTouch,
     detail: (person: PersonStats) => `${messages(person.total)}, last ${formatAgo(person.last, at())}`

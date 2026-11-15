@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { cleanThemeOverride, normalTheme, parseThemeJson, sameTheme, splitTheme, themeJson, unsafeThemeValue } from '../app/utils/theme-editor'
-import { matchingPreset, presetFromSaved, presetTheme, THEME_PRESETS } from '../app/utils/theme-presets'
+import { matchingPreset, presetFromSaved, THEME_PRESETS } from '../app/utils/theme-presets'
 import { contrastRatio } from '../app/utils/contrast'
 import { mergeTheme } from '../app/utils/theme'
 

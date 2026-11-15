@@ -9,7 +9,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="flex flex-col gap-1 rounded-lg p-4 ring ring-default">
+  <div class="flex flex-col gap-1 rounded-lg bg-elevated/50 px-4 py-3.5">
     <p class="text-xs font-medium text-muted">
       {{ label }}
     </p>

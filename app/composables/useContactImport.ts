@@ -75,7 +75,7 @@ export function useContactImport() {
       return
     }
 
-    const vcard = /\.vcf$|\.vcard$/i.test(file.name) || /^﻿?\s*BEGIN:VCARD/i.test(text)
+    const vcard = /\.vcf$|\.vcard$/i.test(file.name) || /^\uFEFF?\s*BEGIN:VCARD/i.test(text)
     if (vcard) {
       const found = parseVCards(text)
       if (!found.length) {
@@ -152,7 +152,12 @@ export function useContactImport() {
 
   async function saveOne(contact: Contact): Promise<true | string> {
     let reason = 'The address book refused it'
-    const saved = await save(contact, { quiet: true, onError: (message) => { reason = message } })
+    const saved = await save(contact, {
+      quiet: true,
+      onError: (message) => {
+        reason = message
+      }
+    })
     return saved ? true : reason
   }
 

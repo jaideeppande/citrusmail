@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { EditorToolbarItem } from '@nuxt/ui'
+import type { Editor as CoreEditor } from '@tiptap/core'
 import type { Editor } from '@tiptap/vue-3'
-import type { EditorState } from '@tiptap/pm/state'
 import type { EditorView } from '@tiptap/pm/view'
 
 // Small menus that float by what the cursor is in: a table (rows, columns,
@@ -10,7 +10,7 @@ const props = defineProps<{
   editor: Editor
 }>()
 
-interface ShowArgs { editor: Editor, view: EditorView, state: EditorState, element: HTMLElement }
+interface ShowArgs { editor: CoreEditor, view: EditorView, element: HTMLElement }
 
 // Shown while the editor (or the menu itself) has the cursor
 const showFor = (name: string, unless?: string) => ({ editor, view, element }: ShowArgs) =>

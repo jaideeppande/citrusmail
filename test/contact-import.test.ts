@@ -91,7 +91,7 @@ describe('parseVCards', () => {
   })
 
   it('ignores group prefixes, pictures and a byte order mark, and keeps non-ASCII names', () => {
-    const text = '﻿BEGIN:VCARD\nFN:李小龍\nitem1.EMAIL;type=INTERNET:lee@example.com\nPHOTO;ENCODING=b;TYPE=JPEG:AAAA\nEND:VCARD'
+    const text = '\uFEFFBEGIN:VCARD\nFN:李小龍\nitem1.EMAIL;type=INTERNET:lee@example.com\nPHOTO;ENCODING=b;TYPE=JPEG:AAAA\nEND:VCARD'
     expect(parseVCards(text)).toEqual([expect.objectContaining({ name: '李小龍', emails: ['lee@example.com'] })])
   })
 
@@ -119,7 +119,7 @@ describe('CSV', () => {
   })
 
   it('drops empty rows and a byte order mark', () => {
-    expect(parseCsv('﻿a,b\n\n,\n1,2\n')).toEqual([['a', 'b'], ['1', '2']])
+    expect(parseCsv('\uFEFFa,b\n\n,\n1,2\n')).toEqual([['a', 'b'], ['1', '2']])
   })
 
   it('detects the delimiter', () => {
@@ -163,7 +163,7 @@ describe('CSV', () => {
       draft({ name: 'Ben', emails: ['ben@example.com'], company: 'Okri & Co' })
     ]
     const csv = contactsToCsv(contacts)
-    expect(csv.startsWith('﻿')).toBe(true)
+    expect(csv.startsWith('\uFEFF')).toBe(true)
     const sheet = readCsv(csv)
     expect(sheet.recognised).toBe(true)
     expect(csvToContacts(sheet.rows, sheet.mapping)).toEqual(contacts.map(contact => ({

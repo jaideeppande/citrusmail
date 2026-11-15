@@ -143,6 +143,11 @@
 @keyframes lb-zen-in { from { opacity: 0; transform: scale(0.985); } }
 @keyframes lb-zen-out { to { opacity: 0; transform: scale(0.985); } }
 
+/* The subject line, which distraction-free writing sets large and centred (see lb-zen) */
+@utility lb-zen-subject {
+  scroll-margin-top: 4rem;
+}
+
 @utility lb-zen-status {
   border-top: 1px solid transparent;
 }
@@ -221,8 +226,6 @@
 @utility lb-timeline-track {
   position: relative;
   height: 2.75rem;
-  background-image: linear-gradient(to right, var(--ui-border) 1px, transparent 1px);
-  background-size: calc(100% / 7) 100%;
 }
 @utility lb-timeline-marker {
   position: absolute;

@@ -36,6 +36,7 @@ const sorted = computed(() => [...props.entries].sort())
       <UInput
         v-model="input"
         placeholder="name@example.com or @example.com"
+        :aria-label="`Add to ${label}`"
         class="flex-1"
       />
       <UButton
