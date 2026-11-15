@@ -117,6 +117,7 @@ watch(unread, (count) => {
     <ShortcutsHelp />
     <template v-if="isMain">
       <TodayPanel />
+      <AssistantPanel />
       <AppNotifications />
       <AppTour />
       <WhatsNew />

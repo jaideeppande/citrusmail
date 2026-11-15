@@ -39,6 +39,24 @@ function addToCalendar() {
   if (message.value) mailEvent.fromMessage(message.value)
 }
 
+/* Ask about this ------------------------------------------------------ */
+
+const ai = useAiClient()
+const assistant = useAssistant()
+
+// The assistant opens on this conversation: every message of it, your replies included
+function ask() {
+  const open = message.value
+  if (!open) return
+  const entries = thread.value?.entries ?? []
+  assistant.open({
+    kind: 'thread',
+    key: messageKey(open),
+    subject: open.subject,
+    messages: entries.length ? entries.map(entry => entry.summary) : [summary.value ?? open]
+  })
+}
+
 /* Reading progress --------------------------------------------------- */
 
 // A hairline under the header fills as the message scrolls by. Where the
@@ -81,7 +99,8 @@ useCommands(() => message.value
       items: [
         { label: 'Print or save as PDF', icon: 'i-lucide-printer', kbds: kbds('mail.print').map(value => ({ value, variant: 'soft' as const })), onSelect: print },
         ...(mailEvent.available.value ? [{ label: 'Add to calendar', icon: 'i-lucide-calendar-plus', onSelect: addToCalendar }] : []),
-        ...(ready.value && thread.value?.isThread ? [{ label: 'Summarize conversation', icon: 'i-lucide-sparkles', onSelect: () => thread.value?.summarize() }] : [])
+        ...(ready.value && thread.value?.isThread ? [{ label: 'Summarize conversation', icon: 'i-lucide-sparkles', onSelect: () => thread.value?.summarize() }] : []),
+        ...(ai.enabled('ask-thread') ? [{ label: thread.value?.isThread ? 'Ask about this conversation' : 'Ask about this message', icon: 'i-lucide-message-circle-question', onSelect: ask }] : [])
       ]
     }]
   : [])
@@ -104,6 +123,7 @@ useCommands(() => message.value
       :translation="thread?.translationState"
       :thread="thread?.isThread"
       @summarize="thread?.summarize()"
+      @ask="ask"
       @translate="thread?.translate()"
       @print="print"
       @event="addToCalendar"

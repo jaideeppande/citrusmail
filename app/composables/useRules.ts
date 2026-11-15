@@ -43,8 +43,12 @@ export function useRules() {
     }
   }
 
-  async function edit(rule?: MailRule, folder?: string) {
-    const modal = overlay.create(SettingsRuleEditor, { props: { rule, folder } })
+  /**
+   * Opens the editor on a rule, a new one, or a draft to check before it's
+   * added (one the AI wrote from a description, with `notes` on what it left out)
+   */
+  async function edit(rule?: MailRule, folder?: string, draft?: { rule: RuleInput, notes: string[] }) {
+    const modal = overlay.create(SettingsRuleEditor, { props: { rule, folder, draft: draft?.rule, notes: draft?.notes } })
     const result = await modal.open().result
     if (!result) return
     const exists = rules.value.some(item => item.id === result.id)

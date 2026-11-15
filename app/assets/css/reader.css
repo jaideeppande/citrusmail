@@ -80,3 +80,18 @@
   from { transform: scaleX(0); }
   to { transform: scaleX(1); }
 }
+
+/* The assistant panel (components/assistant): an answer being written ends
+   in the same violet caret the composer's AI writing uses */
+@utility lb-ai-caret {
+  &::after {
+    content: '';
+    display: inline-block;
+    width: 2px;
+    height: 1.1em;
+    margin-inline-start: 2px;
+    vertical-align: text-bottom;
+    background: var(--lb-ai);
+    animation: lb-caret 900ms steps(2, start) infinite;
+  }
+}

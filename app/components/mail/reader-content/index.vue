@@ -79,6 +79,9 @@ const hasInvite = computed(() => props.message.attachments.some(isInvite))
       :message="message"
     />
 
+    <!-- The one AI row above the body: it shows only when a message looks like a scam -->
+    <MailAiScamBanner :message="message" />
+
     <MailActionChips :message="message" />
 
     <MailTranslateBar :translation="translation" />

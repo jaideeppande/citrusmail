@@ -6,6 +6,8 @@ const { open: openPalette } = useCommandPalette()
 const { kbds } = useShortcutKeys()
 const { focus } = useWindowChrome()
 const today = useTodayPanel()
+const assistant = useAssistant()
+const ai = useAiClient()
 const { account } = useShell()
 </script>
 
@@ -51,6 +53,22 @@ const { account } = useShell()
           aria-label="Open this page in a new window"
           class="text-muted hover:text-highlighted"
           @click="openPopout(currentPath())"
+        />
+      </UTooltip>
+      <UTooltip
+        v-if="ai.available.value"
+        text="Ask AI"
+        :kbds="kbds('app.assistant')"
+      >
+        <UButton
+          icon="i-lucide-sparkles"
+          color="neutral"
+          :variant="assistant.isOpen.value ? 'soft' : 'ghost'"
+          size="xs"
+          aria-label="Ask AI"
+          :aria-pressed="assistant.isOpen.value"
+          class="text-muted hover:text-(--lb-ai)"
+          @click="assistant.toggle()"
         />
       </UTooltip>
       <UTooltip

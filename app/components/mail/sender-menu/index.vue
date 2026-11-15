@@ -22,6 +22,7 @@ const { togglePin, isPinned, snooze } = useMail()
 const { kbds } = useShortcutKeys()
 const mailEvent = useMailEvent()
 const board = useLaterBoard()
+const ai = useAiClient()
 
 const address = computed(() => props.message.from.address)
 const domain = computed(() => `@${address.value.split('@')[1] ?? ''}`)
@@ -42,6 +43,7 @@ const items = computed<DropdownMenuItem[][]>(() => {
       { label: isPinned(summary) ? 'Unpin' : 'Pin to top', icon: isPinned(summary) ? 'i-lucide-pin-off' : 'i-lucide-pin', kbds: kbds('mail.pin'), onSelect: () => togglePin(summary) },
       { label: 'Label…', icon: 'i-lucide-tag', kbds: kbds('mail.label'), onSelect: () => useLabelPicker().pick([summary]) },
       { label: board.has(summary) ? 'On the Later board' : 'Add to Later', icon: 'i-lucide-square-kanban', disabled: board.has(summary), onSelect: () => board.add([summary]) },
+      ...(ai.enabled('tasks') ? [{ label: 'Find tasks', icon: 'i-lucide-list-checks', onSelect: () => useAiTasks().extract([summary]) }] : []),
       {
         label: 'Snooze',
         icon: 'i-lucide-alarm-clock',
