@@ -28,7 +28,7 @@ const loaded = ref(false)
     >
       <UIcon
         name="i-lucide-loader-circle"
-        class="size-5 text-dimmed animate-spin"
+        class="size-5 text-muted animate-spin"
       />
     </div>
   </div>

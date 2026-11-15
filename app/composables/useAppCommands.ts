@@ -36,6 +36,8 @@ export function useAppCommands() {
           { label: message.unread ? 'Mark as read' : 'Mark as unread', icon: message.unread ? 'i-lucide-mail-open' : 'i-lucide-mail', kbds: keys('mail.toggleRead'), onSelect: () => mail.setUnread(message, !message.unread) },
           { label: message.flagged ? 'Remove flag' : 'Flag', icon: 'i-lucide-flag', kbds: keys('mail.flag'), onSelect: () => mail.toggleFlag(message) },
           { label: mail.isPinned(message) ? 'Unpin' : 'Pin to top', icon: 'i-lucide-pin', kbds: keys('mail.pin'), onSelect: () => mail.togglePin(message) },
+          { label: 'Label…', icon: 'i-lucide-tag', kbds: keys('mail.label'), onSelect: () => useLabelPicker().pick([message]) },
+          { label: 'Add to Later', icon: 'i-lucide-square-kanban', onSelect: () => useLaterBoard().add([message]) },
           ...snoozePresets().map(preset => ({ label: `Snooze: ${preset.label.toLowerCase()}`, icon: preset.icon, suffix: snoozeLabel(preset.date), onSelect: () => mail.snooze([message], preset.date) })),
           { label: 'Open in a new window', icon: 'i-lucide-picture-in-picture-2', kbds: keys('window.popout'), onSelect: () => openPopout(`${folderLink(message.folder)}?m=${encodeURIComponent(message.id)}`) }
         ]
@@ -47,6 +49,7 @@ export function useAppCommands() {
       label: 'Actions',
       items: [
         { label: 'New message', icon: 'i-lucide-square-pen', kbds: keys('mail.compose'), onSelect: () => compose() },
+        { label: 'Search every folder', icon: 'i-lucide-search', kbds: keys('mail.searchAll'), onSelect: () => useSearchAll().open() },
         { label: 'Triage the Inbox', icon: 'i-lucide-list-checks', kbds: keys('mail.triage'), onSelect: () => triage.start() },
         { label: 'Undo the last move or delete', icon: 'i-lucide-undo-2', kbds: keys('mail.undo'), onSelect: () => mail.undo() },
         { label: 'Check for new mail', icon: 'i-lucide-rotate-cw', onSelect: () => mail.refreshTop() }
@@ -63,6 +66,7 @@ export function useAppCommands() {
         })),
         ...(account.value?.hasCalendar ? [{ label: 'Calendar', icon: 'i-lucide-calendar', kbds: keys('go.calendar'), to: `/calendar/week/${todayDate().toString()}` }] : []),
         ...(account.value?.hasContacts ? [{ label: 'Contacts', icon: 'i-lucide-book-user', kbds: keys('go.contacts'), to: '/contacts' }] : []),
+        { label: 'Later board', icon: 'i-lucide-square-kanban', kbds: keys('go.later'), to: '/later' },
         ...(account.value?.protocol !== 'pop3' ? [{ label: 'Subscriptions', icon: 'i-lucide-newspaper', to: '/subscriptions' }] : []),
         { label: 'Settings', icon: 'i-lucide-settings', kbds: keys('go.settings'), to: '/settings' }
       ]
@@ -107,6 +111,7 @@ export function useAppCommands() {
     'go.calendar': () => account.value?.hasCalendar && navigateTo(`/calendar/week/${todayDate().toString()}`),
     'go.contacts': () => account.value?.hasContacts && navigateTo('/contacts'),
     'go.settings': () => navigateTo('/settings'),
+    'go.later': () => navigateTo('/later'),
     'window.popout': () => openPopout(currentPath())
   })
 }

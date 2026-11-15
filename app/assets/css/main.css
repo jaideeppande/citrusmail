@@ -30,6 +30,12 @@
     cursor: pointer;
   }
 
+  /* One focus ring for anything that takes keyboard focus and draws none of its own */
+  :focus-visible {
+    outline: 2px solid var(--ui-primary);
+    outline-offset: 2px;
+  }
+
   ::selection {
     background-color: color-mix(in oklab, var(--ui-primary) 18%, transparent);
   }
@@ -552,8 +558,8 @@ html:is([data-motion='reduced'], [data-motion='off'])::view-transition-new(*) {
 }
 
 /* Density (Settings → Appearance): how much air a row gets */
-:root { --lb-row-y: 0.75rem; --lb-row-gap: 0.125rem; }
-html[data-density='cozy'] { --lb-row-y: 0.5rem; --lb-row-gap: 0; }
+:root { --lb-row-y: 0.625rem; --lb-row-gap: 0.125rem; }
+html[data-density='cozy'] { --lb-row-y: 0.4375rem; --lb-row-gap: 0; }
 html[data-density='compact'] { --lb-row-y: 0.3125rem; --lb-row-gap: 0; }
 
 /* ---------------------------------------------------------------- */
@@ -664,11 +670,11 @@ html[data-density='compact'] { --lb-row-compact: 2rem; }
   flex-shrink: 0;
   &[data-dot] { width: 1rem; height: 1rem; }
   & > * { grid-area: 1 / 1; transition: opacity var(--lb-dur-1) ease, transform var(--lb-dur-2) var(--lb-ease-out); }
-  & > [role="checkbox"] { opacity: 0; transform: scale(.8); }
+  & > [data-check] { opacity: 0; transform: scale(.8); }
   .group:hover > button > & > :first-child,
   [data-checking] > button > & > :first-child { opacity: 0; transform: scale(.8); }
-  .group:hover > button > & > [role="checkbox"],
-  [data-checking] > button > & > [role="checkbox"] { opacity: 1; transform: none; }
+  .group:hover > button > & > [data-check],
+  [data-checking] > button > & > [data-check] { opacity: 1; transform: none; }
 }
 
 @utility lb-row-check {
@@ -754,3 +760,26 @@ html[data-density='compact'] { --lb-row-compact: 2rem; }
 .lb-triage-away-leave-to { opacity: 0; transform: translate(-72px, 12px) rotate(-1.5deg) scale(.96); }
 .lb-triage-back-enter-from { opacity: 0; transform: translateX(-48px) scale(.98); }
 .lb-triage-back-leave-to { opacity: 0; transform: translateX(48px) scale(.98); }
+
+/* ---------------------------------------------------------------- */
+/* Labels: nine colours, mid-tones that sit on white and on near-black alike.
+   A label always shows its name beside the dot, so the colour is a help,
+   never the only way to tell two apart */
+:root {
+  --lb-label-red: oklch(0.63 0.2 25);
+  --lb-label-orange: oklch(0.7 0.17 55);
+  --lb-label-amber: oklch(0.78 0.15 85);
+  --lb-label-green: oklch(0.65 0.16 150);
+  --lb-label-teal: oklch(0.66 0.11 195);
+  --lb-label-blue: oklch(0.62 0.16 255);
+  --lb-label-violet: oklch(0.6 0.18 295);
+  --lb-label-pink: oklch(0.68 0.17 350);
+  --lb-label-grey: oklch(0.62 0.01 60);
+}
+
+/* A pane of a split layout is a desktop page in a narrow frame. The page's
+   own breakpoints see a phone-sized viewport, so what only phones need is
+   put away here: the menu button (a pane has no sidebar to open) and the
+   floating phone toolbar on the calendar */
+html[data-window='pane'] button[aria-label='Open menu'] { display: none; }
+html[data-window='pane'] .lb-phone-only { display: none; }

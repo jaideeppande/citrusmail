@@ -107,7 +107,7 @@ const changed = computed(() => JSON.stringify(type.value) !== JSON.stringify(DEF
           @update:model-value="(on: boolean) => set({ sepia: on })"
         />
 
-        <p class="text-xs text-dimmed">
+        <p class="text-xs text-muted">
           Typeface and line height apply to plain-text messages. Formatted mail keeps its own design.
         </p>
 

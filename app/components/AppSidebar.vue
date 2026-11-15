@@ -13,6 +13,7 @@ defineAppShortcuts({ 'app.sidebar': () => !isMobile.value && toggleSidebar() })
 <template>
   <USidebar
     v-model:open="isSidebarOpen"
+    aria-label="Folders and sections"
     collapsible="icon"
     rail
     :transition="true"

@@ -20,7 +20,7 @@ const { account } = useShell()
       size="xs"
       icon="i-lucide-search"
       aria-label="Search and commands"
-      class="w-full max-w-88 justify-start gap-2 px-2.5 h-7 font-normal text-dimmed rounded-full bg-(--lb-tab-track) ring ring-inset ring-(--lb-tab-ring) hover:bg-(--lb-tab-track) hover:text-toned lb-press [-webkit-app-region:no-drag]"
+      class="w-full max-w-88 justify-start gap-2 px-2.5 h-7 font-normal text-muted rounded-full bg-(--lb-tab-track) ring ring-inset ring-(--lb-tab-ring) hover:bg-(--lb-tab-track) hover:text-toned lb-press [-webkit-app-region:no-drag]"
       @click="openPalette"
     >
       <span class="flex-1 text-start truncate">Search or run a command</span>
@@ -37,6 +37,7 @@ const { account } = useShell()
 
     <div class="flex-1 flex items-center justify-end gap-0.5 [-webkit-app-region:no-drag]">
       <AppNotificationsDnd />
+      <NotificationCentre />
       <UTooltip
         text="Open this page in a new window"
         :kbds="kbds('window.popout')"
@@ -48,7 +49,7 @@ const { account } = useShell()
           variant="ghost"
           size="xs"
           aria-label="Open this page in a new window"
-          class="text-dimmed hover:text-highlighted"
+          class="text-muted hover:text-highlighted"
           @click="openPopout(currentPath())"
         />
       </UTooltip>
@@ -65,7 +66,7 @@ const { account } = useShell()
           size="xs"
           aria-label="Today"
           :aria-pressed="today.isOpen.value"
-          class="text-dimmed hover:text-highlighted"
+          class="text-muted hover:text-highlighted"
           @click="today.toggle()"
         />
       </UTooltip>
@@ -80,7 +81,7 @@ const { account } = useShell()
           size="xs"
           aria-label="Focus mode"
           :aria-pressed="focus"
-          class="text-dimmed hover:text-highlighted"
+          class="text-muted hover:text-highlighted"
           @click="focus = !focus"
         />
       </UTooltip>

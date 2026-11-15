@@ -22,6 +22,7 @@ export function useMailRow(props: { message: MessageSummary, selected: boolean, 
   const pinned = computed(() => mail.thread(props.message).some(mail.isPinned))
   const returned = computed(() => mail.thread(props.message).some(mail.isReturned))
   const waiting = computed(() => props.sent ? nudges.waitingDays(props.message) : undefined)
+  const labelled = computed(() => useLabels().labelsOf(props.message).length > 0)
 
   const motion = computed(() => mail.vanishing.value.has(key.value) ? 'lb-row-leaving' : mail.arrived.value.has(key.value) ? 'lb-row-arriving' : '')
 
@@ -51,7 +52,7 @@ export function useMailRow(props: { message: MessageSummary, selected: boolean, 
     setTimeout(() => ghost.remove())
   }
 
-  return { thread, count, unread, flagged, hasAttachments, person, checked, checking, pinned, returned, waiting, motion, onClick, onCheck, onDragStart }
+  return { thread, count, unread, flagged, hasAttachments, person, checked, checking, pinned, returned, waiting, labelled, motion, onClick, onCheck, onDragStart }
 }
 
 /** What a dragged row carries: the keys of the messages, as JSON */

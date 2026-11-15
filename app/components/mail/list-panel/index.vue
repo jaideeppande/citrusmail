@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
 
-const { folder, filter, total, status, load, refreshTop, ai, tabbed, checked, checkAll, shown } = useMail()
+const { folder, filter, total, status, load, refreshTop, ai, tabbed, checked, checkAll, shown, labelFilter } = useMail()
+const { labels } = useLabels()
+const activeLabel = computed(() => labels.value.find(label => label.id === labelFilter.value))
 const { isSidebarOpen } = useShell()
 const { kbds } = useShortcutKeys()
 const gallery = useAttachmentGallery()
@@ -103,6 +105,26 @@ async function refresh() {
     <MailSearchBar />
 
     <MailInboxTabs v-if="tabbed && !ai.on" />
+
+    <Transition name="lb-collapse">
+      <div v-if="activeLabel && !ai.on">
+        <div class="flex items-center gap-2 px-4 h-9 border-b border-default text-sm">
+          <span
+            class="size-2.5 rounded-full"
+            :style="{ background: labelVar(activeLabel.color) }"
+            aria-hidden="true"
+          />
+          <span class="flex-1 truncate text-toned">Labelled <span class="font-medium text-highlighted">{{ activeLabel.name }}</span></span>
+          <UButton
+            label="Show all"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            @click="labelFilter = undefined"
+          />
+        </div>
+      </div>
+    </Transition>
 
     <MailScheduledSection v-if="folder?.role === 'drafts' && !ai.on" />
 

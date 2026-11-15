@@ -11,6 +11,11 @@ const themeSchedule = useThemeSchedule()
 const { account } = useShell()
 const { settings } = useSettings()
 const { others, switchTo, signOutOf, signOutAll, add } = useMailboxes()
+const { waiting } = useNotificationCentre()
+const newIn = (email: string) => {
+  const count = waiting.value[email.toLowerCase()]
+  return count ? `${count} new` : undefined
+}
 
 const appearance = (value: 'light' | 'dark' | 'system', label: string, icon: string): DropdownMenuItem => ({
   label,
@@ -34,8 +39,9 @@ const items = computed<DropdownMenuItem[][]>(() => [[{
   avatar: { alt: label.value, src: settings.value.avatar }
 }, ...others.value.map((mailbox, index): DropdownMenuItem => ({
   label: mailbox.name || mailbox.email,
-  description: mailbox.name ? mailbox.email : undefined,
-  avatar: { alt: mailbox.name || mailbox.email, size: '2xs' },
+  // Mail that came in there since it was last open, then its address
+  description: [newIn(mailbox.email), mailbox.name ? mailbox.email : undefined].filter(Boolean).join(' · ') || undefined,
+  avatar: { alt: mailbox.name || mailbox.email, size: '2xs', chip: waiting.value[mailbox.email.toLowerCase()] ? { color: 'primary' as const, size: 'sm' as const } : undefined },
   kbds: index < 3 ? ['ctrl', String(index + 2)] : undefined,
   onSelect: () => switchTo(mailbox.email)
 })), {
@@ -85,7 +91,7 @@ defineShortcuts(Object.fromEntries([0, 1, 2].map(index => [`ctrl_${index + 2}`, 
       :trailing-icon="collapsed ? undefined : 'i-lucide-chevrons-up-down'"
       class="data-[state=open]:bg-(--control-bg)"
       :class="collapsed && 'mx-auto'"
-      :ui="{ trailingIcon: 'text-dimmed', label: 'truncate' }"
+      :ui="{ trailingIcon: 'text-muted', label: 'truncate' }"
     />
   </UDropdownMenu>
 </template>

@@ -73,7 +73,7 @@ const recipients = computed(() => {
         >{{ listDate(message.date) }}</time>
         <UIcon
           name="i-lucide-chevron-down"
-          class="size-4 text-dimmed transition-transform duration-(--lb-dur-2) ease-(--lb-ease-out)"
+          class="size-4 text-muted transition-transform duration-(--lb-dur-2) ease-(--lb-ease-out)"
           :class="open && 'rotate-180'"
         />
       </span>

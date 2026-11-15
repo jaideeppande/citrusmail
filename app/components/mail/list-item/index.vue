@@ -28,6 +28,7 @@ const avatarAddress = computed(() => props.sent ? props.message.to[0] : props.me
       <UButton
         :data-id="message.id"
         :aria-current="selected || undefined"
+        :aria-keyshortcuts="row.checking.value ? undefined : 'x'"
         color="neutral"
         variant="ghost"
         block
@@ -35,10 +36,11 @@ const avatarAddress = computed(() => props.sent ? props.message.to[0] : props.me
         :class="row.checked.value ? 'bg-primary/8 hover:bg-primary/10' : selected ? 'bg-(--lb-selected) hover:bg-(--lb-selected)' : 'hover:bg-elevated/60'"
         @click="row.onClick"
       >
+        <span class="sr-only">{{ [row.checked.value && 'Selected', row.unread.value && 'Unread', row.pinned.value && 'Pinned', row.flagged.value && 'Flagged', row.hasAttachments.value && 'Has attachments', row.returned.value && 'Back from snooze', row.count.value > 1 && `${row.count.value} messages`].filter(Boolean).join(', ') }}</span>
         <span
           class="mt-[15px] size-2 shrink-0 rounded-full transition-colors duration-(--lb-dur-2)"
           :class="row.unread.value ? 'bg-(--lb-unread)' : 'bg-transparent'"
-          :aria-label="row.unread.value ? 'Unread' : undefined"
+          aria-hidden="true"
         />
 
         <span class="lb-row-avatar">
@@ -68,19 +70,19 @@ const avatarAddress = computed(() => props.sent ? props.message.to[0] : props.me
                 v-if="row.pinned.value"
                 name="i-ph-push-pin-fill"
                 class="size-3.5 text-primary lb-mark-pop"
-                aria-label="Pinned"
+                aria-hidden="true"
               />
               <UIcon
                 v-if="row.hasAttachments.value"
                 name="i-lucide-paperclip"
                 class="size-3.5"
-                aria-label="Has attachments"
+                aria-hidden="true"
               />
               <UIcon
                 v-if="row.flagged.value"
                 name="i-ph-flag-fill"
                 class="size-3.5 text-(--lb-flag) lb-mark-pop"
-                aria-label="Flagged"
+                aria-hidden="true"
               />
               {{ listDate(message.date) }}
             </span>
@@ -110,9 +112,10 @@ const avatarAddress = computed(() => props.sent ? props.message.to[0] : props.me
             {{ message.preview }}
           </span>
           <span
-            v-if="note || row.returned.value || row.waiting.value !== undefined"
-            class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-dimmed"
+            v-if="note || row.returned.value || row.waiting.value !== undefined || row.labelled.value"
+            class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-muted"
           >
+            <MailLabelChips :message="message" />
             <span
               v-if="row.returned.value"
               class="inline-flex items-center gap-1 text-primary"

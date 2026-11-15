@@ -58,7 +58,7 @@ function newWindow() {
         :variant="open || layout.panes > 1 ? 'soft' : 'ghost'"
         size="xs"
         aria-label="Layout and windows"
-        class="text-dimmed hover:text-highlighted"
+        class="text-muted hover:text-highlighted"
       />
     </UTooltip>
 
@@ -92,7 +92,7 @@ function newWindow() {
         </div>
         <p
           v-if="!available"
-          class="mt-2 text-xs text-dimmed"
+          class="mt-2 text-xs text-muted"
         >
           Split layouts are part of the desktop app. Here, a page can still open in a window of its own.
         </p>
@@ -163,7 +163,7 @@ function newWindow() {
                 @click="restore(workspace)"
               >
                 <template #trailing>
-                  <span class="ms-auto text-xs text-dimmed tabular-nums">{{ workspace.windows }} {{ workspace.windows === 1 ? 'window' : 'windows' }}</span>
+                  <span class="ms-auto text-xs text-muted tabular-nums">{{ workspace.windows }} {{ workspace.windows === 1 ? 'window' : 'windows' }}</span>
                 </template>
               </UButton>
               <UButton
@@ -172,14 +172,14 @@ function newWindow() {
                 variant="ghost"
                 size="xs"
                 :aria-label="`Remove ${workspace.name}`"
-                class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity text-dimmed"
+                class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity text-muted"
                 @click="forget(workspace)"
               />
             </li>
           </TransitionGroup>
           <p
             v-if="!workspaces.length"
-            class="text-xs text-dimmed"
+            class="text-xs text-muted"
           >
             Arrange your windows across your screens, then save them under a name to get them back in one click.
           </p>

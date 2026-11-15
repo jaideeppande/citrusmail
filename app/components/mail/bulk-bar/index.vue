@@ -16,6 +16,9 @@ const targets = computed<DropdownMenuItem[][]>(() => [folders.value
   .map(item => ({ label: item.name, icon: folderIcon(item), onSelect: () => moveMany(checkedRows.value, item.path) }))])
 
 const snoozes = computed(() => [snoozeItems(() => checkedRows.value)])
+
+const bar = useTemplateRef<HTMLElement>('bar')
+useRovingFocus(bar)
 </script>
 
 <template>
@@ -25,6 +28,7 @@ const snoozes = computed(() => [snoozeItems(() => checkedRows.value)])
       class="absolute bottom-4 inset-x-0 z-10 flex justify-center px-3 pointer-events-none"
     >
       <div
+        ref="bar"
         role="toolbar"
         aria-label="Selected messages"
         class="pointer-events-auto flex items-center gap-0.5 ps-3 pe-1 py-1 rounded-full bg-inverted text-inverted shadow-lg ring ring-default/10 max-w-full"

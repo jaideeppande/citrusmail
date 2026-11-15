@@ -28,6 +28,7 @@ const person = computed(() => props.sent ? `To ${props.message.to.map(personName
       <UButton
         :data-id="message.id"
         :aria-current="selected || undefined"
+        :aria-keyshortcuts="row.checking.value ? undefined : 'x'"
         color="neutral"
         variant="ghost"
         block
@@ -35,6 +36,7 @@ const person = computed(() => props.sent ? `To ${props.message.to.map(personName
         :class="row.checked.value ? 'bg-primary/8 hover:bg-primary/10' : selected ? 'bg-(--lb-selected) hover:bg-(--lb-selected)' : row.unread.value ? 'hover:bg-elevated/60' : 'bg-elevated/25 hover:bg-elevated/60'"
         @click="row.onClick"
       >
+        <span class="sr-only">{{ [row.checked.value && 'Selected', row.unread.value && 'Unread', row.pinned.value && 'Pinned', row.flagged.value && 'Flagged', row.hasAttachments.value && 'Has attachments', row.returned.value && 'Back from snooze', row.count.value > 1 && `${row.count.value} messages`].filter(Boolean).join(', ') }}</span>
         <span
           class="lb-row-avatar"
           data-dot
@@ -42,7 +44,7 @@ const person = computed(() => props.sent ? `To ${props.message.to.map(personName
           <span
             class="size-2 rounded-full transition-colors duration-(--lb-dur-2)"
             :class="row.unread.value ? 'bg-(--lb-unread)' : 'bg-transparent'"
-            :aria-label="row.unread.value ? 'Unread' : undefined"
+            aria-hidden="true"
           />
           <MailRowCheck
             :checked="row.checked.value"
@@ -72,6 +74,10 @@ const person = computed(() => props.sent ? `To ${props.message.to.map(personName
         </span>
 
         <span class="shrink-0 flex items-center gap-1.5 text-xs text-muted tabular-nums group-hover:invisible in-data-checking:visible">
+          <MailLabelChips
+            :message="message"
+            compact
+          />
           <span
             v-if="row.waiting.value !== undefined"
             class="inline-flex items-center gap-1 text-warning"
@@ -85,7 +91,7 @@ const person = computed(() => props.sent ? `To ${props.message.to.map(personName
             v-if="row.returned.value"
             name="i-lucide-alarm-clock-check"
             class="size-3.5 text-primary"
-            aria-label="Back from snooze"
+            aria-hidden="true"
           />
           <MailReceiptBadge
             v-if="message.receipt"
@@ -95,19 +101,19 @@ const person = computed(() => props.sent ? `To ${props.message.to.map(personName
             v-if="row.pinned.value"
             name="i-ph-push-pin-fill"
             class="size-3.5 text-primary lb-mark-pop"
-            aria-label="Pinned"
+            aria-hidden="true"
           />
           <UIcon
             v-if="row.hasAttachments.value"
             name="i-lucide-paperclip"
             class="size-3.5"
-            aria-label="Has attachments"
+            aria-hidden="true"
           />
           <UIcon
             v-if="row.flagged.value"
             name="i-ph-flag-fill"
             class="size-3.5 text-(--lb-flag) lb-mark-pop"
-            aria-label="Flagged"
+            aria-hidden="true"
           />
           <span
             class="w-14 text-end"

@@ -160,7 +160,7 @@ function retry() {
                 <UIcon
                   v-else
                   :name="attachmentIcon(item.file.contentType)"
-                  class="size-9 text-dimmed"
+                  class="size-9 text-muted"
                 />
               </span>
               <span class="flex flex-col gap-0.5 px-2.5 py-2 min-w-0">

@@ -56,6 +56,7 @@ watch(unread, (count) => {
 
 <template>
   <div class="isolate relative flex h-svh overflow-hidden bg-(--lb-desk)">
+    <SkipLink v-if="!isPane" />
     <AppBackground />
     <AppSidebar v-if="showSidebar" />
 
@@ -80,13 +81,19 @@ watch(unread, (count) => {
       <WindowPanes v-if="isMain">
         <!-- `isolate`: pages put layers of their own under their content (the
           calendar grid does), and those must stay above the sheet -->
-        <main class="isolate relative flex-1 min-w-0 flex">
+        <main
+          id="main"
+          tabindex="-1"
+          class="isolate relative flex-1 min-w-0 flex outline-none"
+        >
           <slot />
         </main>
       </WindowPanes>
       <main
         v-else
-        class="isolate relative flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden"
+        id="main"
+        tabindex="-1"
+        class="isolate relative flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden outline-none"
         :class="isPopout && 'lb-sheet'"
       >
         <WindowPaneBar v-if="isPane" />
@@ -99,6 +106,7 @@ watch(unread, (count) => {
     <MailComposer v-if="!bare" />
     <MailTriage />
     <MailAttachmentGallery />
+    <MailSearchAll />
     <CommandPalette />
     <ShortcutsHelp />
     <template v-if="isMain">
@@ -108,5 +116,6 @@ watch(unread, (count) => {
       <WhatsNew />
     </template>
     <AppLock />
+    <AppAnnouncer />
   </div>
 </template>

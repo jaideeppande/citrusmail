@@ -127,6 +127,8 @@ function onDrop(event: DragEvent) {
       @click="promptCreate()"
     />
 
+    <MailLabels :collapsed="collapsed" />
+
     <MailSavedSearches :collapsed="collapsed" />
 
     <MailSidebarExtras :collapsed="collapsed" />

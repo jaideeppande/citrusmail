@@ -54,7 +54,7 @@ watch(() => route.fullPath, path => tellWindows({ type: 'pane:route', index, pat
         variant="ghost"
         size="xs"
         class="font-medium text-toned"
-        :ui="{ trailingIcon: 'size-3.5 text-dimmed' }"
+        :ui="{ trailingIcon: 'size-3.5 text-muted' }"
       />
     </UDropdownMenu>
 
@@ -66,7 +66,7 @@ watch(() => route.fullPath, path => tellWindows({ type: 'pane:route', index, pat
           variant="ghost"
           size="xs"
           aria-label="Open in a new window"
-          class="text-dimmed hover:text-highlighted"
+          class="text-muted hover:text-highlighted"
           @click="tellWindows({ type: 'pane:popout', index, path: currentPath() })"
         />
       </UTooltip>
@@ -77,7 +77,7 @@ watch(() => route.fullPath, path => tellWindows({ type: 'pane:route', index, pat
           variant="ghost"
           size="xs"
           aria-label="Close pane"
-          class="text-dimmed hover:text-highlighted"
+          class="text-muted hover:text-highlighted"
           @click="tellWindows({ type: 'pane:close', index })"
         />
       </UTooltip>

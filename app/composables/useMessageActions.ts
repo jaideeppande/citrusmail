@@ -6,6 +6,8 @@ export function useMessageActions(source: () => MessageSummary) {
   const mail = useMail()
   const { kbds } = useShortcutKeys()
   const nudges = useNudges()
+  const labels = useLabels()
+  const board = useLaterBoard()
 
   const items = computed<ContextMenuItem[][]>(() => {
     const message = source()
@@ -39,6 +41,27 @@ export function useMessageActions(source: () => MessageSummary) {
       label: 'Snooze',
       icon: 'i-lucide-alarm-clock',
       children: snoozeItems(list)
+    }, {
+      label: 'Label',
+      icon: 'i-lucide-tag',
+      kbds: kbds('mail.label'),
+      children: [
+        ...labels.labels.value.map(label => ({
+          label: label.name,
+          type: 'checkbox' as const,
+          checked: list().every(item => labels.has(item, label.id)),
+          onSelect: (event: Event) => {
+            // The menu stays open: several labels are often set in one go
+            event.preventDefault()
+            labels.toggle(list(), label.id)
+          }
+        })),
+        { label: labels.labels.value.length ? 'New label…' : 'Make a label…', icon: 'i-lucide-plus', onSelect: () => useLabelPicker().pick(list()) }
+      ]
+    }, {
+      label: 'Add to Later',
+      icon: 'i-lucide-square-kanban',
+      children: LATER_COLUMNS.map(column => ({ label: column.label, icon: column.icon, onSelect: () => board.add(list(), column.id) }))
     }], [{
       label: 'Archive',
       icon: 'i-lucide-archive',

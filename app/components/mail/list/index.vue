@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { listed, messages, status, cursor, load, folder, search, filter, filtering, selectedId, isRowSelected, inboxTabs, tabbed } = useMail()
+const { listed, messages, status, cursor, load, folder, search, filter, filtering, selectedId, isRowSelected, inboxTabs, tabbed, labelFilter } = useMail()
 const { view } = useMailLayout()
 const { isMobile } = useShell()
 const prefs = usePrefs()
@@ -28,6 +28,7 @@ const empty = computed(() => {
   if (filtering.value) return { icon: 'i-lucide-search-x', title: 'No matches', description: `Nothing in ${folder.value?.name ?? 'this folder'} matches${search.value ? ` “${search.value}”` : ''} with these filters.` }
   if (filter.value === 'flagged') return { icon: 'i-lucide-flag', title: 'Nothing flagged', description: 'Press S on a message to flag it for later.' }
   if (search.value) return { icon: 'i-lucide-search-x', title: 'No matches', description: `Nothing in ${folder.value?.name ?? 'this folder'} matches “${search.value}”.` }
+  if (labelFilter.value) return { icon: 'i-lucide-tag', title: 'Nothing with this label here', description: `No message in ${folder.value?.name ?? 'this folder'} carries it. Labels follow a message to other folders.` }
   if (filter.value === 'unread') return { icon: 'i-lucide-check-check', title: 'All read', description: 'You’re caught up.' }
   if (tab.value === 'screen') return { icon: 'i-lucide-user-round-check', title: 'No one new', description: 'Mail from people who haven’t written to you before waits here until you allow or block them.' }
   if (tab.value === 'tracked') return { icon: 'i-lucide-mail-check', title: 'Nothing tracked', description: 'Messages you send with tracking on show here with what’s come back.' }
@@ -75,6 +76,8 @@ const empty = computed(() => {
     ref="scroller"
     :key="`${compact ? 'compact' : 'roomy'}:${prefs.density}`"
     data-tour="list"
+    role="region"
+    :aria-label="`Messages in ${folder?.name ?? 'this folder'}`"
     :items="listed"
     :virtualize="{ estimateSize: rowHeight, overscan: 8 }"
     class="flex-1 transition-opacity duration-(--lb-dur-2)"

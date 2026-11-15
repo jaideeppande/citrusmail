@@ -269,10 +269,18 @@ const _useMail = () => {
     return found && found.messages.length > 1 ? found : undefined
   }
 
+  // One label at a time narrows the folder to the messages that carry it
+  const labels = useLabels()
+  const labelFilter = ref<string>()
+  watch(labels.labels, (all) => {
+    if (labelFilter.value && !all.some(label => label.id === labelFilter.value)) labelFilter.value = undefined
+  })
+
   /** The folder as it's listed: one row per conversation, pins first, snoozed mail left out */
   const listed = computed(() => {
     if (tabbed.value && organise.value!.tab.value === 'tracked') return tracked.value
     let list = messages.value.filter(message => !marks.isSnoozed(message))
+    if (labelFilter.value) list = list.filter(message => labels.has(message, labelFilter.value!))
     if (tabbed.value) list = list.filter(organise.value!.accepts)
     if (threading.value) {
       const heads = new Set<string>()
@@ -416,6 +424,7 @@ const _useMail = () => {
     }
     anchor = key
     checked.value = next
+    announce(next.size ? `${next.size} selected` : 'Selection cleared')
   }
 
   function checkAll() {
@@ -478,11 +487,14 @@ const _useMail = () => {
         clearTimeout(action.timer)
         restore()
         toast.remove(action.toast)
+        playUiSound('undo')
+        announce('Undone')
         tellWindows({ type: 'mail:refresh' })
       },
       timer: setTimeout(() => commit(action), UNDO_MS),
       toast: ''
     }
+    announce(`${title}. Press ${useShortcutKeys().kbds('mail.undo').join(' ')} to undo`)
     action.toast = toast.add({
       title,
       icon,
@@ -526,6 +538,7 @@ const _useMail = () => {
     const restores = going.map(message => takeOut(message))
     marks.forget(going)
     const target = folders.value.find(item => item.path === to)
+    playUiSound('archive')
     later(
       counted(going.length, MOVE_LABELS[to] ?? `Moved to ${target?.name ?? to}`),
       'i-lucide-check',
@@ -543,6 +556,7 @@ const _useMail = () => {
     marks.forget(going)
     const from = folders.value.find(item => item.path === going[0]!.folder)
     const forGood = from?.role === 'trash' || !folders.value.some(item => item.role === 'trash')
+    playUiSound('archive')
     later(
       counted(going.length, forGood ? 'Deleted for good' : 'Moved to Trash'),
       'i-lucide-trash-2',
@@ -576,6 +590,8 @@ const _useMail = () => {
       else selectedId.value = undefined
     }
     marks.snooze(going, until)
+    playUiSound('snooze')
+    announce(counted(going.length, `Snoozed until ${snoozeLabel(until)}`))
     const keys = going.map(messageKey)
     toast.add({
       title: counted(going.length, `Snoozed until ${snoozeLabel(until)}`),
@@ -591,6 +607,10 @@ const _useMail = () => {
       if (row && !row.unread) setUnread(row, true)
     }
     const first = due[0]!.message
+    const centre = useNotificationCentre()
+    for (const { message } of due) {
+      centre.push({ kind: 'snooze', title: 'Back from snooze', body: message.subject || '(No subject)', to: `${folderLink(message.folder)}?m=${encodeURIComponent(message.id)}`, key: `snooze:${messageKey(message)}` })
+    }
     toast.add({
       title: due.length === 1 ? `Back from snooze: ${first.subject || '(No subject)'}` : `${due.length} messages are back from snooze`,
       icon: 'i-lucide-alarm-clock-check',
@@ -695,7 +715,11 @@ const _useMail = () => {
     'mail.flag': withActing(list => flagMany(list, !list.every(message => message.flagged))),
     // Both ways, as the menus that show it say
     'mail.toggleRead': withActing(list => setUnreadMany(list, !list.some(message => message.unread))),
-    'mail.pin': withSelected(marks.togglePin),
+    'mail.pin': withSelected((message) => {
+      marks.togglePin(message)
+      announce(marks.isPinned(message) ? 'Pinned to top' : 'Unpinned')
+    }),
+    'mail.label': withActing(list => useLabelPicker().pick(list)),
     'mail.select': withSelected(message => check(threadOf.value.get(messageKey(message))?.head ?? message)),
     'mail.selectAll': when(checkAll),
     'mail.undo': when(undo)
@@ -774,6 +798,7 @@ const _useMail = () => {
     clearChecked,
     acting,
     inboxTabs: organise,
+    labelFilter,
     tabbed,
     snooze,
     togglePin: marks.togglePin,

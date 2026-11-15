@@ -53,7 +53,7 @@ const { saved, current, apply, remove, describe } = useSavedSearches()
           variant="link"
           size="xs"
           :aria-label="`Remove ${item.name}`"
-          class="absolute end-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity text-dimmed"
+          class="absolute end-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity text-muted"
           @click="remove(item.id)"
         />
       </li>

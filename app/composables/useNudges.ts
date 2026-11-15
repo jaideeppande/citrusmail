@@ -40,6 +40,20 @@ const _useNudges = () => {
     return result
   })
 
+  // Each one is said once in the notification centre, the first time it's noticed
+  const told = useAccountPref<string[]>('nudged', () => [])
+  watch(waiting, (map) => {
+    const fresh = [...map.keys()].filter(key => !told.value.includes(key))
+    if (!fresh.length) return
+    const centre = useNotificationCentre()
+    for (const key of fresh) {
+      const message = messages.value.find(item => messageKey(item) === key)
+      if (!message) continue
+      centre.push({ kind: 'nudge', title: `No reply from ${personName(message.to[0])}`, body: `${message.subject || '(No subject)'} · sent ${map.get(key)} days ago`, to: `${folderLink(message.folder)}?m=${encodeURIComponent(message.id)}`, key: `nudge:${key}` })
+    }
+    told.value = [...told.value, ...fresh].slice(-200)
+  })
+
   /** Days a sent message has gone unanswered, when that's long enough to say so */
   const waitingDays = (message: MessageSummary) => waiting.value.get(messageKey(message))
 

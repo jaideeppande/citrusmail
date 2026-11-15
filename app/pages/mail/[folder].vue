@@ -44,6 +44,7 @@ const solo = computed(() => isPopout && !sidebarShown.value && !!selectedId.valu
     class="relative flex-1 flex min-w-0"
   >
     <MailSnoozePicker />
+    <MailLabelPicker />
 
     <MailReader
       v-if="solo"

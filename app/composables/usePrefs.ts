@@ -20,6 +20,12 @@ export interface Prefs {
   closeToTray: boolean
   /** The shortcut that opens a new message from any app; empty for none */
   quickCompose: string
+  /** Quiet cues for sending, archiving, snoozing and undoing */
+  uiSounds: boolean
+  /** 'high' draws stronger borders and text, for eyes or screens that need it */
+  contrast: 'normal' | 'high'
+  /** Bigger text and bigger things to click */
+  largeText: boolean
 }
 
 export const DEFAULT_PREFS: Prefs = {
@@ -31,7 +37,10 @@ export const DEFAULT_PREFS: Prefs = {
   undoSend: 10,
   nudgeDays: 3,
   closeToTray: false,
-  quickCompose: ''
+  quickCompose: '',
+  uiSounds: false,
+  contrast: 'normal',
+  largeText: false
 }
 
 /** The handful of choices most of the app reads */
@@ -41,7 +50,7 @@ export function usePrefs() {
 
 /** Row heights the virtual list is told to expect, per density */
 export const DENSITY_ROWS: Record<Density, { roomy: number, compact: number }> = {
-  comfortable: { roomy: 84, compact: 41 },
-  cozy: { roomy: 72, compact: 37 },
-  compact: { roomy: 60, compact: 33 }
+  comfortable: { roomy: 76, compact: 38 },
+  cozy: { roomy: 66, compact: 34 },
+  compact: { roomy: 56, compact: 30 }
 }

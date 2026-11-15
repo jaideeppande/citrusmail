@@ -14,6 +14,8 @@ export default defineNuxtPlugin(() => {
     root.dataset.motion = motion.value
     root.dataset.density = prefs.value.density
     root.dataset.window = windowKind()
+    root.dataset.contrast = prefs.value.contrast
+    root.dataset.text = prefs.value.largeText ? 'large' : 'normal'
   })
 
   return { provide: { motion } }
