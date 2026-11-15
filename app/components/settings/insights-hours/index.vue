@@ -4,6 +4,7 @@ const props = defineProps<{
   hours: number[]
 }>()
 
+const asTable = ref(false)
 const max = computed(() => niceMax(Math.max(0, ...props.hours)))
 const total = computed(() => props.hours.reduce((sum, value) => sum + value, 0))
 const height = (value: number) => value ? `max(2px, ${value / max.value * 100}%)` : '0'
@@ -21,18 +22,61 @@ const busiest = computed(() => {
 
 <template>
   <figure>
-    <figcaption class="mb-3">
-      <h2 class="text-sm font-semibold text-highlighted">
-        Busiest hours
-      </h2>
-      <p class="mt-0.5 text-sm text-muted">
-        {{ busiest || 'No mail in the last 30 days to go on.' }}
-      </p>
+    <figcaption class="mb-3 flex flex-wrap items-start gap-x-4 gap-y-1">
+      <span class="min-w-0 flex-1">
+        <h2 class="text-sm font-semibold text-highlighted">
+          Busiest hours
+        </h2>
+        <p class="mt-0.5 text-sm text-muted">
+          {{ busiest || 'No mail in the last 30 days to go on.' }} Messages received in each hour, over 30 days.
+        </p>
+      </span>
+      <UButton
+        :label="asTable ? 'Show as chart' : 'Show as table'"
+        color="neutral"
+        variant="ghost"
+        size="xs"
+        @click="asTable = !asTable"
+      />
     </figcaption>
 
-    <div class="flex gap-2">
+    <div
+      v-if="asTable"
+      class="lb-in max-h-72 overflow-y-auto rounded-lg ring ring-default"
+    >
+      <table class="w-full text-sm">
+        <thead class="sticky top-0 bg-elevated text-xs text-muted">
+          <tr>
+            <th class="px-3 py-1.5 text-start font-medium">
+              Hour
+            </th>
+            <th class="px-3 py-1.5 text-end font-medium">
+              Received
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-default">
+          <tr
+            v-for="(value, hour) in hours"
+            :key="hour"
+          >
+            <td class="px-3 py-1.5">
+              {{ clock(hour) }} to {{ clock(hour + 1) }}
+            </td>
+            <td class="px-3 py-1.5 text-end tabular-nums">
+              {{ value.toLocaleString() }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div
+      v-else
+      class="lb-in flex gap-2"
+    >
       <div
-        class="flex h-24 w-7 shrink-0 flex-col justify-between text-end text-[11px] leading-none text-dimmed tabular-nums"
+        class="flex h-24 w-7 shrink-0 flex-col justify-between text-end text-[11px] leading-none text-muted tabular-nums"
         aria-hidden="true"
       >
         <span class="-translate-y-1/2">{{ max.toLocaleString() }}</span>
@@ -61,7 +105,7 @@ const busiest = computed(() => {
           </UTooltip>
         </div>
         <div
-          class="mt-1.5 flex text-[11px] leading-none text-dimmed"
+          class="mt-1.5 flex text-[11px] leading-none text-muted"
           aria-hidden="true"
         >
           <span

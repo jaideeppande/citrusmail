@@ -12,8 +12,10 @@ export interface Draft {
   attachments: OutgoingAttachment[]
   inReplyTo?: string
   references?: string[]
-  /** Whether your signature goes under this message */
+  /** Whether a signature goes under this message */
   signature: boolean
+  /** Which one: an extra signature's id (see useSignatures); unset is the default one */
+  signatureId?: string
   /** The original of a reply or forward, sent under the signature as is */
   quote?: string
   /** The same original as text, for the preview under the editor */
@@ -106,6 +108,7 @@ const _useComposer = () => {
   const { recall } = useTranslationMemory()
   const { contacts } = useContacts()
   const tally = useAccountPref<RecipientTally>('recipients', () => ({}))
+  const signatures = useSignatures()
   const closed = useAccountPref<ClosedDraft[]>('closed-drafts', () => [])
 
   renameStoredKey('letterbox-draft', 'citrusmail-draft')
@@ -419,12 +422,14 @@ const _useComposer = () => {
 
   // Your words, then the signature, then the original
   function outgoingHtml(from = draft.value) {
-    const { html, signature, quote } = from
+    const { html, quote } = from
     // Paragraphs sit line under line, as in every mail app; an empty one
-    // keeps its height as a blank line in the recipient's client
-    const body = html.replace(/<p><\/p>/g, '<p><br></p>').replace(/<p>/g, '<p style="margin:0">')
+    // keeps its height as a blank line in the recipient's client. Tables,
+    // code and pictures get their looks written on them (mailReadyHtml)
+    const body = mailReadyHtml(html.replace(/<p><\/p>/g, '<p><br></p>').replace(/<p>/g, '<p style="margin:0">'))
     const parts = [body]
-    if (signature && settings.value.signature) parts.push(`<br><div class="citrusmail-signature">${settings.value.signature}</div>`)
+    const signature = signatures.htmlOf(from)
+    if (signature) parts.push(`<br><div class="citrusmail-signature">${mailReadyHtml(signature)}</div>`)
     if (quote) parts.push(quote)
     return parts.join('')
   }
@@ -465,9 +470,11 @@ const _useComposer = () => {
       // Reopened later, it replaces this copy instead of adding another
       closed.value = closed.value.map(item => item.id === entry.id ? { ...item, draft: { ...item.draft, savedAs: kept.savedAs } } : item)
       toast.add({ title: 'Saved to Drafts', icon: 'i-lucide-file-pen-line', actions: [reopenAction] })
+      announce('Saved to Drafts')
       follow()
     } catch {
       toast.add({ title: 'Draft closed', description: 'It couldn’t be saved to Drafts.', icon: 'i-lucide-file-x', duration: 10_000, actions: [reopenAction] })
+      announce('Draft closed. It couldn’t be saved to Drafts.', true)
     } finally {
       pending.value--
     }
@@ -521,13 +528,19 @@ const _useComposer = () => {
         tellWindows({ type: 'scheduled:changed' })
         await refreshScheduled()
         toast.add({ title: `Scheduled for ${scheduleLabel(result.scheduled.sendAt)}`, icon: 'i-lucide-clock-arrow-up', actions: [{ label: 'View', color: 'neutral', variant: 'outline', to: draftsLink.value }] })
+        announce(`Scheduled for ${scheduleLabel(result.scheduled.sendAt)}`)
       } else {
         toast.add({ title: 'Message sent', icon: 'i-lucide-send', color: 'success' })
+        playUiSound('send')
+        announce('Message sent')
       }
       return true
     } catch (error) {
       const message = (error as { data?: { message?: string } }).data?.message
       toast.add({ title: scheduled ? 'Message not scheduled' : 'Message not sent', description: message ?? 'Check your connection and try again.', color: 'error', icon: 'i-lucide-circle-alert' })
+      // Kept in the notification centre too, so a send that failed while you looked away isn't missed
+      useNotificationCentre().push({ kind: 'failed', title: scheduled ? 'Message not scheduled' : 'Message not sent', body: `${kept.subject.trim() || '(No subject)'}${message ? ` · ${message}` : ''}`, key: `failed:${kept.id}` })
+      announce(scheduled ? 'Message not scheduled' : 'Message not sent', true)
       return false
     } finally {
       sending.value = false
@@ -576,9 +589,12 @@ const _useComposer = () => {
           toast.remove(id)
           restore(out.kept)
           toast.add({ title: 'Sending undone', description: 'Your message is back in the composer.', icon: 'i-lucide-undo-2' })
+          playUiSound('undo')
+          announce('Sending undone. Your message is back in the composer.')
         }
       }]
     })
+    announce(`Sending in ${seconds} ${seconds === 1 ? 'second' : 'seconds'}. Undo is in the notification.`)
   }
 
   // A request made while the page closes can only carry a little. A held

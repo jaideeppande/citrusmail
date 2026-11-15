@@ -23,10 +23,15 @@ const tick = (index: number) => (props.days.length - 1 - index) % 7 === 0
 
 <template>
   <figure>
-    <figcaption class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1">
-      <h2 class="text-sm font-semibold text-highlighted">
-        The last 30 days
-      </h2>
+    <figcaption class="mb-3 flex flex-wrap items-end gap-x-4 gap-y-1">
+      <span>
+        <h2 class="text-sm font-semibold text-highlighted">
+          The last 30 days
+        </h2>
+        <p class="mt-0.5 text-sm text-muted">
+          Messages received and sent each day.
+        </p>
+      </span>
       <span class="flex-1" />
       <span class="flex items-center gap-1.5 text-xs text-muted">
         <span class="size-2 rounded-[2px] bg-(--lb-chart-accent)" />
@@ -88,7 +93,7 @@ const tick = (index: number) => (props.days.length - 1 - index) % 7 === 0
     >
       <!-- The scale: its top and zero, nothing between -->
       <div
-        class="flex h-36 w-7 shrink-0 flex-col justify-between text-end text-[11px] leading-none text-dimmed tabular-nums"
+        class="flex h-36 w-7 shrink-0 flex-col justify-between text-end text-[11px] leading-none text-muted tabular-nums"
         aria-hidden="true"
       >
         <span class="-translate-y-1/2">{{ max.toLocaleString() }}</span>
@@ -122,7 +127,7 @@ const tick = (index: number) => (props.days.length - 1 - index) % 7 === 0
           </UTooltip>
         </div>
         <div
-          class="mt-1.5 flex text-[11px] leading-none text-dimmed"
+          class="mt-1.5 flex text-[11px] leading-none text-muted"
           aria-hidden="true"
         >
           <span

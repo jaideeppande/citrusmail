@@ -29,12 +29,12 @@ const folderName = (path: string) => folders.value.find(item => item.path === pa
       />
     </div>
 
-    <UEmpty
+    <AppEmpty
       v-else-if="ai.status === 'error'"
-      icon="i-lucide-circle-alert"
+      illustration="error"
+      tone="error"
       title="Search didn’t finish"
       :description="ai.error"
-      variant="naked"
       class="flex-1"
     />
 

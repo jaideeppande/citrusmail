@@ -49,3 +49,37 @@ html:not([data-nav-direction])::view-transition-new(calendar) {
   transition: background-color var(--lb-dur-2) ease;
   &[data-drop-target] { background-color: color-mix(in oklab, var(--ui-primary) 6%, transparent); }
 }
+
+/* Event text on its calendar's tint. The colour alone on a 15–25% tint of
+   itself reads at 1.6–3:1 in light mode (amber and green worst) and dips
+   under 4.5:1 for red in dark; half of it mixed into the strongest ink clears
+   4.5:1 for every calendar colour in both, and high contrast leans further */
+:root {
+  --lb-ink-mix: 50%;
+  --lb-ink-primary: color-mix(in oklab, var(--ui-primary) var(--lb-ink-mix), var(--ui-text-highlighted));
+  --lb-ink-secondary: color-mix(in oklab, var(--ui-secondary) var(--lb-ink-mix), var(--ui-text-highlighted));
+  --lb-ink-info: color-mix(in oklab, var(--ui-info) var(--lb-ink-mix), var(--ui-text-highlighted));
+  --lb-ink-success: color-mix(in oklab, var(--ui-success) var(--lb-ink-mix), var(--ui-text-highlighted));
+  --lb-ink-warning: color-mix(in oklab, var(--ui-warning) var(--lb-ink-mix), var(--ui-text-highlighted));
+  --lb-ink-error: color-mix(in oklab, var(--ui-error) var(--lb-ink-mix), var(--ui-text-highlighted));
+}
+html[data-contrast="high"] { --lb-ink-mix: 30%; }
+
+/* Find a time: a marked slot is an outline, never a fill, so it can never be
+   mistaken for an event; the events under the mode stay in sight but let the
+   pointer through to the grid */
+@utility lb-free-slot {
+  border: 1.5px dashed var(--ui-primary);
+  background-color: color-mix(in oklab, var(--ui-primary) 7%, transparent);
+  animation: lb-in-scale var(--lb-dur-2) var(--lb-ease-out) both;
+}
+[data-finding] [data-event] {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* The slot the keyboard is on while finding a time */
+@utility lb-free-cursor {
+  outline: 2px solid var(--ui-primary);
+  outline-offset: -2px;
+}

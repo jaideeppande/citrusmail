@@ -62,7 +62,7 @@ const minutes = computed(() => readingMinutes(messageText(props.message)))
         <span class="ms-auto flex items-baseline gap-2 text-sm text-muted tabular-nums">
           <span
             v-if="minutes"
-            class="text-dimmed lb-in"
+            class="text-muted lb-in"
           >{{ minutes }} min read</span>
           <RevealButton
             icon="i-lucide-calendar-search"
@@ -97,7 +97,7 @@ const minutes = computed(() => readingMinutes(messageText(props.message)))
               v-for="row in recipients"
               :key="row.label"
             >
-              <dt class="text-xs leading-6 text-dimmed">
+              <dt class="text-xs leading-6 text-muted">
                 {{ row.label }}
               </dt>
               <dd class="flex flex-wrap items-center gap-1 min-w-0">

@@ -8,3 +8,12 @@ interface AgendaItem {
   /** The countdown the two emphasised ones carry: “in 25 min”, “ends in 10 min” */
   note?: string
 }
+
+/** Every view the calendar route knows: the four grids and the agenda list */
+type CalendarViewName = CalendarView | 'agenda'
+
+/** What this computer remembers about the calendar's time zones */
+interface CalendarZonePrefs {
+  /** An IANA name, or empty for none */
+  second: string
+}

@@ -9,7 +9,7 @@ Everything you see is themeable, from the accent color down to the 2px edge on t
 | `NUXT_PUBLIC_BRAND_*` | Name, logo, favicon, sign-in text and image | No |
 | `brand/custom.css` | Any CSS at all, loaded after everything else | No (read on each request) |
 | `ui` in `app/app.config.ts` | Per-component styling: button variants, menu padding, modal size | Yes |
-| Settings → Appearance | Each person's own accent, font, text size, corners and light/dark | No |
+| Settings → Appearance and the theme editor | Each person's own accent, font, text size, corners, greys, surfaces and light/dark | No |
 
 Values are applied in that order, so a person's Appearance choice wins over the environment variable, which wins over `app.config.ts`. `custom.css` is loaded last and can override all of them.
 
@@ -150,4 +150,50 @@ Each component's page in the Nuxt UI docs lists its slots and variants under "Th
 
 ## 5. Per person
 
-Settings → Appearance lets each person pick light or dark, an accent (presets or any color), a font from `citrusmail.fonts`, a text size and corner style. Their choices are saved with their account and follow them to other devices. A row of ready-made looks sets accent, font and corners together, and the theme can follow the time of day. Motion, density and zoom are kept on the device they were chosen on. Set `allowAppearance: false` to give everyone the instance's look.
+Settings → Appearance lets each person pick light or dark, an accent (presets or any color), a font from `citrusmail.fonts`, a text size and corner style. A gallery of looks sets several of these at once, and the theme can follow the time of day. Set `allowAppearance: false` to give everyone the instance's look; that also hides the theme editor.
+
+### What is kept where
+
+| Choice | Kept |
+| --- | --- |
+| Accent, font, text size, corners | With the account (`appearance` in `/api/settings`), so it follows the person to other devices |
+| Greys, surface colors, the sheet's inset, corners and shadow | On this computer (`citrusmail-theme-custom` in local storage) |
+| An accent for each mailbox | On this computer (`citrusmail-mailbox-accents`, keyed by address) |
+| Saved looks | On this computer (`citrusmail-theme-saved`) |
+| Motion, density, zoom, contrast, larger text, sounds | On this computer (`citrusmail-prefs`) |
+
+The server only accepts the four account keys, each held to a strict shape (`server/api/settings.patch.ts`), which is why the rest stays local.
+
+### Layers
+
+`app/plugins/theme.client.ts` merges, in this order, each layer winning over the one before:
+
+1. `citrusmail.theme` in `app.config.ts`
+2. `NUXT_PUBLIC_CITRUSMAIL_THEME`
+3. The person's account choices
+4. What the theme editor keeps on this computer
+5. The accent of the mailbox that's open
+
+Layers 3 to 5 come from storage the person can edit, so they are cleaned before use: only known keys are read, and a value is dropped if it is longer than 200 characters or contains `;`, `{`, `}`, `<`, `\`, `/*`, `url(`, `@import` or `expression(`.
+
+### The theme editor
+
+Settings → Appearance → **Customise…** (`/settings/theme`) edits every key of the theme with a live preview: a miniature of the app in light and dark side by side, drawn with the theme's own tokens (`themeVars()` in `app/utils/theme.ts` scopes a theme to one element). Each text color is measured against the surfaces it sits on, and any pair below WCAG's 4.5:1 is flagged (`contrastRatio()` in `app/utils/contrast.ts`).
+
+- **Copy as JSON** gives exactly the object to paste into `citrusmail.theme` in `app.config.ts` or into `NUXT_PUBLIC_CITRUSMAIL_THEME`, so a look tried in the app can become the instance's default.
+- **Import JSON** takes the same shape back. Every key must be one of the theme's keys and every value must pass the rules above; if anything fails, nothing is applied and each problem is named.
+- **Save as preset** adds the current look to the gallery, on this computer.
+
+### Presets
+
+The gallery (`app/utils/theme-presets.ts`) has light looks, looks drawn for the dark (choosing one switches to dark mode) and two high-contrast looks. A preset's accent, font and corners are account choices; its `extras` (greys and surfaces) go into the local layer. `test/theme-editor.test.ts` checks every preset's text against its surfaces: 4.5:1 at least, 7:1 for the high-contrast ones.
+
+### Accessibility
+
+Settings → Accessibility gathers the choices that make the app easier to use:
+
+- **Increase contrast** sets `data-contrast="high"` on `<html>`. `app/assets/css/settings.css` then raises `--ui-text-muted` and `--ui-text-dimmed` to the 700 shade (300 in dark), borders to 500 (`--ui-border-accented` and `--lb-sheet-border` to 600, 400 in dark) and makes the focus ring 3px. Muted text then measures between 8.18:1 and 10.46:1 in light and between 9.87:1 and 12.08:1 in dark for every `neutral` (see `test/contrast.test.ts`). The same applies when the computer asks for more contrast (`prefers-contrast: more`) and the setting is left at normal. A theme can restyle it from `custom.css` with `html[data-contrast='high']` rules.
+- **Larger text and controls** sets `data-text="large"`: the root size goes one step (an eighth) above the chosen text size and Nuxt UI buttons get a 32px minimum hit area.
+- **Motion** and **Sounds for what you do** are the same controls as in Appearance and Notifications.
+
+The accent eases from one color to the next when it changes: `--ui-primary` is registered with `@property` and transitions on `<html>` for `--lb-dur-4` (not when Motion is Off).

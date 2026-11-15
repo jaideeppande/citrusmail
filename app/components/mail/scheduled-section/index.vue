@@ -19,11 +19,17 @@ async function edit(item: ScheduledMessage) {
 }
 
 async function drop(item: ScheduledMessage) {
-  if (await cancel(item)) toast.add({ title: 'Won’t be sent', description: item.subject || '(No subject)', icon: 'i-lucide-x' })
+  if (!(await cancel(item))) return
+  toast.add({ title: 'Won’t be sent', description: item.subject || '(No subject)', icon: 'i-lucide-x' })
+  announce(`Won’t be sent: ${item.subject || 'no subject'}`)
 }
 
-function moveTo(date: Date) {
-  if (picking.value) reschedule(picking.value, date)
+async function moveTo(date: Date) {
+  if (picking.value) await moveItem(picking.value, date)
+}
+
+async function moveItem(item: ScheduledMessage, date: Date) {
+  if (await reschedule(item, date)) announce(`Rescheduled for ${scheduleLabel(date.toISOString())}`)
 }
 </script>
 
@@ -43,24 +49,38 @@ function moveTo(date: Date) {
       class="justify-start rounded-none px-4 h-9 text-muted font-semibold"
       :ui="{ trailingIcon: 'ms-auto' }"
       :aria-expanded="open"
+      aria-controls="lb-scheduled-list"
       @click="open = !open"
     />
     <div
+      id="lb-scheduled-list"
       class="lb-expand"
       :data-open="open || undefined"
       :inert="!open"
     >
-      <ul class="max-h-64 overflow-y-auto">
-        <MailScheduledItem
-          v-for="item in scheduled"
-          :key="item.id"
-          :item="item"
-          @edit="edit(item)"
-          @reschedule="picking = item"
-          @reschedule-to="date => reschedule(item, date)"
-          @cancel="drop(item)"
+      <div>
+        <MailScheduledTimeline
+          :items="scheduled"
+          @edit="edit"
+          @reschedule="item => (picking = item)"
+          @reschedule-to="moveItem"
+          @cancel="drop"
         />
-      </ul>
+        <ul
+          class="max-h-64 overflow-y-auto"
+          aria-label="Scheduled messages"
+        >
+          <MailScheduledItem
+            v-for="item in scheduled"
+            :key="item.id"
+            :item="item"
+            @edit="edit(item)"
+            @reschedule="picking = item"
+            @reschedule-to="date => moveItem(item, date)"
+            @cancel="drop(item)"
+          />
+        </ul>
+      </div>
     </div>
 
     <MailSendLaterModal

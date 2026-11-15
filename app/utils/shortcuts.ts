@@ -30,13 +30,18 @@ export const SHORTCUTS = {
   'mail.toggleView': { label: 'Split or list view', group: 'Mail', keys: ['shift_v'] },
   'mail.search': { label: 'Search', group: 'Mail', keys: ['/'] },
   'mail.print': { label: 'Print', group: 'Mail', keys: ['meta_p'] },
+  'mail.label': { label: 'Label', group: 'Mail', keys: ['l'] },
+  'mail.searchAll': { label: 'Search every folder', group: 'Mail', keys: ['meta_shift_f'] },
   'compose.send': { label: 'Send', group: 'Compose', keys: ['meta_enter'] },
+  'compose.zen': { label: 'Distraction-free writing', group: 'Compose', keys: ['meta_shift_d'] },
+  'compose.emoji': { label: 'Emoji', group: 'Compose', keys: ['meta_shift_e'] },
   'go.inbox': { label: 'Inbox', group: 'Go to', keys: ['g-i'] },
   'go.drafts': { label: 'Drafts', group: 'Go to', keys: ['g-d'] },
   'go.sent': { label: 'Sent', group: 'Go to', keys: ['g-t'] },
   'go.calendar': { label: 'Calendar', group: 'Go to', keys: ['g-c'] },
   'go.contacts': { label: 'Contacts', group: 'Go to', keys: ['g-p'] },
   'go.settings': { label: 'Settings', group: 'Go to', keys: ['g-s'] },
+  'go.later': { label: 'Later board', group: 'Go to', keys: ['g-l'] },
   'window.popout': { label: 'Open in a new window', group: 'Windows', keys: ['shift_o'] },
   'window.layout': { label: 'Choose a layout', group: 'Windows', keys: ['shift_l'] },
   'window.focus': { label: 'Focus mode', group: 'Windows', keys: ['shift_f'] },
@@ -49,7 +54,9 @@ export const SHORTCUTS = {
   'calendar.prev': { label: 'Previous', group: 'Calendar', keys: ['arrowleft'] },
   'calendar.next': { label: 'Next', group: 'Calendar', keys: ['arrowright'] },
   'calendar.newEvent': { label: 'New event', group: 'Calendar', keys: ['n'] },
+  'calendar.agenda': { label: 'Agenda view', group: 'Calendar', keys: ['a'] },
   'app.palette': { label: 'Search and commands', group: 'App', keys: ['meta_k'] },
+  'app.notifications': { label: 'Notifications', group: 'App', keys: ['shift_n'] },
   'app.sidebar': { label: 'Fold sidebar', group: 'App', keys: ['['] },
   'app.help': { label: 'These shortcuts', group: 'App', keys: ['?'] }
 } as const satisfies Record<string, ShortcutDef>
@@ -70,7 +77,8 @@ export const SHORTCUT_PRESETS: Record<ShortcutPreset, { label: string, descripti
       'mail.selectAll': ['*-a'],
       'go.sent': ['g-t'],
       'go.contacts': ['g-c'],
-      'go.calendar': ['g-l']
+      'go.calendar': ['g-k'],
+      'go.later': ['g-l']
     }
   },
   outlook: {

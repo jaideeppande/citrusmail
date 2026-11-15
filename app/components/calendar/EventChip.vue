@@ -13,6 +13,9 @@ const { calendars } = useCalendarEvents()
 const { movingId, suppressed, onPointerdown } = useEventMove()
 
 const calendar = computed(() => calendars.value.find(calendar => calendar.id === props.event.calendarId))
+
+// Everything the chip leaves out or says with a colour, read out in full
+const label = computed(() => eventLabel(props.event, calendar.value?.name))
 const color = computed(() => calendar.value?.color ?? 'primary')
 
 // Held open or in flight, the chip wears the shade the pointer gives it
@@ -60,7 +63,8 @@ const ghost = computed(() => isMoveGhost(props.event))
         moving && 'lb-chip-lifted'
       ]"
       :data-active="open || moving || undefined"
-      :aria-label="event.allDay ? event.title : `${event.title}, ${formatTime(new Date(event.start))}`"
+      :aria-label="label"
+      aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight Alt+ArrowUp Alt+ArrowDown"
       @click.stop
       @pointerdown="onPointerdown($event, event)"
     >

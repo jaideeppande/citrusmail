@@ -15,6 +15,7 @@ const items = computed<NavigationMenuItem[]>(() => [
   { label: 'Profile', icon: 'i-lucide-circle-user-round', to: '/settings/profile' },
   { label: 'Signature', icon: 'i-lucide-signature', to: '/settings/signature' },
   ...(appConfig.citrusmail.allowAppearance ? [{ label: 'Appearance', icon: 'i-lucide-palette', to: '/settings/appearance' }] : []),
+  { label: 'Accessibility', icon: 'i-lucide-accessibility', to: '/settings/accessibility' },
   { label: 'Reading', icon: 'i-lucide-book-open', to: '/settings/reading' },
   { label: 'Notifications', icon: 'i-lucide-bell', to: '/settings/notifications' },
   { label: 'Shortcuts', icon: 'i-lucide-keyboard', to: '/settings/shortcuts' },
@@ -40,6 +41,7 @@ const items = computed<NavigationMenuItem[]>(() => [
   </p>
   <UNavigationMenu
     :items="items"
+    aria-label="Settings"
     orientation="vertical"
     :collapsed="collapsed"
     :tooltip="{ content: { side: 'right' } }"

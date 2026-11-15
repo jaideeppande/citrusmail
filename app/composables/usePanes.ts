@@ -37,7 +37,18 @@ const defaultPaths = () => [`/calendar/week/${todayDate().toString()}`, '/contac
 
 const _usePanes = () => {
   const { isMain } = useWindowChrome()
-  const state = useLocalPref<PaneState>('panes', { layout: 'single', paths: [], split: [0.5, 0.5] })
+  // Each window keeps its own layout (session storage is per window and
+  // survives a reload). A new window starts from the layout used last, which
+  // is also what the app opens with next time
+  const last = useLocalPref<PaneState>('panes', { layout: 'single', paths: [], split: [0.5, 0.5] })
+  const own = useSessionStorage<PaneState | null>('citrusmail-panes-window', null, { serializer: { read: value => value ? JSON.parse(value) : null, write: value => JSON.stringify(value) } })
+  const state = computed<PaneState>({
+    get: () => own.value ?? last.value,
+    set: (value) => {
+      own.value = value
+      last.value = value
+    }
+  })
 
   /** Frames of the app can be shown here at all */
   const available = computed(() => isMain && !!desktop()?.panes)

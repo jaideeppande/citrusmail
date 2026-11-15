@@ -2,8 +2,13 @@
 // times into it) and a lapsed session sends the viewer back to sign in
 export default defineNuxtPlugin(() => {
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  // A request that got no answer at all tells the offline bar to start checking
+  const connection = useConnection()
 
   globalThis.$fetch = $fetch.create({
+    onRequestError() {
+      connection.reportFailure()
+    },
     onRequest({ options }) {
       options.headers = new Headers(options.headers)
       options.headers.set('x-timezone', timezone)

@@ -18,13 +18,17 @@ useEventListener(window, 'keydown', (event: KeyboardEvent) => {
   if (!recording.value) return
   event.preventDefault()
   event.stopPropagation()
-  if (event.key === 'Escape') return (recording.value = false)
+  if (event.key === 'Escape') {
+    recording.value = false
+    return announce('Cancelled. The shortcut is unchanged.')
+  }
   if (['Shift', 'Control', 'Alt', 'Meta'].includes(event.key)) return
   const accelerator = acceleratorFromEvent(event)
   weak.value = !accelerator
-  if (!accelerator) return
+  if (!accelerator) return announce(`That needs ${isMac() ? 'Command' : 'Ctrl'} or Alt with it. Try again, or press Escape to cancel.`, true)
   recording.value = false
   emit('update:modelValue', accelerator)
+  announce(`Shortcut set to ${acceleratorParts(accelerator).join(' ')}`)
 }, { capture: true })
 
 useEventListener(window, 'pointerdown', () => (recording.value = false), { capture: true })
@@ -32,6 +36,12 @@ useEventListener(window, 'pointerdown', () => (recording.value = false), { captu
 function record() {
   weak.value = false
   recording.value = true
+  announce('Press the keys for the new shortcut. Escape cancels.')
+}
+
+function remove() {
+  emit('update:modelValue', '')
+  announce('Shortcut removed')
 }
 </script>
 
@@ -40,10 +50,9 @@ function record() {
     <span
       v-if="recording"
       class="lb-recording rounded-md px-2.5 py-1 text-sm text-primary ring ring-primary"
-      role="status"
     >
       {{ weak ? `Add ${isMac() ? '⌘' : 'Ctrl'} or Alt` : 'Press the keys' }}
-      <span class="ms-1 text-xs text-dimmed">Esc cancels</span>
+      <span class="ms-1 text-xs text-muted">Esc cancels</span>
     </span>
     <span
       v-else-if="modelValue"
@@ -59,7 +68,7 @@ function record() {
     </span>
     <span
       v-else
-      class="text-sm text-dimmed"
+      class="text-sm text-muted"
     >No shortcut</span>
 
     <UButton
@@ -76,7 +85,7 @@ function record() {
       color="neutral"
       variant="ghost"
       size="sm"
-      @click="emit('update:modelValue', '')"
+      @click="remove"
     />
   </div>
 </template>

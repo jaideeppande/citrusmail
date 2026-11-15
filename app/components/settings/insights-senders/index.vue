@@ -27,7 +27,7 @@ const max = computed(() => Math.max(1, ...props.senders.map(sender => sender.cou
           <span class="block truncate text-sm text-highlighted">{{ sender.name || sender.address }}</span>
           <span
             v-if="sender.name"
-            class="block truncate text-xs text-dimmed"
+            class="block truncate text-xs text-muted"
           >{{ sender.address }}</span>
         </span>
         <span

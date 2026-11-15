@@ -16,7 +16,7 @@ const title = useTitle(null, { observe: true })
         size="xs"
         :aria-label="sidebarShown ? 'Hide sidebar' : 'Show sidebar'"
         :aria-pressed="sidebarShown"
-        class="text-dimmed hover:text-highlighted [-webkit-app-region:no-drag]"
+        class="text-muted hover:text-highlighted [-webkit-app-region:no-drag]"
         @click="sidebarShown = !sidebarShown"
       />
     </UTooltip>
@@ -32,7 +32,7 @@ const title = useTitle(null, { observe: true })
         variant="ghost"
         size="xs"
         aria-label="Move back to the main window"
-        class="text-dimmed hover:text-highlighted [-webkit-app-region:no-drag]"
+        class="text-muted hover:text-highlighted [-webkit-app-region:no-drag]"
         @click="dockBack(currentPath())"
       />
     </UTooltip>

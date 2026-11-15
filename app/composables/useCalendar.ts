@@ -4,8 +4,8 @@ import { breakpointsTailwind } from '@vueuse/core'
 const _useCalendar = () => {
   const route = useRoute()
 
-  const view = computed<CalendarView>(() => {
-    return ['day', 'month', 'year'].includes(route.params.view as string) ? route.params.view as CalendarView : 'week'
+  const view = computed<CalendarViewName>(() => {
+    return ['day', 'month', 'year', 'agenda'].includes(route.params.view as string) ? route.params.view as CalendarViewName : 'week'
   })
 
   const date = computed<CalendarDate>(() => {
@@ -37,6 +37,11 @@ const _useCalendar = () => {
   const monthLabelsVisible = refAutoReset(false, 600)
 
   const title = computed<RangeTitle>(() => {
+    // The agenda scrolls on past its first week: the month is what it's in
+    if (view.value === 'agenda') {
+      return { months: formatMonth(toDate(date.value)), year: String(date.value.year) }
+    }
+
     if (view.value === 'year') {
       return { months: String(date.value.year), year: '' }
     }
@@ -54,14 +59,15 @@ const _useCalendar = () => {
   })
 
   // The event form stands beside the event it belongs to. The day view has a
-  // single column the width of the grid, so there is no beside to stand in
-  const formSide = computed<'bottom' | 'right'>(() => view.value === 'day' ? 'bottom' : 'right')
+  // single column the width of the grid, as does the agenda's list, so there is no beside to stand in
+  const formSide = computed<'bottom' | 'right'>(() => view.value === 'day' || view.value === 'agenda' ? 'bottom' : 'right')
 
   const step = computed(() => {
     switch (view.value) {
       case 'year': return { years: 1 }
       case 'month': return { months: 1 }
       case 'week': return { days: narrow.value ? 3 : 7 }
+      case 'agenda': return { days: 7 }
       default: return { days: 1 }
     }
   })
@@ -69,8 +75,8 @@ const _useCalendar = () => {
   const prevDate = computed(() => date.value.subtract(step.value))
   const nextDate = computed(() => date.value.add(step.value))
 
-  function pathFor(target: CalendarDate, targetView: CalendarView = view.value): string {
-    return `/calendar/${targetView}/${target.toString()}`
+  function pathFor(target: CalendarDate, targetView: CalendarViewName = view.value): string {
+    return calendarPath(target, targetView)
   }
 
   // Drives the slide direction of the view transition, cleared once it finishes
@@ -127,6 +133,7 @@ const _useCalendar = () => {
   defineAppShortcuts({
     'calendar.today': unlessEditing(() => navigateTo(pathFor(todayDate()))),
     'calendar.day': unlessEditing(() => navigateTo(pathFor(date.value, 'day'))),
+    'calendar.agenda': unlessEditing(() => navigateTo(pathFor(date.value, 'agenda'))),
     'calendar.week': unlessEditing(() => navigateTo(pathFor(date.value, 'week'))),
     'calendar.month': unlessEditing(() => navigateTo(pathFor(date.value, 'month'))),
     'calendar.year': unlessEditing(() => navigateTo(pathFor(date.value, 'year'))),

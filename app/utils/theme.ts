@@ -55,7 +55,7 @@ export interface CitrusMailTheme {
   dark: ThemeColors
 }
 
-/** What a person can change for themselves in Settings → Appearance */
+/** What a person can change for themselves in Settings → Appearance, saved with their account */
 export interface Appearance {
   primary?: string
   font?: string
@@ -67,6 +67,11 @@ export type ThemeOverride = Partial<Omit<CitrusMailTheme, 'light' | 'dark'>> & {
   light?: Partial<ThemeColors>
   dark?: Partial<ThemeColors>
 }
+
+export const SURFACE_KEYS = ['desk', 'sheet', 'elevated', 'accented', 'border', 'sheetBorder', 'text', 'textHighlighted', 'textMuted', 'selected', 'selectedEdge', 'overlay'] as const satisfies readonly (keyof ThemeColors)[]
+
+/** Tailwind's own palettes by name, each a shade to a color: what `tailwindcss/colors` exports */
+export type Palettes = Record<string, Record<string, string> | string | undefined>
 
 const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const
 
@@ -83,12 +88,12 @@ export function isHexColor(value?: string): value is string {
 export function mergeTheme(base: CitrusMailTheme, ...overrides: (ThemeOverride | undefined)[]): CitrusMailTheme {
   return overrides.reduce<CitrusMailTheme>((theme, override) => {
     if (!override || typeof override !== 'object') return theme
-    const clean = Object.fromEntries(Object.entries(override).filter(([, value]) => value !== undefined && value !== ''))
+    const set = (values?: object) => Object.fromEntries(Object.entries(values ?? {}).filter(([, value]) => value !== undefined && value !== ''))
     return {
       ...theme,
-      ...clean,
-      light: { ...theme.light, ...override.light },
-      dark: { ...theme.dark, ...override.dark }
+      ...set(override),
+      light: { ...theme.light, ...set(override.light) },
+      dark: { ...theme.dark, ...set(override.dark) }
     }
   }, base)
 }
@@ -116,15 +121,56 @@ function colorVars(colors: ThemeColors) {
 const block = (selector: string, vars: Record<string, string | undefined>) =>
   `${selector} {\n${Object.entries(vars).filter(([, value]) => value).map(([name, value]) => `  ${name}: ${value};`).join('\n')}\n}`
 
+const shades = (family: 'primary' | 'neutral', value: (shade: number) => string | undefined) =>
+  Object.fromEntries(SHADES.map(shade => [`--ui-color-${family}-${shade}`, value(shade)]))
+
+/** One shade of a hex accent */
+export const accentShade = (primary: string, shade: (typeof SHADES)[number]) =>
+  MIX[shade] ? `color-mix(in oklab, ${primary}, ${MIX[shade]})` : primary
+
+// A hex is mixed into a scale; a palette of our own (declared with @theme in
+// main.css, like 'post') is spelled out, since Nuxt UI only resolves
+// Tailwind's built-in names, which it handles itself
+const accentScale = (primary: string) => isHexColor(primary)
+  ? shades('primary', shade => accentShade(primary, shade as (typeof SHADES)[number]))
+  : shades('primary', shade => `var(--color-${primary}-${shade})`)
+
+/**
+ * One mode of a theme as custom properties for a single element, so a part of
+ * the page (a preview) can wear a theme the rest of the app doesn't. Unlike
+ * `themeCss` it spells out Tailwind's palettes too, from `palettes`, and the
+ * few Nuxt UI tokens that differ between light and dark
+ */
+export function themeVars(theme: CitrusMailTheme, mode: 'light' | 'dark', palettes: Palettes = {}): Record<string, string> {
+  const dark = mode === 'dark'
+  const palette = (name: string) => typeof palettes[name] === 'object' ? palettes[name] : undefined
+  const n = (shade: number) => `var(--ui-color-neutral-${shade})`
+  const vars: Record<string, string | undefined> = {
+    ...(isHexColor(theme.primary) || !palette(theme.primary) ? accentScale(theme.primary) : shades('primary', shade => palette(theme.primary)![shade])),
+    ...(palette(theme.neutral) ? shades('neutral', shade => palette(theme.neutral)![shade]) : {}),
+    '--font-sans': theme.font,
+    '--ui-radius': theme.radius,
+    '--lb-sheet-inset': theme.sheetInset,
+    '--lb-sheet-radius': theme.sheetRadius,
+    '--lb-sheet-shadow': theme.sheetShadow,
+    '--lb-shadow': theme.floatingShadow,
+    '--lb-flag': theme.flag,
+    '--lb-unread': theme.unread || 'var(--ui-primary)',
+    '--ui-primary': `var(--ui-color-primary-${dark ? 400 : 600})`,
+    '--ui-text-dimmed': n(dark ? 500 : 400),
+    '--ui-text-toned': n(dark ? 300 : 600),
+    '--ui-text-inverted': dark ? n(900) : '#fff',
+    '--ui-bg-inverted': dark ? '#fff' : n(900),
+    '--ui-border-accented': n(dark ? 700 : 300),
+    '--ui-border-inverted': dark ? '#fff' : n(900),
+    ...colorVars(theme[mode])
+  }
+  return Object.fromEntries(Object.entries(vars).filter(([, value]) => value)) as Record<string, string>
+}
+
 /** The whole theme as CSS custom properties, light and dark */
 export function themeCss(theme: CitrusMailTheme, builtInPalettes: Set<string>): string {
-  const shades = (value: (shade: number) => string) => Object.fromEntries(SHADES.map(shade => [`--ui-color-primary-${shade}`, value(shade)]))
-  // A hex is mixed into a scale; a palette of our own (declared with @theme in
-  // main.css, like 'post') is spelled out, since Nuxt UI only resolves
-  // Tailwind's built-in names, which it handles itself
-  const accent = isHexColor(theme.primary)
-    ? shades(shade => MIX[shade as keyof typeof MIX] ? `color-mix(in oklab, ${theme.primary}, ${MIX[shade as keyof typeof MIX]})` : theme.primary)
-    : builtInPalettes.has(theme.primary) ? {} : shades(shade => `var(--color-${theme.primary}-${shade})`)
+  const accent = isHexColor(theme.primary) || !builtInPalettes.has(theme.primary) ? accentScale(theme.primary) : {}
 
   // Plain :root and .dark, so brand/custom.css (loaded after) can override any of it
   return [

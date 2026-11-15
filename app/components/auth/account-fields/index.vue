@@ -10,7 +10,10 @@ const form = defineModel<SignInForm>('form', { required: true })
       label="Your name"
       description="Shown to the people you write to."
     >
-      <UInput v-model="form.name" />
+      <UInput
+        v-model="form.name"
+        autocomplete="name"
+      />
     </UFormField>
     <UFormField
       label="Username"
@@ -19,6 +22,8 @@ const form = defineModel<SignInForm>('form', { required: true })
       <UInput
         v-model="form.username"
         :placeholder="form.email || 'you@example.com'"
+        autocomplete="off"
+        spellcheck="false"
       />
     </UFormField>
   </div>

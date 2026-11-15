@@ -5,6 +5,7 @@
 const { config, locked, cooldown, triesLeft, unlock, unlockWithTouchId, reset } = useAppLock()
 const { signOutAll } = useMailboxes()
 const brand = useBrand()
+// Mounted once in every window, so the palette has these wherever it opens
 
 const sheet = useTemplateRef<HTMLElement>('sheet')
 const pin = ref<number[]>([])
@@ -25,6 +26,8 @@ async function submit(value: (number | string | undefined)[]) {
   await nextTick()
   shaking.value = true
   firstField()?.focus()
+  // Said at once, over whatever was being read: the PIN has to be typed again
+  if (!cooldown.value) announce(`That’s not the PIN. ${triesLeft.value} ${triesLeft.value === 1 ? 'try' : 'tries'} left before a short pause.`, true)
 }
 
 watch(pin, value => value.length && (wrong.value = false))
@@ -43,12 +46,32 @@ watch(locked, async (on) => {
 }, { immediate: true })
 onBeforeUnmount(() => document.getElementById('__nuxt')?.removeAttribute('inert'))
 
-// The pause is over: the field takes the cursor again
+// The pause starts and ends out loud; when it's over the field takes the
+// cursor again
 watch(cooldown, async (left, before) => {
-  if (left || !before || !locked.value) return
+  if (!locked.value) return
+  if (left && !before) return announce(`Too many wrong PINs. Try again in ${left} seconds.`, true)
+  if (left || !before) return
+  announce('You can try your PIN again.', true)
   await nextTick()
   firstField()?.focus()
 })
+
+// Keys pressed in the sheet stay in it, and Tab goes round the sheet's own
+// controls and never out of it
+function onKeydown(event: KeyboardEvent) {
+  event.stopPropagation()
+  if (event.key !== 'Tab' || !sheet.value) return
+  const items = [...sheet.value.querySelectorAll<HTMLElement>('input:not(:disabled), button:not(:disabled)')]
+  if (!items.length) return
+  const at = items.indexOf(document.activeElement as HTMLElement)
+  const next = event.shiftKey ? (at <= 0 ? items.length - 1 : at - 1) : (at === -1 || at === items.length - 1 ? 0 : at + 1)
+  // Between the PIN's own digits the browser's order is right
+  const inPin = (element?: HTMLElement) => element?.tagName === 'INPUT'
+  if (at !== -1 && inPin(items[at]) && inPin(items[next]) && Math.abs(next - at) === 1) return
+  event.preventDefault()
+  items[next]?.focus()
+}
 
 // Keys pressed anywhere but in the sheet go nowhere, so no shortcut can
 // archive or open something in the app behind it
@@ -88,7 +111,8 @@ async function signOut() {
         aria-modal="true"
         aria-labelledby="app-lock-title"
         class="lb-lock-sheet fixed inset-0 z-1000 flex flex-col items-center justify-center gap-6 p-6 [-webkit-app-region:no-drag]"
-        @keydown.stop
+        aria-describedby="app-lock-hint"
+        @keydown="onKeydown"
         @keyup.stop
         @keypress.stop
       >
@@ -104,7 +128,10 @@ async function signOut() {
             >
               {{ brand.name }} is locked
             </h1>
-            <p class="mt-1 text-sm text-muted">
+            <p
+              id="app-lock-hint"
+              class="mt-1 text-sm text-muted"
+            >
               Enter your PIN to carry on.
             </p>
           </div>
@@ -131,7 +158,6 @@ async function signOut() {
           <p
             class="min-h-5 text-sm"
             :class="cooldown || wrong ? 'text-error' : 'text-muted'"
-            role="status"
           >
             <template v-if="cooldown">
               Too many wrong PINs. Try again in {{ cooldown }} {{ cooldown === 1 ? 'second' : 'seconds' }}.
@@ -161,7 +187,7 @@ async function signOut() {
             :loading="signingOut"
             @click="signOut"
           />
-          <p class="max-w-sm text-xs text-dimmed">
+          <p class="max-w-sm text-xs text-muted">
             <template v-if="signOutFailed">
               Couldn’t sign out. Check your connection and try again.
             </template>

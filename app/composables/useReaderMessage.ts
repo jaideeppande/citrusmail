@@ -37,6 +37,9 @@ export function useReaderMessage(target: () => { folder: string, id: string }, s
       // Not from a saved copy with no connection: the server couldn't be told
       const item = row(id, folder)
       if (item?.unread && !entry.offline) setUnread(item, false, entry.marked)
+      // Not on this window's list (a window opened straight onto it): the
+      // server marked it read all the same, and the other windows hear so
+      else if (!item && entry.marked && !entry.offline) tellWindows({ type: 'mail:patch', folder, id, change: { unread: false } })
       // Only that first fetch marked it read; opened again from the copy, the server is told
       entry.marked = false
     } catch {

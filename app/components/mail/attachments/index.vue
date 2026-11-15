@@ -46,7 +46,7 @@ watch(() => [props.message.id, props.message.folder], () => (looking.value = und
           </span>
           <UIcon
             name="i-lucide-eye"
-            class="size-4 text-dimmed"
+            class="size-4 text-muted"
           />
         </UButton>
         <UButton
@@ -66,7 +66,7 @@ watch(() => [props.message.id, props.message.folder], () => (looking.value = und
           </span>
           <UIcon
             name="i-lucide-download"
-            class="size-4 text-dimmed"
+            class="size-4 text-muted"
           />
         </UButton>
       </template>

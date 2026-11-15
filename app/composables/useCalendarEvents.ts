@@ -72,7 +72,9 @@ const _useCalendarEvents = () => {
     watch(range, () => {
       // The month view streams events in chunks as it scrolls instead, and the
       // year view only holds the month it zooms into
-      if (view.value === 'month' || view.value === 'year') {
+      // The agenda loads its own days as it scrolls, in `ensureDays` blocks.
+      // Compared as a string so it reads the same once the shared view knows it
+      if (view.value === 'month' || view.value === 'year' || (view.value as string) === 'agenda') {
         return
       }
 
@@ -127,6 +129,17 @@ const _useCalendarEvents = () => {
 
   function isRangePending(range: DateRange): boolean {
     return eventsKey({ start: startOfDay(range.start), end: startOfDay(range.end) }) in pendingRanges.value
+  }
+
+  // For the lists that scroll through the days (the agenda, the mini calendar
+  // in the mail sidebar): the same, asked for in the fixed blocks `eventChunks`
+  // cuts, so however the two overlap nothing is fetched twice
+  async function ensureDays(range: DateRange): Promise<void> {
+    await Promise.all(eventChunks(range).map(loadRange))
+  }
+
+  function isDaysPending(range: DateRange): boolean {
+    return eventChunks(range).some(chunk => eventsKey(chunk) in pendingRanges.value)
   }
 
   // Local mutations are layered over whatever the server returns: the
@@ -455,6 +468,8 @@ const _useCalendarEvents = () => {
     loadRange,
     ensureRange,
     isRangePending,
+    ensureDays,
+    isDaysPending,
     reload,
     pendingRanges,
     warmRange,

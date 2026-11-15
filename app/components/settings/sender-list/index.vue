@@ -36,6 +36,7 @@ const sorted = computed(() => [...props.entries].sort())
       <UInput
         v-model="input"
         placeholder="name@example.com or @example.com"
+        :aria-label="`Add to ${label}`"
         class="flex-1"
       />
       <UButton
@@ -73,7 +74,7 @@ const sorted = computed(() => [...props.entries].sort())
     </TransitionGroup>
     <p
       v-if="!entries.length"
-      class="mt-3 text-sm text-dimmed"
+      class="mt-3 text-sm text-muted"
     >
       {{ empty }}
     </p>

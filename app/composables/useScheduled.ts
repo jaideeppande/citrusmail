@@ -36,17 +36,19 @@ const _useScheduled = () => {
     }
   }
 
-  /** Moves it to another time */
-  async function reschedule(item: ScheduledMessage, sendAt: Date) {
+  /** Moves it to another time. True when it moved */
+  async function reschedule(item: ScheduledMessage, sendAt: Date): Promise<boolean> {
     try {
       const next = await $fetch<ScheduledMessage>(`/api/scheduled/${item.id}`, { method: 'PATCH', body: { sendAt: sendAt.toISOString() } })
       scheduled.value = scheduled.value.map(entry => entry.id === item.id ? next : entry).sort((a, b) => a.sendAt.localeCompare(b.sendAt))
       tellWindows({ type: 'scheduled:changed' })
       toast.add({ title: `Rescheduled for ${scheduleLabel(next.sendAt)}`, icon: 'i-lucide-clock-arrow-up' })
+      return true
     } catch (error) {
       const description = (error as { data?: { message?: string } }).data?.message
       toast.add({ title: 'Couldn’t reschedule it', description, color: 'error', icon: 'i-lucide-circle-alert' })
       await refresh()
+      return false
     }
   }
 

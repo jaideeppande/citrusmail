@@ -120,28 +120,18 @@ useCommands(() => message.value
       </Transition>
     </div>
 
-    <div
+    <SkeletonReader
       v-if="status === 'pending' && !message"
-      class="flex-1 p-6 flex flex-col gap-4"
-    >
-      <USkeleton class="h-7 w-2/3" />
-      <div class="flex items-center gap-3">
-        <USkeleton class="size-10 rounded-full" />
-        <div class="flex-1 flex flex-col gap-2">
-          <USkeleton class="h-4 w-1/3" />
-          <USkeleton class="h-3 w-1/4" />
-        </div>
-      </div>
-      <USkeleton class="h-64 w-full rounded-xl" />
-    </div>
+      class="flex-1"
+    />
 
-    <UEmpty
+    <AppEmpty
       v-else-if="status === 'error'"
-      icon="i-lucide-mail-x"
+      illustration="error"
+      tone="error"
       title="Couldn’t open this message"
       description="It may have been moved or deleted from another device."
       :actions="[{ label: 'Try again', icon: 'i-lucide-rotate-cw', color: 'neutral', variant: 'subtle', onClick: () => refresh() }]"
-      variant="naked"
       class="flex-1"
     />
 

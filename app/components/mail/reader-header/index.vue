@@ -34,6 +34,9 @@ function pop(which: 'flag' | 'unread') {
 }
 watch(() => [props.summary?.id, props.summary?.folder], () => (popped.value = undefined))
 
+const bar = useTemplateRef<HTMLElement>('bar')
+useRovingFocus(bar)
+
 const snoozeOpen = ref(false)
 const snoozePicking = ref(false)
 
@@ -45,7 +48,12 @@ defineExpose({
 
 <template>
   <!-- Scrolls sideways rather than pushing Flag and More off a narrow sheet -->
-  <header class="shrink-0 flex items-center gap-1 h-14 px-3 border-b border-default min-w-0 overflow-x-auto">
+  <header
+    ref="bar"
+    role="toolbar"
+    aria-label="Message actions"
+    class="shrink-0 flex items-center gap-1 h-14 px-3 border-b border-default min-w-0 overflow-x-auto"
+  >
     <UTooltip
       text="Back to the list"
       :kbds="['escape']"

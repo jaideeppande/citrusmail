@@ -9,6 +9,8 @@ const props = defineProps<{
   anchored?: boolean
   continuesBefore?: boolean
   continuesAfter?: boolean
+  // Where the form opens, for a list that has no beside (the agenda)
+  side?: 'bottom' | 'right'
 }>()
 
 const { formSide } = useCalendar()
@@ -31,7 +33,7 @@ const times = computed(() => draft.value && !draft.value.allDay
 let dismissedByEscape = false
 
 const content = computed(() => ({
-  side: formSide.value,
+  side: props.side ?? formSide.value,
   sideOffset: 8,
   collisionPadding: 16,
   onEscapeKeyDown: () => {

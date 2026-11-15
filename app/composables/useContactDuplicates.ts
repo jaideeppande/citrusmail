@@ -28,10 +28,12 @@ export function useContactDuplicates() {
 
   function skip(group: DuplicateGroup) {
     states.value = { ...states.value, [group.key]: 'skipped' }
+    announce('Skipped')
   }
 
   function restore(group: DuplicateGroup) {
     states.value = { ...states.value, [group.key]: 'idle' }
+    announce('Brought back')
   }
 
   // The kept contact is written first, and nothing is deleted unless that
@@ -72,6 +74,7 @@ export function useContactDuplicates() {
     tellWindows({ type: 'contacts:changed' })
 
     const failed = targets.length - merged
+    announce(merged ? `Merged ${merged === 1 ? '1 contact' : `${merged} contacts`}${failed ? `, ${failed} couldn’t be merged` : ''}` : 'Couldn’t merge the contacts', !merged)
     if (merged) {
       toast.add({
         title: merged === 1 ? 'Merged 1 contact' : `Merged ${merged} contacts`,

@@ -42,6 +42,7 @@ const chains = (key: string) => key.length === 1 && key !== '-' && key !== '_'
 function record(id: ShortcutId) {
   cancel()
   recording.value = id
+  announce(`Press the new key for ${SHORTCUTS[id].label}. Escape cancels.`)
 }
 
 function cancel() {
@@ -58,8 +59,13 @@ function commit(key: string) {
   pending.value = ''
   if (!id) return
   const other = clash(id, key)
-  if (other) conflict.value = { id, key, other }
-  else rebind(id, [key])
+  if (other) {
+    conflict.value = { id, key, other }
+    announce(`${keyName(key)} is already ${SHORTCUTS[other].label}. Use it anyway, or cancel.`, true)
+  } else {
+    rebind(id, [key])
+    announce(`${SHORTCUTS[id].label} is now ${keyName(key)}`)
+  }
 }
 
 /** The key moves here; the shortcut that had it keeps its other keys, if it has any */
@@ -69,11 +75,13 @@ function useAnyway() {
   rebind(other, keysOf(other).filter(item => item !== key))
   rebind(id, [key])
   conflict.value = undefined
+  announce(`${SHORTCUTS[id].label} is now ${keyName(key)}`)
 }
 
 function resetAll() {
   cancel()
   prefs.value = { ...prefs.value, custom: {} }
+  announce('Every key is back to the preset’s')
 }
 
 // Caught before anything else hears it, so the key being recorded doesn't
@@ -82,7 +90,10 @@ useEventListener(window, 'keydown', (event: KeyboardEvent) => {
   if (!recording.value) return
   event.preventDefault()
   event.stopPropagation()
-  if (event.key === 'Escape') return cancel()
+  if (event.key === 'Escape') {
+    cancel()
+    return announce('Cancelled. The key is unchanged.')
+  }
   const key = keyFromEvent(event)
   if (!key) return
   if (pending.value) return commit(chains(key) ? `${pending.value}-${key}` : key)
@@ -144,7 +155,7 @@ const keyName = (key: string) => shortcutParts(key).map(part => part === 'meta' 
 
       <p
         v-if="!groups.length"
-        class="py-6 text-sm text-dimmed"
+        class="py-6 text-sm text-muted"
       >
         No shortcut matches “{{ search.trim() }}”.
       </p>
@@ -177,7 +188,6 @@ const keyName = (key: string) => shortcutParts(key).map(part => part === 'meta' 
               <span
                 v-if="recording === item.id"
                 class="lb-recording flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-primary ring ring-primary"
-                role="status"
               >
                 <template v-if="pending">
                   <UKbd
@@ -189,7 +199,7 @@ const keyName = (key: string) => shortcutParts(key).map(part => part === 'meta' 
                 <template v-else>
                   Press a key
                 </template>
-                <span class="text-xs text-dimmed">Esc cancels</span>
+                <span class="text-xs text-muted">Esc cancels</span>
               </span>
               <SettingsShortcutKeys
                 v-else

@@ -21,5 +21,13 @@ const { prefs, set } = useNotificationSettings()
       <SettingsNotificationDnd />
       <SettingsNotificationMailboxes />
     </div>
+
+    <!-- Not about new mail, so not turned off with it -->
+    <fieldset class="flex flex-col gap-4 border-t border-default pt-8">
+      <legend class="sr-only">
+        Sounds for what you do
+      </legend>
+      <SettingsUiSounds />
+    </fieldset>
   </div>
 </template>

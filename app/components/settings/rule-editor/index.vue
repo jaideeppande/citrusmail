@@ -64,6 +64,7 @@ function validate() {
                 v-if="state.conditions.length > 1"
                 v-model="state.match"
                 :items="MATCH"
+                aria-label="Match all or any of the conditions"
                 size="xs"
                 class="w-16"
               />

@@ -69,29 +69,22 @@ useSeoMeta({ title: 'Subscriptions' })
       </div>
     </Transition>
 
-    <div
+    <SkeletonContactRow
       v-if="status === 'pending' && !subscriptions.length"
-      class="flex flex-col gap-2"
-    >
-      <USkeleton
-        v-for="n in 6"
-        :key="n"
-        class="h-14 rounded-lg"
-      />
-    </div>
-    <UEmpty
+      :count="6"
+      label="Looking for mailing lists"
+    />
+    <AppEmpty
       v-else-if="!subscriptions.length"
-      icon="i-lucide-newspaper"
+      illustration="no-subscriptions"
       title="No mailing lists found"
       description="None of the recent mail in your Inbox has an unsubscribe link."
-      variant="naked"
     />
-    <UEmpty
+    <AppEmpty
       v-else-if="!shown.length"
-      icon="i-lucide-search-x"
+      illustration="no-results"
       title="No matches"
       :description="`No mailing list matches “${query}”.`"
-      variant="naked"
     />
     <ul
       v-else

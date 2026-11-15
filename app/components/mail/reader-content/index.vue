@@ -74,6 +74,11 @@ const hasInvite = computed(() => props.message.attachments.some(isInvite))
       />
     </MailSender>
 
+    <MailLabelChips
+      v-if="!nested"
+      :message="message"
+    />
+
     <MailActionChips :message="message" />
 
     <MailTranslateBar :translation="translation" />

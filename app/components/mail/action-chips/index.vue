@@ -72,7 +72,7 @@ function run(action: MessageAction) {
         variant="outline"
         size="xs"
         class="rounded-full lb-press max-w-full"
-        :ui="{ label: 'truncate', leadingIcon: 'text-muted', trailingIcon: 'size-3 text-dimmed' }"
+        :ui="{ label: 'truncate', leadingIcon: 'text-muted', trailingIcon: 'size-3 text-muted' }"
         :title="`${action.carrier} ${action.number}`"
       />
       <UButton

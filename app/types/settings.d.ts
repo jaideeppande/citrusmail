@@ -7,7 +7,11 @@ interface ThemeSchedule {
   before?: string
 }
 
-/** One card in the Appearance gallery: an accent, a font and corners that sit well together */
+/**
+ * One card in the Appearance gallery. Accent, font and corners are saved with
+ * the account like the choices under the gallery; greys, surfaces and the
+ * sheet's shape are kept on this computer, as the theme editor keeps them
+ */
 interface ThemePreset {
   id: string
   label: string
@@ -16,6 +20,21 @@ interface ThemePreset {
   /** A font stack from `citrusmail.fonts`; absent for the instance's own */
   font?: string
   radius?: string
+  /** The rest of the look: greys, light and dark surfaces, the sheet */
+  extras?: import('~/utils/theme').ThemeOverride
+  /** A look drawn for one mode: choosing it switches to that mode */
+  scheme?: 'light' | 'dark'
+  /** Stronger text and lines, for eyes or screens that need them */
+  contrast?: boolean
+  /** One of your own, saved from the theme editor */
+  custom?: boolean
+}
+
+/** A look saved from the theme editor, kept on this computer */
+interface SavedTheme {
+  id: string
+  label: string
+  theme: import('~/utils/theme').ThemeOverride
 }
 
 /** Do not disturb: a time in ms it lasts until, 0 for off, -1 until turned off */
@@ -60,4 +79,11 @@ interface TourStep {
   target: string
   title: string
   text: string
+}
+
+/** One line of the theme editor's contrast check: a text color on a surface */
+interface ContrastPair {
+  label: string
+  /** The WCAG ratio; NaN when a color couldn't be read */
+  ratio: number
 }

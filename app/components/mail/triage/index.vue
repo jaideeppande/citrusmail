@@ -96,6 +96,40 @@ useEventListener('keydown', (event: KeyboardEvent) => {
   action.run()
 })
 
+// Focus goes into triage when it opens, stays inside while it's up, and goes
+// back where it came from when it closes
+const root = useTemplateRef<HTMLElement>('root')
+let returnTo: HTMLElement | null = null
+watch(triage.isOpen, async (open) => {
+  if (open) {
+    returnTo = document.activeElement as HTMLElement | null
+    await nextTick()
+    root.value?.focus()
+    announce(`Triage: ${triage.queue.value.length} messages. ${actions.map(action => `${keysOf(action.id)[0]} to ${action.label.toLowerCase()}`).join(', ')}. Escape to finish`)
+  } else {
+    returnTo?.focus?.()
+    returnTo = null
+  }
+})
+watch(() => triage.current.value, (message) => {
+  if (triage.isOpen.value && message) announce(`${triage.index.value + 1} of ${triage.queue.value.length}: ${message.subject || 'No subject'}, from ${personName(message.from)}`)
+  if (triage.finished.value) announce('That’s all of them')
+})
+function trap(event: KeyboardEvent) {
+  if (event.key !== 'Tab' || !root.value) return
+  const items = [...root.value.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], [tabindex="0"]')]
+  if (!items.length) return
+  const first = items[0]!
+  const last = items[items.length - 1]!
+  if (event.shiftKey && (document.activeElement === first || document.activeElement === root.value)) {
+    event.preventDefault()
+    last.focus()
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first.focus()
+  }
+}
+
 const total = computed(() => triage.queue.value.length)
 const position = computed(() => Math.min(triage.index.value + 1, total.value))
 const summary = computed(() => {
@@ -109,10 +143,13 @@ const summary = computed(() => {
   <Transition name="lb-fade">
     <div
       v-if="triage.isOpen.value"
+      ref="root"
       role="dialog"
       aria-modal="true"
       aria-label="Triage"
-      class="fixed inset-0 z-40 flex flex-col items-center gap-4 px-6 py-6 bg-(--lb-desk-solid)/92 backdrop-blur-sm"
+      tabindex="-1"
+      class="fixed inset-0 z-40 flex flex-col items-center gap-4 px-6 py-6 bg-(--lb-desk-solid)/92 backdrop-blur-sm outline-none"
+      @keydown="trap"
     >
       <header class="w-full max-w-3xl flex items-center gap-4">
         <span class="text-sm font-medium text-toned tabular-nums whitespace-nowrap">{{ triage.finished.value ? total : position }} of {{ total }}</span>
@@ -196,12 +233,12 @@ const summary = computed(() => {
                 :remote="detail.remoteShown"
                 class="lb-in"
               />
-              <UEmpty
+              <AppEmpty
                 v-else-if="failed"
-                icon="i-lucide-mail-x"
+                illustration="error"
+                tone="error"
                 title="Couldn’t open this message"
                 description="It may have been moved or deleted from another device."
-                variant="naked"
               />
               <div
                 v-else

@@ -24,8 +24,9 @@ const _useContacts = () => {
   })
 
   // `quiet` is for a caller that reports on a whole batch itself (merging
-  // duplicates): no toast per contact, and it tells the other windows once
-  async function save(contact: Contact, { quiet = false } = {}) {
+  // duplicates, an import): no toast per contact, and it tells the other
+  // windows once. `onError` hears the server's reason when it refuses
+  async function save(contact: Contact, { quiet = false, onError }: { quiet?: boolean, onError?: (reason: string) => void } = {}) {
     try {
       const saved = contact.id
         ? await $fetch<Contact>(`/api/contacts/${contact.id}`, { method: 'PUT', body: contact })
@@ -38,6 +39,7 @@ const _useContacts = () => {
       return saved
     } catch (error) {
       const message = (error as { data?: { message?: string } }).data?.message
+      onError?.(message || 'The address book didn’t answer')
       if (!quiet) toast.add({ title: 'Couldn’t save the contact', description: message, color: 'error', icon: 'i-lucide-circle-alert' })
     }
   }
@@ -74,6 +76,21 @@ const _useContacts = () => {
         suffix: contact.emails[0],
         icon: 'i-ph-star-fill',
         onSelect: () => useComposer().compose([{ name: contact.name, address: contact.emails[0]! }])
+      }))
+  }])
+
+  // Each group is one command away too, as a whole list of recipients
+  const { groups } = useContactExtras()
+  useCommands(() => [{
+    id: 'contact-groups',
+    label: 'Groups',
+    items: groups.value
+      .filter(group => group.members.length)
+      .map(group => ({
+        label: `Write to ${group.name}`,
+        suffix: peopleCount(group.members.length),
+        icon: 'i-lucide-users',
+        onSelect: () => useComposer().compose(group.members)
       }))
   }])
 

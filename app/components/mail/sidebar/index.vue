@@ -127,7 +127,11 @@ function onDrop(event: DragEvent) {
       @click="promptCreate()"
     />
 
+    <MailLabels :collapsed="collapsed" />
+
     <MailSavedSearches :collapsed="collapsed" />
+
+    <CalendarMiniBusy v-if="!collapsed" />
 
     <MailSidebarExtras :collapsed="collapsed" />
   </template>

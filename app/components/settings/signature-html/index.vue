@@ -17,6 +17,7 @@ const preview = computed(() => `<!doctype html><html><head><meta charset="utf-8"
       autoresize
       :maxrows="18"
       placeholder="<table>…</table>"
+      aria-label="Signature HTML"
       spellcheck="false"
       :ui="{ base: 'text-xs leading-5' }"
     />

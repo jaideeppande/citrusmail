@@ -1,4 +1,4 @@
-import { addDays, differenceInCalendarDays } from 'date-fns'
+import { addDays, addMinutes, differenceInCalendarDays } from 'date-fns'
 
 // Moving a chip is a whole-day gesture: the month grid has no time axis and an
 // all-day bar keeps the span it has, so only the date shifts. `useEventDrag`
@@ -187,7 +187,40 @@ const _useEventMove = () => {
     }
   })
 
+  // The keyboard's way to do what a drag does (Alt with an arrow on a
+  // focused event): whole days by the date, minutes by the clock, and a
+  // resize by the end alone. The same update a drop sends, said out loud
+  function moveBy(event: CalendarEvent, by: { days?: number, minutes?: number, resize?: boolean }) {
+    const days = by.days ?? 0
+    const minutes = by.minutes ?? 0
+    const start = new Date(event.start)
+    const end = new Date(event.end)
+
+    if (by.resize) {
+      const resized = addMinutes(end, minutes)
+      // Never shorter than a snap step, the way the drag handle stops
+      if (resized <= addMinutes(start, SNAP_MINUTES - 1)) {
+        announce(`${event.title} is as short as it goes`)
+
+        return
+      }
+
+      updateEvent({ ...event, end: toLocalISO(resized) })
+      announce(`${event.title} now ends at ${formatTime(resized)}`)
+
+      return
+    }
+
+    // `addDays` for the date so the wall clock survives a DST edge
+    const shift = (date: Date) => addMinutes(addDays(date, days), minutes)
+    const moved = { ...event, start: toLocalISO(shift(start)), end: toLocalISO(shift(end)) }
+
+    updateEvent(moved)
+    announce(`${event.title} moved to ${formatSpokenDate(shift(start))}${event.allDay ? '' : `, ${formatTime(shift(start))}`}`)
+  }
+
   return {
+    moveBy,
     movingId,
     preview,
     ghost,

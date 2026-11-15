@@ -107,7 +107,7 @@ watch(item, () => (imageFailed.value = false))
         >
           <UIcon
             :name="attachmentIcon(item.file.contentType)"
-            class="size-12 text-dimmed"
+            class="size-12 text-muted"
           />
           <p class="text-sm text-muted max-w-sm text-pretty">
             {{ kind ? 'Couldn’t show this file.' : isPdf ? 'PDFs open in a tab of their own.' : 'There’s no preview for this kind of file.' }}

@@ -49,12 +49,11 @@ async function confirmMerge(targets: DuplicateGroup[]) {
     :ui="{ content: 'sm:max-w-3xl', body: 'p-0 sm:p-0', footer: 'justify-between gap-3' }"
   >
     <template #body>
-      <UEmpty
+      <AppEmpty
         v-if="!groups.length"
-        icon="i-lucide-check-check"
+        illustration="all-read"
         title="No duplicates found"
         description="Everyone in your address book is there once."
-        variant="naked"
         class="py-10"
       />
 
@@ -65,7 +64,8 @@ async function confirmMerge(targets: DuplicateGroup[]) {
         <li
           v-for="(group, index) in groups"
           :key="group.key"
-          class="lb-stagger px-4 py-4 sm:px-6"
+          :aria-label="`${group.contacts.length} contacts: ${group.reasons.map(reason => REASONS[reason]).join(', ')}`"
+          class="lb-stagger px-4 py-3 sm:px-6"
           :style="{ '--lb-i': index }"
         >
           <div class="flex items-center gap-2 min-h-7">
@@ -84,6 +84,7 @@ async function confirmMerge(targets: DuplicateGroup[]) {
                 <UIcon
                   name="i-lucide-check"
                   class="lb-mark-pop size-4 text-success"
+                  aria-hidden="true"
                 />
                 <span class="text-sm text-muted">Merged</span>
               </template>
@@ -101,10 +102,15 @@ async function confirmMerge(targets: DuplicateGroup[]) {
               <template v-else>
                 <span
                   v-if="stateOf(group) === 'failed'"
-                  class="text-sm text-error"
-                >Couldn’t merge</span>
+                  class="flex items-center gap-1 text-sm text-error"
+                ><UIcon
+                  name="i-lucide-circle-alert"
+                  class="size-4"
+                  aria-hidden="true"
+                />Couldn’t merge</span>
                 <UButton
                   label="Skip"
+                  :aria-label="`Skip ${group.contacts.map(contact => contact.name).join(', ')}`"
                   color="neutral"
                   variant="ghost"
                   size="xs"
@@ -113,6 +119,7 @@ async function confirmMerge(targets: DuplicateGroup[]) {
                 />
                 <UButton
                   :label="stateOf(group) === 'failed' ? 'Try again' : 'Merge'"
+                  :aria-label="`${stateOf(group) === 'failed' ? 'Try again to merge' : 'Merge'} ${group.contacts.map(contact => contact.name).join(', ')}`"
                   icon="i-lucide-merge"
                   color="neutral"
                   variant="subtle"
@@ -141,7 +148,8 @@ async function confirmMerge(targets: DuplicateGroup[]) {
                   </div>
                   <UIcon
                     name="i-lucide-arrow-right"
-                    class="hidden sm:block mt-8 size-4 text-dimmed"
+                    class="hidden sm:block mt-8 size-4 text-muted"
+                    aria-hidden="true"
                   />
                   <ContactsDuplicateCard
                     :contact="group.merged"
@@ -164,6 +172,7 @@ async function confirmMerge(targets: DuplicateGroup[]) {
           :max="progress.total"
           size="sm"
           class="max-w-56"
+          :aria-label="`Merged ${progress.done} of ${progress.total}`"
         />
         <span
           v-else-if="groups.length"
