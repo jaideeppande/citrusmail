@@ -9,7 +9,7 @@ const isPicture = (file: OutgoingAttachment) => /^image\/(png|jpe?g|gif|webp)$/.
   <TransitionGroup
     v-if="draft.attachments.length"
     tag="ul"
-    name="lb-chip"
+    name="lb-pop"
     class="flex flex-wrap gap-2 px-5 pb-3"
     aria-label="Attachments"
   >

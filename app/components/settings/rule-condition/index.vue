@@ -21,6 +21,7 @@ const PLACEHOLDERS: Record<RuleField, string> = {
     <USelect
       v-model="condition.field"
       :items="RULE_FIELDS"
+      aria-label="Where to look"
       class="w-28 shrink-0"
       :ui="{ base: 'w-28' }"
     />
@@ -28,6 +29,7 @@ const PLACEHOLDERS: Record<RuleField, string> = {
     <UInput
       v-model="condition.value"
       :placeholder="PLACEHOLDERS[condition.field]"
+      :aria-label="`${RULE_FIELDS.find(item => item.value === condition.field)?.label ?? 'It'} contains`"
       class="flex-1 min-w-0"
     />
     <UButton

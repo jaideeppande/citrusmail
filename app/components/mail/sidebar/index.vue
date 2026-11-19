@@ -41,31 +41,80 @@ const items = computed<NavigationMenuItem[]>(() => folders.value.map(folder => (
 const folderOf = (item: unknown) => (item as { folder: Folder }).folder
 
 const canFolder = computed(() => account.value?.protocol !== 'pop3')
+
+// Rows dragged from the list are dropped on a folder to move them there.
+// The menu draws its own links, so the folder under the pointer is found
+// from the link's address
+const { moveMany, messages } = useMail()
+const nav = useTemplateRef<HTMLElement>('nav')
+let over: HTMLElement | undefined
+
+function linkUnder(event: DragEvent) {
+  return (event.target as HTMLElement | null)?.closest<HTMLAnchorElement>('a[href^="/mail/"]') ?? undefined
+}
+function folderUnder(link?: HTMLAnchorElement) {
+  const href = link?.getAttribute('href')
+  return href ? folders.value.find(folder => folderLink(folder.path) === href) : undefined
+}
+function mark(link?: HTMLElement) {
+  if (over === link) return
+  over?.classList.remove('lb-drop-folder')
+  link?.classList.add('lb-drop-folder')
+  over = link
+}
+function onDragOver(event: DragEvent) {
+  if (!event.dataTransfer?.types.includes(MAIL_DRAG_TYPE)) return
+  const link = linkUnder(event)
+  const target = folderUnder(link)
+  // Not onto the folder they are already in, or onto one that holds no mail of its own
+  const ok = target && target.path !== folderPath.value && target.role !== 'flagged'
+  mark(ok ? link : undefined)
+  if (!ok) return
+  event.preventDefault()
+  event.dataTransfer.dropEffect = 'move'
+}
+function onDrop(event: DragEvent) {
+  const target = folderUnder(linkUnder(event))
+  mark(undefined)
+  const data = event.dataTransfer?.getData(MAIL_DRAG_TYPE)
+  if (!target || !data) return
+  event.preventDefault()
+  const keys = new Set<string>(JSON.parse(data))
+  moveMany(messages.value.filter(message => keys.has(messageKey(message))), target.role === 'trash' || target.role === 'junk' || target.role === 'archive' || target.role === 'inbox' ? target.role : target.path)
+}
 </script>
 
 <template>
   <MailComposeButton :collapsed="collapsed" />
 
   <template v-if="folders.length">
-    <UNavigationMenu
-      :items="items"
-      orientation="vertical"
-      :collapsed="collapsed"
-      :tooltip="{ content: { side: 'right' } }"
-      :ui="{ linkTrailingBadge: 'font-semibold tabular-nums' }"
+    <div
+      ref="nav"
+      class="contents"
+      @dragover="onDragOver"
+      @dragleave="mark(undefined)"
+      @drop="onDrop"
     >
-      <template #custom-trailing="{ item }">
-        <UBadge
-          v-if="unreadOf(folderOf(item))"
-          :label="String(folderOf(item).unread)"
-          color="neutral"
-          variant="subtle"
-          size="sm"
-          class="font-semibold tabular-nums group-hover:hidden"
-        />
-        <MailFolderMenu :folder="folderOf(item)" />
-      </template>
-    </UNavigationMenu>
+      <UNavigationMenu
+        :items="items"
+        orientation="vertical"
+        :collapsed="collapsed"
+        :tooltip="{ content: { side: 'right' } }"
+        :ui="{ linkTrailingBadge: 'font-semibold tabular-nums' }"
+      >
+        <template #custom-trailing="{ item }">
+          <UBadge
+            v-if="unreadOf(folderOf(item))"
+            :label="String(folderOf(item).unread)"
+            color="neutral"
+            variant="subtle"
+            size="sm"
+            class="font-semibold tabular-nums group-hover:hidden"
+          />
+          <MailFolderMenu :folder="folderOf(item)" />
+        </template>
+      </UNavigationMenu>
+    </div>
 
     <UButton
       v-if="canFolder && !collapsed"
@@ -77,6 +126,12 @@ const canFolder = computed(() => account.value?.protocol !== 'pop3')
       class="justify-start text-muted -mt-2 px-2.5"
       @click="promptCreate()"
     />
+
+    <MailLabels :collapsed="collapsed" />
+
+    <MailSavedSearches :collapsed="collapsed" />
+
+    <CalendarMiniBusy v-if="!collapsed" />
 
     <MailSidebarExtras :collapsed="collapsed" />
   </template>

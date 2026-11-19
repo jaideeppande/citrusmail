@@ -1,0 +1,64 @@
+/* first-run features: illustrations, empty states, skeletons, the offline bar
+   and the sign-in moments. Imported by main.css; uses the motion scale defined
+   there (--lb-dur-*, --lb-ease-*). Selectors hang off data attributes rather
+   than classes, so the templates carry no class the Tailwind linter has to
+   know about, and html[data-motion=reduced|off] stills all of it */
+
+/* Illustrations -------------------------------------------------------- */
+
+/* Each illustration moves one part, slowly, and only that part */
+[data-lb-motion] {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+[data-lb-motion='float'] { animation: lb-ill-float 5s var(--lb-ease-in-out) infinite; }
+[data-lb-motion='drift'] { animation: lb-ill-drift 6s var(--lb-ease-in-out) infinite; }
+[data-lb-motion='sway'] {
+  transform-origin: top center;
+  animation: lb-ill-sway 5s var(--lb-ease-in-out) infinite;
+}
+[data-lb-motion='blink'] { animation: lb-ill-blink 4s ease-in-out infinite; }
+/* Drawn once, as if by hand, when it arrives: the paths carry pathLength="1" */
+[data-lb-motion='draw'] path {
+  stroke-dasharray: 1;
+  animation: lb-ill-draw 900ms var(--lb-ease-out) 200ms both;
+}
+
+@keyframes lb-ill-float { 50% { transform: translateY(-3px); } }
+@keyframes lb-ill-drift { 50% { transform: translateX(3px); } }
+@keyframes lb-ill-sway { 25% { transform: rotate(2deg); } 75% { transform: rotate(-2deg); } }
+@keyframes lb-ill-blink { 0%, 70%, 100% { opacity: 1; } 85% { opacity: .25; } }
+@keyframes lb-ill-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+
+/* Skeletons ------------------------------------------------------------ */
+
+/* One sweep for the whole screen: the gradient is fixed to the window, so
+   every bone shows the same band passing at the same moment instead of each
+   shimmering on its own. When motion is reduced the sweep ends off screen
+   and the bones rest in their plain colour */
+[data-lb-bone] {
+  background-color: var(--ui-bg-elevated);
+  background-image: linear-gradient(
+    100deg,
+    var(--ui-bg-elevated) 0 12%,
+    color-mix(in oklab, var(--ui-bg-accented) 70%, var(--ui-bg-elevated)) 25%,
+    var(--ui-bg-elevated) 38% 100%
+  );
+  background-size: 200vw 100%;
+  background-attachment: fixed;
+  animation: lb-shimmer 2.4s ease-in-out infinite;
+}
+@keyframes lb-shimmer {
+  from { background-position: 100vw 0; }
+  to { background-position: -100vw 0; }
+}
+
+/* Sign-in -------------------------------------------------------------- */
+
+/* The check that draws itself once signing in worked */
+[data-lb-check] circle,
+[data-lb-check] path {
+  stroke-dasharray: 1;
+  animation: lb-ill-draw var(--lb-dur-4) var(--lb-ease-out) both;
+}
+[data-lb-check] path { animation-delay: 120ms; }

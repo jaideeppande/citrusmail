@@ -33,6 +33,7 @@ const GRID_TOP = CHROME_HEIGHT - DOCK_TOP
 const { date, pathFor, visibleMonth, monthLabelsVisible } = useCalendar()
 const { loadRange } = useCalendarEvents()
 const { draft, pendingScroll, registerHost } = useEventDraft()
+const { onKeydown } = useEventKeyboard({ grid: 'month' })
 
 // A grid the `+` button can draw on, so it knows it does not have to navigate
 // somewhere else first
@@ -366,7 +367,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="relative flex-1 flex flex-col min-h-0">
+  <div
+    class="relative flex-1 flex flex-col min-h-0"
+    @keydown="onKeydown"
+  >
     <ClientOnly>
       <!-- Snapped on the week rows so the grid always settles flush under the
         weekday bar, the way the docked labels assume. `scrollPaddingStart` is

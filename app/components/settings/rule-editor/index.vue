@@ -3,6 +3,10 @@ const props = defineProps<{
   rule?: MailRule
   /** A folder to start with, from "Filter mail into this folder" */
   folder?: string
+  /** A new rule filled in already (by the AI, from a description), for the person to check */
+  draft?: RuleInput
+  /** What to say about the draft: what was left out, a folder it makes */
+  notes?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -11,15 +15,16 @@ const emit = defineEmits<{
 
 const { folders } = useMail()
 
+const start = props.rule ?? props.draft
 const state = reactive<RuleInput>({
-  id: props.rule?.id ?? crypto.randomUUID(),
-  enabled: props.rule?.enabled ?? true,
-  match: props.rule?.match ?? 'all',
-  conditions: props.rule ? props.rule.conditions.map(condition => ({ ...condition })) : [{ field: 'from', value: '' }],
-  folder: props.rule?.folder ?? props.folder ?? '',
-  markRead: props.rule?.markRead ?? false,
-  createFolder: false,
-  applyToExisting: !props.rule
+  id: start?.id ?? crypto.randomUUID(),
+  enabled: start?.enabled ?? true,
+  match: start?.match ?? 'all',
+  conditions: start ? start.conditions.map(condition => ({ ...condition })) : [{ field: 'from', value: '' }],
+  folder: start?.folder ?? props.folder ?? '',
+  markRead: start?.markRead ?? false,
+  createFolder: props.draft?.createFolder ?? false,
+  applyToExisting: props.draft?.applyToExisting ?? !props.rule
 })
 
 // Any folder but the Inbox itself; typing a new name creates it on save
@@ -49,6 +54,27 @@ function validate() {
     @update:open="emit('close')"
   >
     <template #body>
+      <div
+        v-if="draft"
+        class="mb-6 flex gap-2.5 rounded-lg bg-(--lb-ai-bg) px-3 py-2.5 text-sm"
+      >
+        <UIcon
+          name="i-lucide-sparkles"
+          class="mt-0.5 size-4 shrink-0 text-(--lb-ai)"
+        />
+        <div class="flex flex-col gap-1">
+          <p class="font-medium text-highlighted">
+            Suggested from your description. Check it, then add it.
+          </p>
+          <p
+            v-for="note in notes"
+            :key="note"
+            class="text-toned"
+          >
+            {{ note }}
+          </p>
+        </div>
+      </div>
       <UForm
         id="rule-form"
         :state="state"
@@ -64,6 +90,7 @@ function validate() {
                 v-if="state.conditions.length > 1"
                 v-model="state.match"
                 :items="MATCH"
+                aria-label="Match all or any of the conditions"
                 size="xs"
                 class="w-16"
               />

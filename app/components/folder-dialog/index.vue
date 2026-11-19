@@ -37,8 +37,11 @@ function submit() {
 </script>
 
 <template>
+  <!-- Focus starts in the name field (its autofocus); Enter in it submits,
+    Escape cancels -->
   <UModal
     :title="title"
+    description="Folder names can’t contain / \ * or %."
     :ui="{ footer: 'justify-end gap-2' }"
     @update:open="emit('close')"
   >
@@ -57,17 +60,21 @@ function submit() {
           <UInput
             v-model="state.name"
             placeholder="Receipts"
+            autocomplete="off"
             autofocus
+            class="w-full"
           />
         </UFormField>
 
         <UFormField
           v-if="parents?.length"
           label="Inside"
+          name="parent"
         >
           <USelect
             v-model="state.parent"
             :items="parentItems"
+            class="w-full"
           />
         </UFormField>
       </UForm>

@@ -35,12 +35,16 @@ const tint = computed(() => {
 
 const { account } = useShell()
 const { settings } = useSettings()
+const { photoOf } = useContactExtras()
 
 // Your own picture comes straight from Settings, so a change shows at once
 const src = computed(() => {
   const email = props.address?.address
   if (!email?.includes('@')) return undefined
   if (settings.value.avatar && email.toLowerCase() === account.value?.email.toLowerCase()) return settings.value.avatar
+  // A photo you chose for this person wins over anything found for them
+  const own = photoOf(email)
+  if (own) return own
   // `v` changes when cached answers must be dropped (v3: company logos from BIMI; v2: misses cached while
   // the network guard wrongly refused every picture host)
   return `/api/avatar?email=${encodeURIComponent(email)}&v=3`

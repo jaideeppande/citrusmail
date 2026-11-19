@@ -25,6 +25,7 @@ async function look() {
   } finally {
     looking.value = false
   }
+  if (!found.value) announce(calendar.value ? 'No calendar found' : 'No address book found')
 }
 
 onMounted(look)
@@ -32,26 +33,22 @@ onMounted(look)
 
 <template>
   <div class="flex items-center justify-center p-6">
-    <UEmpty
-      v-if="looking"
-      icon="i-lucide-loader-circle"
-      :title="calendar ? 'Looking for your calendar' : 'Looking for your contacts'"
-      description="Checking your mail server. This takes a few seconds."
-      :ui="{ avatar: 'shrink-0 mb-2 animate-spin motion-reduce:animate-none' }"
-      variant="naked"
-    />
-    <UEmpty
-      v-else
-      :icon="calendar ? 'i-lucide-calendar-off' : 'i-lucide-contact'"
-      :title="calendar ? 'No calendar found' : 'No address book found'"
-      :description="calendar
-        ? `Your mail server doesn’t seem to offer a calendar, and not every provider does.${locked ? '' : ' If yours gives you a CalDAV address, add it in Settings.'}`
-        : `Your mail server doesn’t seem to offer an address book, and not every provider does.${locked ? '' : ' If yours gives you a CardDAV address, add it in Settings.'}`"
+    <!-- One block for both states, so "looking" turns into the answer in place -->
+    <AppEmpty
+      :illustration="calendar ? 'no-calendar' : 'no-contacts'"
+      :title="looking
+        ? (calendar ? 'Looking for your calendar' : 'Looking for your contacts')
+        : (calendar ? 'No calendar found' : 'No address book found')"
+      :description="looking
+        ? 'Checking your mail server. This takes a few seconds.'
+        : calendar
+          ? `Your mail server doesn’t seem to offer a calendar, and not every provider does.${locked ? '' : ' If yours gives you a CalDAV address, add it in Settings.'}`
+          : `Your mail server doesn’t seem to offer an address book, and not every provider does.${locked ? '' : ' If yours gives you a CardDAV address, add it in Settings.'}`"
       :actions="[
-        { label: 'Look again', icon: 'i-lucide-refresh-cw', color: 'neutral', variant: 'subtle', onClick: look },
+        { label: looking ? 'Looking' : 'Look again', icon: 'i-lucide-refresh-cw', color: 'neutral', variant: 'subtle', loading: looking, onClick: look },
         ...(locked ? [] : [{ label: 'Add an address', icon: 'i-lucide-settings', color: 'neutral' as const, variant: 'ghost' as const, to: '/settings/profile' }])
       ]"
-      variant="naked"
+      :aria-busy="looking"
     />
   </div>
 </template>

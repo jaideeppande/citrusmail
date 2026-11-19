@@ -2,23 +2,28 @@
 // What goes under your words: the signature and, for a reply or forward, the
 // original. Both are sent as they are, outside the editor
 const { draft } = useComposer()
-const { settings } = useSettings()
+const { htmlOf, labelOf, choiceOf } = useSignatures()
+
+const signature = computed(() => htmlOf(draft.value))
 
 const showQuote = ref(false)
 const isForward = computed(() => /^fwd:/i.test(draft.value.subject))
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 px-5 pb-5">
+  <div class="flex flex-col gap-3 px-5 pb-4">
     <div
-      v-if="draft.signature && settings.signature"
+      v-if="signature"
       class="group relative max-w-full overflow-x-auto"
+      :aria-label="`Signature: ${labelOf(choiceOf(draft))}`"
+      role="group"
     >
-      <!-- Sanitized by the server when it was saved -->
+      <!-- The default one is sanitized by the server when it was saved; the
+           others were written in this app's editor, which keeps only its own markup -->
       <!-- eslint-disable vue/no-v-html -->
       <div
         class="text-sm text-toned [&_a]:text-primary [&_img]:inline-block"
-        v-html="settings.signature"
+        v-html="signature"
       />
       <!-- eslint-enable vue/no-v-html -->
       <UTooltip text="Leave out the signature">

@@ -8,6 +8,7 @@ const props = defineProps<{
 const { folders, folder, move, remove } = useMail()
 const { account } = useShell()
 const { promptCreate } = useFolderDialogs()
+const { kbds } = useShortcutKeys()
 
 async function moveToNew() {
   const message = props.summary
@@ -36,26 +37,28 @@ function act(handler: (message: MessageSummary) => void) {
   <UFieldGroup>
     <UTooltip
       text="Archive"
-      :kbds="['e']"
+      :kbds="kbds('mail.archive')"
     >
       <UButton
         icon="i-lucide-archive"
         color="neutral"
         variant="ghost"
         aria-label="Archive"
+        class="lb-press"
         :disabled="!summary || folder?.role === 'archive'"
         @click="act(message => move(message, 'archive'))()"
       />
     </UTooltip>
     <UTooltip
       text="Delete"
-      :kbds="['#']"
+      :kbds="kbds('mail.delete')"
     >
       <UButton
         icon="i-lucide-trash-2"
         color="neutral"
         variant="ghost"
         aria-label="Delete"
+        class="lb-press"
         :disabled="!summary"
         @click="act(remove)()"
       />
@@ -66,6 +69,7 @@ function act(handler: (message: MessageSummary) => void) {
         color="neutral"
         variant="ghost"
         :aria-label="folder?.role === 'junk' ? 'Not junk' : 'Move to Junk'"
+        class="lb-press"
         :disabled="!summary"
         @click="act(message => move(message, folder?.role === 'junk' ? 'inbox' : 'junk'))()"
       />
@@ -81,6 +85,7 @@ function act(handler: (message: MessageSummary) => void) {
           color="neutral"
           variant="ghost"
           aria-label="Move to folder"
+          class="lb-press"
           :disabled="!summary"
         />
       </UTooltip>

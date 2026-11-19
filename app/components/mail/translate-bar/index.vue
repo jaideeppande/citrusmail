@@ -41,7 +41,7 @@ const line = computed(() => {
         />
         <span
           v-if="state === 'translated' && providerLabel"
-          class="text-dimmed"
+          class="text-muted"
         > with {{ providerLabel }}</span>
       </p>
       <UButton

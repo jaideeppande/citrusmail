@@ -1,5 +1,11 @@
 <script setup lang="ts">
 import type { SignInForm } from '~/composables/useSignIn'
+import type { SignInAdvice } from '~/utils/sign-in-errors'
+
+defineProps<{
+  /** A sign-in error about the servers, repeated here where it gets fixed */
+  advice?: SignInAdvice | null
+}>()
 
 const brand = useBrand()
 
@@ -46,6 +52,16 @@ watch(() => [form.value.username, form.value.incoming, form.value.outgoing, form
     :ui="{ content: 'sm:max-w-xl', body: 'p-0 sm:p-0', footer: 'justify-end' }"
   >
     <template #body>
+      <UAlert
+        v-if="advice"
+        icon="i-lucide-circle-alert"
+        color="error"
+        variant="subtle"
+        :title="advice.message"
+        :description="advice.detail"
+        class="mx-4 mt-4 w-auto sm:mx-6"
+        :ui="{ description: 'text-xs opacity-80 wrap-anywhere' }"
+      />
       <UTabs
         v-model="tab"
         :items="TABS"

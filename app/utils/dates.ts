@@ -1,5 +1,5 @@
 import { CalendarDate, getLocalTimeZone, parseDate, Time, toCalendarDateTime, today } from '@internationalized/date'
-import { addDays, lightFormat, startOfMonth, startOfWeek } from 'date-fns'
+import { addDays, differenceInCalendarDays, lightFormat, startOfDay, startOfMonth, startOfWeek } from 'date-fns'
 
 export function toCalendarDate(date: Date): CalendarDate {
   return new CalendarDate(date.getFullYear(), date.getMonth() + 1, date.getDate())
@@ -94,14 +94,54 @@ export function monthFetchRange(date: CalendarDate): DateRange {
   return { start, end: addDays(start, MONTH_FETCH_WEEKS * 7) }
 }
 
-export function rangeFor(view: CalendarView, date: CalendarDate): DateRange {
+// How many days the agenda opens on, and how many more each scroll to its
+// end brings in
+export const AGENDA_DAYS = 28
+
+export function rangeFor(view: CalendarViewName, date: CalendarDate): DateRange {
   // The year view draws no events, so it fetches the month it was opened on,
   // which then opens warm when it zooms back in
   if (view === 'month' || view === 'year') {
     return monthFetchRange(date)
   }
 
+  // The agenda reads on from its date rather than around it
+  if (view === 'agenda') {
+    const start = toDate(date)
+
+    return { start, end: addDays(start, AGENDA_DAYS) }
+  }
+
   return weekRange(date, view === 'day' ? 1 : 7)
+}
+
+// Where a view of a date lives. The agenda is a view the route knows by name
+// like the other four
+export function calendarPath(date: CalendarDate, view: CalendarViewName): string {
+  return `/calendar/${view}/${date.toString()}`
+}
+
+// A list that scrolls through the days (the agenda, the mini calendar in the
+// mail sidebar) asks for events in six-week blocks counted from one fixed
+// Monday, so two of them looking at the same days ask for the same block and
+// the second finds it already there. Well inside the ninety days the server
+// answers for
+export const EVENT_CHUNK_DAYS = 42
+const CHUNK_EPOCH = new Date(2024, 0, 1)
+
+export function eventChunks({ start, end }: DateRange): DateRange[] {
+  const first = Math.floor(differenceInCalendarDays(startOfDay(start), CHUNK_EPOCH) / EVENT_CHUNK_DAYS)
+  // The end is the first day left out, so a range closing on a block's edge
+  // does not reach into the next one
+  const last = Math.floor((differenceInCalendarDays(startOfDay(end), CHUNK_EPOCH) - 1) / EVENT_CHUNK_DAYS)
+
+  const chunks: DateRange[] = []
+  for (let index = first; index <= Math.max(first, last); index++) {
+    const from = addDays(CHUNK_EPOCH, index * EVENT_CHUNK_DAYS)
+    chunks.push({ start: from, end: addDays(from, EVENT_CHUNK_DAYS) })
+  }
+
+  return chunks
 }
 
 export function eachDay({ start, end }: DateRange): Date[] {
@@ -117,6 +157,7 @@ export function eachDay({ start, end }: DateRange): Date[] {
 // run once per event chip and per day cell of every rendered week
 const timeFormat = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
 const dayFormat = new Intl.DateTimeFormat('en-US', { weekday: 'short', day: 'numeric' })
+const spokenDateFormat = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 const fullDateFormat = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 const weekdayFormat = new Intl.DateTimeFormat('en-US', { weekday: 'short' })
 const monthFormat = new Intl.DateTimeFormat('en-US', { month: 'long' })
@@ -137,6 +178,11 @@ export function formatDay(date: Date): string {
 
 export function formatFullDate(date: Date): string {
   return fullDateFormat.format(date)
+}
+
+// “Tuesday 17 November”, the day as it is read out
+export function formatSpokenDate(date: Date): string {
+  return spokenDateFormat.format(date).replace(',', '')
 }
 
 export function formatWeekday(date: Date): string {

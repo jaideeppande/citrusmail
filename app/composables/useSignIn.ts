@@ -1,3 +1,17 @@
+import type { SignInAdvice } from '~/utils/sign-in-errors'
+import { signInAdvice, UNREACHABLE_ADVICE } from '~/utils/sign-in-errors'
+
+/**
+ * Where a sign-in is: `connecting` while the mail server is tried (connect
+ * and password check are one request, so they're one stage), `loading`
+ * while the session and first page load, `done` for the moment before the
+ * app takes over
+ */
+export type SignInStage = 'idle' | 'connecting' | 'loading' | 'done'
+
+/** How long the "signed in" check stays before the app replaces it */
+const SUCCESS_PAUSE = 400
+
 export interface SignInForm {
   email: string
   password: string
@@ -40,6 +54,12 @@ export function useSignIn() {
   // Sign in with Microsoft comes back here with what went wrong, if anything
   const error = ref(typeof route.query.error === 'string' ? route.query.error : '')
   const submitting = ref(false)
+  const stage = ref<SignInStage>('idle')
+  /** The error, placed on the field it concerns and said as what to do next */
+  const advice = computed<SignInAdvice | null>(() => {
+    if (!error.value) return null
+    return error.value === UNREACHABLE_ADVICE.message ? UNREACHABLE_ADVICE : signInAdvice(error.value)
+  })
 
   /** The provider that takes no password, once discovery has said so */
   const oauth = computed(() => discovery.value?.oauth)
@@ -86,6 +106,12 @@ export function useSignIn() {
     }
   })
 
+  /** The check-mark moment: long enough to see, short enough not to wait on */
+  async function succeed() {
+    stage.value = 'done'
+    await new Promise(resolve => setTimeout(resolve, SUCCESS_PAUSE))
+  }
+
   /** Discovery found both: switch between JMAP (the default) and IMAP */
   function chooseJmap(jmap: boolean) {
     const found = discovery.value
@@ -103,6 +129,7 @@ export function useSignIn() {
     }
     error.value = ''
     submitting.value = true
+    stage.value = 'connecting'
     try {
       await $fetch('/api/session', {
         method: 'POST',
@@ -122,20 +149,28 @@ export function useSignIn() {
             : {})
         }
       })
+      stage.value = 'loading'
       // A fresh load, so the new mailbox starts with nothing of the last one on screen
-      if (adding.value) return window.location.assign('/mail/INBOX')
+      if (adding.value) {
+        await succeed()
+        return window.location.assign('/mail/INBOX')
+      }
       await refreshSession()
+      await succeed()
       await navigateTo('/mail/INBOX')
     } catch (failure) {
-      const data = (failure as { data?: { message?: string } }).data
-      error.value = data?.message ?? 'Couldn’t sign in. Check your connection and try again.'
-      // A server the discovery got wrong is the usual reason, so the
-      // settings come forward with the error
-      if (!discovery.value?.incoming) advancedOpen.value = true
+      stage.value = 'idle'
+      const { data, response } = failure as { data?: { message?: string }, response?: unknown }
+      // No response at all: the request never reached the server
+      error.value = data?.message ?? (response ? 'Couldn’t sign in. Try again in a moment.' : UNREACHABLE_ADVICE.message)
+      // When the error is about the servers and discovery had none to
+      // offer, the settings come forward with it. A wrong password stays
+      // on the form, where it gets fixed
+      if (!discovery.value?.incoming && advice.value?.field === 'server') advancedOpen.value = true
     } finally {
       submitting.value = false
     }
   }
 
-  return { form, adding, locked, discovery, discovering, pending, advancedOpen, touched, error, submitting, submit, oauth, oauthUrl, chooseJmap }
+  return { form, adding, locked, discovery, discovering, pending, advancedOpen, touched, error, advice, stage, submitting, submit, oauth, oauthUrl, chooseJmap }
 }

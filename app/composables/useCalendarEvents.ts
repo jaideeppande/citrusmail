@@ -72,7 +72,9 @@ const _useCalendarEvents = () => {
     watch(range, () => {
       // The month view streams events in chunks as it scrolls instead, and the
       // year view only holds the month it zooms into
-      if (view.value === 'month' || view.value === 'year') {
+      // The agenda loads its own days as it scrolls, in `ensureDays` blocks.
+      // Compared as a string so it reads the same once the shared view knows it
+      if (view.value === 'month' || view.value === 'year' || (view.value as string) === 'agenda') {
         return
       }
 
@@ -91,11 +93,16 @@ const _useCalendarEvents = () => {
   // reactive proxies, so removal by object identity would never match
   const pendingRanges = ref<Record<string, DateRange>>({})
 
+  // The range behind each chunk, so a reload knows what to ask for again
+  const loadedRanges = new Map<string, DateRange>()
+
   async function loadRange(range: DateRange) {
     const key = eventsKey(range)
     if (chunks.value[key]) {
       return
     }
+
+    loadedRanges.set(key, range)
 
     // Mark as in-flight so concurrent scroll events do not refetch
     chunks.value[key] = []
@@ -106,10 +113,33 @@ const _useCalendarEvents = () => {
     } catch {
       const { [key]: _failed, ...rest } = chunks.value
       chunks.value = rest
+      loadedRanges.delete(key)
     } finally {
       const { [key]: _pending, ...rest } = pendingRanges.value
       pendingRanges.value = rest
     }
+  }
+
+  // For a caller outside the calendar's own views (the Today panel, a
+  // contact's timeline): makes sure the events of a span of days are in the
+  // pool, whatever the route is showing. The server takes ninety days at most
+  function ensureRange(range: DateRange): Promise<void> {
+    return loadRange({ start: startOfDay(range.start), end: startOfDay(range.end) })
+  }
+
+  function isRangePending(range: DateRange): boolean {
+    return eventsKey({ start: startOfDay(range.start), end: startOfDay(range.end) }) in pendingRanges.value
+  }
+
+  // For the lists that scroll through the days (the agenda, the mini calendar
+  // in the mail sidebar): the same, asked for in the fixed blocks `eventChunks`
+  // cuts, so however the two overlap nothing is fetched twice
+  async function ensureDays(range: DateRange): Promise<void> {
+    await Promise.all(eventChunks(range).map(loadRange))
+  }
+
+  function isDaysPending(range: DateRange): boolean {
+    return eventChunks(range).some(chunk => eventsKey(chunk) in pendingRanges.value)
   }
 
   // Local mutations are layered over whatever the server returns: the
@@ -278,6 +308,61 @@ const _useCalendarEvents = () => {
 
     if (synced) {
       toast.add({ title: 'Offline changes synced', color: 'success' })
+      tellWindows({ type: 'events:changed' })
+    }
+  })
+
+  // Events with a request of this window's still on its way. A reload asked
+  // for by another window leaves their optimistic copies alone
+  const inFlight = new Map<string, number>()
+
+  function settle(id: string) {
+    const count = (inFlight.get(id) ?? 1) - 1
+    if (count > 0) {
+      inFlight.set(id, count)
+    } else {
+      inFlight.delete(id)
+    }
+  }
+
+  // Everything is asked for again: the route's range, and each chunk loaded
+  // since. What is on screen stays until its replacement arrives
+  async function reload() {
+    for (const key of Object.keys(nuxtApp.payload.data)) {
+      if (key.startsWith('events-')) Reflect.deleteProperty(nuxtApp.payload.data, key)
+    }
+
+    const fresh = await Promise.all([...loadedRanges.entries()].map(async ([key, range]) => {
+      try {
+        return [key, await $fetch<CalendarEvent[]>('/api/events', { query: eventsQuery(range) })] as const
+      } catch {
+        return null
+      }
+    }))
+
+    chunks.value = { ...chunks.value, ...Object.fromEntries(fresh.filter(entry => entry !== null)) }
+
+    await refreshEvents()
+  }
+
+  // Another window changed an event. This window's overlay would keep
+  // painting its own older copy over the fresh one, so the entries that are
+  // settled (nothing in flight, nothing queued) step aside for the server's
+  onWindowEvent(async (event) => {
+    if (event.type !== 'events:changed') {
+      return
+    }
+
+    await reload()
+
+    const queued = new Set(queue.value.map(request => request.body?.id ?? decodeURIComponent(request.path.split('/').pop()!)))
+    const held = (id: string) => inFlight.has(id) || queued.has(id)
+    const keep = (entries: Record<string, CalendarEvent>) => Object.fromEntries(Object.entries(entries).filter(([id]) => held(id)))
+
+    overlay.value = {
+      created: keep(overlay.value.created),
+      updated: keep(overlay.value.updated),
+      deleted: overlay.value.deleted.filter(held)
     }
   })
 
@@ -291,8 +376,15 @@ const _useCalendarEvents = () => {
     }
 
     apply()
+    inFlight.set(id, (inFlight.get(id) ?? 0) + 1)
 
-    request().catch(() => {
+    request().then(() => {
+      // Queued for later while offline, there is nothing for the others to
+      // fetch yet: the replay tells them once it has gone through
+      if (online.value) {
+        tellWindows({ type: 'events:changed' })
+      }
+    }).catch(() => {
       const { [id]: _created, ...created } = overlay.value.created
       const { [id]: _updated, ...updated } = overlay.value.updated
 
@@ -311,7 +403,7 @@ const _useCalendarEvents = () => {
 
       overlay.value = { created, updated, deleted }
       toast.add({ title: message, color: 'error' })
-    })
+    }).finally(() => settle(id))
   }
 
   function addEvent(event: CalendarEvent) {
@@ -374,6 +466,11 @@ const _useCalendarEvents = () => {
     online,
     queue,
     loadRange,
+    ensureRange,
+    isRangePending,
+    ensureDays,
+    isDaysPending,
+    reload,
     pendingRanges,
     warmRange,
     addEvent,
