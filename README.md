@@ -5,14 +5,20 @@ An open-source mail, calendar and contacts client for any provider, built with [
 ![CitrusMail showing an inbox with a message open](.github/screenshot.webp)
 
 - **Mail** over IMAP, POP3 or [JMAP](#jmap), sending over SMTP (or through the JMAP server)
-- **Calendar** over CalDAV, using the [Nuxt UI calendar template](https://github.com/nuxt-ui-templates/calendar): day, week, month and year views, drag and drop, and quick events
-- **Contacts** over CardDAV
-- **Composer** built on the Nuxt UI `UEditor`, adapted from the [editor template](https://github.com/nuxt-ui-templates/editor), with send later
+- **Calendar** over CalDAV, using the [Nuxt UI calendar template](https://github.com/nuxt-ui-templates/calendar): day, week, month, year and agenda views, drag and drop, quick events, a second time zone and a way to offer free times by mail
+- **Contacts** over CardDAV, with groups, import and export (vCard, CSV) and a view of who you're in touch with
+- **Composer** built on the Nuxt UI `UEditor`, adapted from the [editor template](https://github.com/nuxt-ui-templates/editor), with send later, undo send, several drafts at once, tables, pictures, highlighted code and a distraction-free mode
 - **Read receipts**: Delivered, Opened or Bounced on the messages you track
-- **AI** with your own key for Anthropic (Claude), OpenAI, Google Gemini, xAI Grok or Perplexity: summaries, AI Reply, and questions across your mail
+- **AI** with your own key for Anthropic (Claude), OpenAI, Google Gemini, xAI Grok or Perplexity: a priority inbox, scam checks, an assistant, drafting and autocomplete, plain-English commands and events, and more ([what it does and sends](#ai))
 - **Translation** of messages you receive and replies you write
 - **Signatures** for each mailbox you send from, written in the app or pasted as HTML
 - **Notifications** for new mail, and one-click unsubscribe
+- **Windows and layouts**: any page in a window of its own, a window split into up to four panes, and sets of windows saved under a name ([more](#windows-and-layouts))
+- **Triage** built for the keyboard: conversations, bulk actions, undo, snooze, pins, labels, a Later board, search across every folder, a one-at-a-time triage mode and a command palette on `Ctrl/⌘K`
+- **Accessible**: every screen works from the keyboard and with a screen reader, with high-contrast, larger-text and reduced-motion settings
+- **Yours to style**: sixteen ready-made looks and a theme editor with live contrast checks ([THEMING.md](THEMING.md))
+
+A tour of what's there, with pictures: [docs/TOUR.md](docs/TOUR.md).
 
 ## Three ways to use it
 
@@ -160,50 +166,75 @@ In Docker, mount a volume at `/app/.data` (or wherever the app runs from). Witho
 
 ## Keyboard
 
-Press `?` anywhere in the app to see every shortcut. The main ones:
+Press `?` anywhere in the app to see every shortcut, and `Ctrl/⌘K` to search for a folder, a person or anything the app can do. Every key can be changed in **Settings → Shortcuts**, which also has presets for hands that learned Gmail, Outlook or Superhuman. The defaults:
 
-| Mail | | Calendar | |
+| Mail | | Everywhere | |
 | --- | --- | --- | --- |
-| `c` | New message | `d` `w` `m` `y` | Day, week, month, year |
-| `j` / `k` | Next / previous | `t` | Today |
-| `r` / `a` / `f` | Reply / all / forward | `n` | New event |
-| `e` / `#` | Archive / delete | `⌘K` | Search events |
-| `⌘↵` | Send | `←` / `→` | Previous / next |
+| `c` | New message | `Ctrl/⌘K` | Search and commands |
+| `j` / `k` | Next / previous | `g` then `i` `d` `t` | Inbox, Drafts, Sent |
+| `r` / `a` / `f` | Reply / all / forward | `g` then `c` `p` `s` | Calendar, Contacts, Settings |
+| `e` / `#` | Archive / delete | `Shift+O` | Open in a new window |
+| `l` | Label | `Ctrl/⌘Shift+F` | Search every folder |
+| `z` | Undo the last move or delete | `Shift+L` | Next layout |
+| `x` / `Shift+A` | Select / select all | `Shift+F` | Focus mode |
+| `h` / `p` | Snooze / pin to top | `Shift+D` | Today panel |
+| `Shift+T` | Triage mode | `Shift+N` | Notifications |
+| `Ctrl/⌘Shift+D` | Writing mode | `g` then `l` | Later board |
+| `Ctrl/⌘Shift+E` | Emoji | `[` | Fold the sidebar |
+| `⌘↵` | Send | `?` | These shortcuts |
 
-## Privacy and security
+On the calendar: `d` `w` `m` `y` `a` for day, week, month, year and agenda, `t` for today, `n` for a new event, `←` / `→` to move. With an event focused, the arrow keys go to the next one and `Alt` with an arrow moves it.
 
-- Message HTML is sanitized on the server and shown in a sandboxed frame that can't run scripts, with a Content-Security-Policy of its own.
-- Remote images are blocked until you choose to show them, so senders can't tell when you open a message.
-- Passwords are never written to logs or error messages. The session cookie is encrypted, `HttpOnly`, and lasts a week.
-- The server refuses cross-site requests, form posts and oversized bodies, and every route except signing in needs a session.
-- It won't connect to private or loopback addresses unless you allow it, and it pins each connection to the address it checked, so DNS can't redirect it.
-- Sign-in attempts are rate-limited per address and per mailbox.
+## Accessibility
 
-Found a security problem? Please report it privately, as described in [SECURITY.md](SECURITY.md), rather than in a public issue.
+- **Keyboard.** Everything can be reached and done without a mouse. The first `Tab` offers a link straight past the sidebar; toolbars move with the arrow keys; dialogs and panels keep focus inside while open and give it back when they close. Calendar events can be moved by keyboard, and anything that can be dragged also has a menu.
+- **Screen readers.** Controls are labelled, lists and grids use their proper roles, and what happens is said out loud: "Archived", "3 selected", "Message sent".
+- **Seeing.** Secondary text meets WCAG AA contrast in light and dark. **Settings → Accessibility** adds Increase contrast (or follows the system's), larger text and controls, and less or no motion.
 
-## Contributing
+## Windows and layouts
 
-Issues and pull requests are welcome. Before you open a pull request, run the same checks as CI:
+- **A window of its own.** A message, the composer, the calendar or contacts opens in its own window from the button at the top right, `Shift+O`, or a right-click on a message. A window like that has no sidebar until you ask for one, and a button hands its page back to the main window. In the desktop app each window remembers which monitor it was on and where.
+- **Split layouts.** The layout button at the top right divides the window into two, three or four panes, each showing a page of the app with its own header: the Inbox beside the calendar, or two folders at once. Drag the gap between panes to resize them. Layouts are part of the desktop app; a browser forbids the app from framing itself.
+- **Workspaces.** Arrange windows across your screens, then save them under a name from the same menu. Opening a workspace puts every window back where it was, on the page it was showing.
+- **In step.** Reading, flagging, archiving or deleting in one window shows in the others at once, as do settings.
 
-```bash
-pnpm install
-pnpm run lint
-pnpm run typecheck
-pnpm run test
-pnpm run build
-```
+## Kept on this computer
 
-Keep each pull request to one change, and say in the description what it fixes or adds. For security problems, follow [SECURITY.md](SECURITY.md) instead of opening an issue.
+A mail server has no notion of some of what CitrusMail does, so these are kept in this browser or desktop app, per mailbox, and don't follow you to another device: pins, snoozes (a snoozed message stays in its folder and is only hidden here), saved searches, labels, the Later board, the notification history, templates, extra signatures, contact groups, photos and time zones, favourite contacts, window layouts, your own shortcuts, surface colours from the theme editor, the motion, density and contrast choices, do not disturb and VIPs, and the app lock.
 
-## License
+Two things work differently from what the words might suggest:
 
-The code is [MIT](LICENSE): use it, change it and ship it, commercially or not.
+- **Undo.** Archive, delete and move wait five seconds before the server is told, and **undo send** holds a message for the time set in Settings → Reading. Undo within that time and nothing was ever sent. Closing the window sends whatever is still waiting.
+- **App lock.** The PIN hides the app from someone at your desk. It does not encrypt anything on disk.
 
-The license covers the code, not the CitrusMail name or the citrus logo. If you give your copy to other people, give it your own name and logo (see [Make it yours](#make-it-yours) and [Build it as your own app](#build-it-as-your-own-app)), so nobody mistakes it for the official CitrusMail. Running it for yourself under the original name is fine.
+## AI
+
+AI in CitrusMail runs on your own key, from your provider of choice: Anthropic (Claude), OpenAI, Google Gemini, xAI Grok or Perplexity. Add it in **Settings → AI**.
+
+**In the desktop app, AI runs on your computer.** The app sends each request to your provider itself, and your key is kept in the system keychain (Windows Credential Manager, the macOS Keychain). The page never sees the key and the CitrusMail server is not involved. On a Linux desktop with no keychain (no GNOME Keyring or KWallet), the key is instead stored unencrypted in a file only your user account can read, as Chromium does there, and Settings → AI warns about it. In a browser, only summaries, AI Reply, tone rewrite, translation and questions about your mail are available, through the server with a key saved there.
+
+**What it does**
+
+| Where | Feature |
+| --- | --- |
+| Inbox | Priority tags (needs your reply, needs action, urgent) with a Needs you tab, learning from your corrections; scam and phishing warnings with plain reasons; suggested labels |
+| Reading | Summaries; ask questions of a conversation or of all your mail in the assistant (`Ctrl/⌘J`); turn a message into tasks on the Later board; translation |
+| Writing | Draft a new message from a line; tone rewrite and proofreading with a preview of each change; subject suggestions; AI Reply; follow-up nudges; reply to "when are you free?" with your real free times; autocomplete as you pause, `Tab` to accept |
+| Calendar | Events from plain English ("lunch with Ana Thursday 1pm"); events from an email; a daily briefing in the Today panel; meeting prep |
+| Contacts | Updated phone, title or company from someone's email signature, applied only on a click; a summary of your history with someone |
+| Everywhere | "Ask AI to do this" in the command palette: "archive last week's GitHub mail" becomes a plan you check, message by message, before anything changes. Rules can be described in words too |
+
+**What is sent, and when.** Settings → AI lists every feature with what it sends and a switch. Features marked *Runs on its own* (priority tags, scam checks, suggested labels, the briefing, signature details, autocomplete and the newsletter advisor) work on new mail and as you type, without being asked, and are on once a key is saved. The first time you save a key, the app lists them so you can turn any off. Everything else waits until you use it. Only the parts of a message a feature needs are sent; pictures and attachments are never sent.
+
+**Cost.** Your provider bills you directly. Settings → AI shows the requests and tokens each feature used today and over 30 days, as counted on your computer, and sets a daily limit on background requests (300 by default). When the limit is reached, background features pause until the next day; what you ask for yourself is never limited.
+
+**What AI can't do on its own.** Nothing that changes your mail or contacts happens without your click: commands show a plan first and go through the usual Undo, rules and events open for review, contact updates and labels are suggestions. Text the AI writes is shown as plain text, never as HTML, and every prompt tells the model that the email it reads is data, not instructions.
 
 ## Desktop app
 
 CitrusMail runs as a desktop app for Mac, Windows and Linux. The app runs the same server inside itself on a local port, so nothing else needs to be running.
+
+Besides the windows and layouts above, the desktop app has a menu bar, the unread count on the Dock or taskbar, a tray icon on Windows and Linux, and in **Settings → Desktop**: opening at sign-in, becoming the default app for `mailto:` links, staying in the tray when the window is closed, and a shortcut that opens a new message from any app.
 
 ```bash
 pnpm desktop               # build, then open the app from source

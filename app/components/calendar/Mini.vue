@@ -1,47 +1,24 @@
 <script setup lang="ts">
-import { parseDate, type CalendarDate } from '@internationalized/date'
+import type { CalendarDate } from '@internationalized/date'
 
+// The calendar sidebar's month: picking a day opens it in the view on screen
 const { date, pathFor, rangeOf } = useCalendar()
 const { warmRange } = useCalendarEvents()
 
-const model = computed({
-  get: () => date.value,
-  set(value: CalendarDate | null | undefined) {
-    if (value) {
-      navigateTo(pathFor(value))
-    }
-  }
-})
+function onSelect(day: CalendarDate) {
+  navigateTo(pathFor(day))
+}
 
-const touchButton = { class: 'max-lg:pointer-coarse:p-2', ui: { leadingIcon: 'max-lg:pointer-coarse:size-5' } }
-
-// Warm the range a click would open while the pointer hovers a day
-function onPointerover(event: PointerEvent) {
-  const value = (event.target as HTMLElement).closest('[data-value]')?.getAttribute('data-value')
-  if (!value) {
-    return
-  }
-
-  try {
-    warmRange(rangeOf(parseDate(value)))
-  } catch {
-    // Not a day cell
-  }
+// Warm the range a click would open while the pointer rests on a day
+function onHover(day: CalendarDate) {
+  warmRange(rangeOf(day))
 }
 </script>
 
 <template>
-  <!-- A size up on a touch screen, below `lg` where it sits in the menu that
-    takes the width of the phone -->
-  <UCalendar
-    v-model="model"
-    :week-starts-on="1"
-    :year-controls="false"
-    size="xs"
-    fixed-weeks
-    :prev-month="touchButton"
-    :next-month="touchButton"
-    :ui="{ cell: 'max-lg:pointer-coarse:text-sm', cellTrigger: 'max-lg:pointer-coarse:size-9', headCell: 'max-lg:pointer-coarse:text-xs' }"
-    @pointerover="onPointerover"
+  <CalendarMiniMonth
+    :selected="date"
+    @select="onSelect"
+    @hover="onHover"
   />
 </template>

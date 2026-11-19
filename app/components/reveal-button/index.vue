@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // Text that offers one action: the action's icon slides out on hover or
-// focus, and swaps to a check for a moment once it's done
+// focus, and swaps to a check for a moment once it's done. Give it an
+// `aria-label` naming the action when the text alone doesn't say it
 defineProps<{
   icon: string
   label?: string
@@ -23,17 +24,22 @@ defineEmits<{
   >
     <slot>{{ label }}</slot>
     <span
-      class="grid transition-[grid-template-columns,opacity] duration-200 ease-out motion-reduce:transition-none"
+      class="grid transition-[grid-template-columns,opacity] duration-(--lb-dur-2) ease-(--lb-ease-out)"
       :class="done ? 'grid-cols-[1fr] opacity-100' : 'grid-cols-[0fr] opacity-0 group-hover/reveal:grid-cols-[1fr] group-hover/reveal:opacity-100 group-focus-visible/reveal:grid-cols-[1fr] group-focus-visible/reveal:opacity-100'"
     >
       <span class="overflow-hidden flex">
         <UIcon
           :key="done ? 'done' : 'idle'"
           :name="done ? 'i-lucide-check' : icon"
-          class="ms-1.5 size-3.5 shrink-0 transition-transform duration-200 motion-reduce:transition-none"
-          :class="done ? 'text-primary animate-[reveal-pop_260ms_ease-out]' : 'text-muted -translate-x-1 group-hover/reveal:translate-x-0 group-focus-visible/reveal:translate-x-0'"
+          class="ms-1.5 size-3.5 shrink-0 transition-transform duration-(--lb-dur-2)"
+          :class="done ? 'text-primary lb-mark-pop' : 'text-muted -translate-x-1 group-hover/reveal:translate-x-0 group-focus-visible/reveal:translate-x-0'"
         />
       </span>
     </span>
+    <!-- The check is only seen: say it too -->
+    <span
+      class="sr-only"
+      aria-live="polite"
+    >{{ done ? 'Done' : '' }}</span>
   </UButton>
 </template>

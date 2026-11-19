@@ -19,25 +19,29 @@ const panel = computed(() => {
     class="min-h-svh grid"
     :class="panel !== 'none' && 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]'"
   >
-    <section class="flex flex-col px-6 sm:px-12 py-8 in-[.desktop]:pt-14">
+    <div class="flex flex-col px-6 sm:px-12 py-8 in-[.desktop]:pt-14">
       <AppLogo />
 
-      <div class="flex-1 flex items-center py-12">
+      <div class="flex-1 flex items-center py-10">
         <AuthLoginForm
           :sign-in="signIn"
           class="w-full max-w-[25rem] mx-auto lg:mx-0 lg:ms-[max(0px,calc(50%-12.5rem))]"
         />
       </div>
 
-      <div class="flex flex-col gap-2 max-w-[25rem] mx-auto lg:mx-0 lg:ms-[max(0px,calc(50%-12.5rem))]">
-        <p class="text-xs text-muted">
-          Your password goes only to your mail server. {{ brand.name }} keeps it in an encrypted cookie in this browser and stores nothing else.
+      <div class="flex flex-col gap-2.5 max-w-[25rem] mx-auto lg:mx-0 lg:ms-[max(0px,calc(50%-12.5rem))]">
+        <p class="flex gap-1.5 text-xs leading-relaxed text-muted text-pretty">
+          <UIcon
+            name="i-lucide-shield-check"
+            class="mt-0.5 size-3.5 shrink-0"
+          />
+          <span>Your password goes only to your mail server. {{ brand.name }} keeps it in an encrypted cookie in this browser and stores nothing else.</span>
         </p>
         <OpenSourceNote />
       </div>
-    </section>
+    </div>
 
-    <section
+    <aside
       v-if="panel === 'image'"
       class="hidden lg:block relative bg-(--lb-desk) border-s border-default"
     >
@@ -46,9 +50,12 @@ const panel = computed(() => {
         alt=""
         class="absolute inset-0 size-full object-cover"
       >
-    </section>
-    <section
+    </aside>
+    <!-- The same lookup as the form, laid out as a slip. Read as a summary,
+      it is labelled; it holds nothing to operate -->
+    <aside
       v-else-if="panel === 'card'"
+      aria-label="Connection details"
       class="hidden lg:flex items-center justify-center bg-(--lb-desk) border-s border-default p-12"
     >
       <AuthRoutingSlip
@@ -59,6 +66,6 @@ const panel = computed(() => {
         :submitting="signIn.submitting.value"
         :failed="!!signIn.error.value"
       />
-    </section>
+    </aside>
   </div>
 </template>

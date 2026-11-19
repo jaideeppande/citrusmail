@@ -31,6 +31,40 @@ export function inQuietHours(settings: NotificationSettings, now = new Date()) {
   return from < to ? current >= from && current < to : current >= from || current < to
 }
 
+/** Whether do not disturb is on: `until` is a time in ms, 0 for off, -1 until it's turned off */
+export function dndActive(until: number, now = Date.now()) {
+  return until === -1 || until > now
+}
+
+/** When “until tomorrow morning” ends: 8:00 the next day, or today when it's still the small hours */
+export function dndMorning(now = new Date()) {
+  const morning = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (now.getHours() < 5 ? 0 : 1), 8, 0, 0, 0)
+  return morning.getTime()
+}
+
+/** An entry is an address, or a domain written as @example.com or example.com */
+export function isVip(address: string, vips: string[]) {
+  const sender = address.trim().toLowerCase()
+  return vips.some((entry) => {
+    const vip = entry.trim().toLowerCase()
+    if (!vip) return false
+    if (vip.includes('@') && !vip.startsWith('@')) return sender === vip
+    const domain = vip.replace(/^@/, '')
+    return sender.endsWith(`@${domain}`) || sender.endsWith(`.${domain}`)
+  })
+}
+
+/**
+ * Whether a new message may ring. Quiet hours and do not disturb hold
+ * everything back except mail from a VIP; notifications turned off hold
+ * back all of it
+ */
+export function shouldNotify(sender: string, state: { enabled: boolean, quiet: boolean, dnd: boolean, vips: string[] }) {
+  if (!state.enabled) return false
+  if (!state.quiet && !state.dnd) return true
+  return isVip(sender, state.vips)
+}
+
 // Each sound is a few notes made on the spot, so there are no files to ship
 type Note = [frequency: number, start: number, length: number, type?: OscillatorType, endFrequency?: number]
 const NOTES: Record<Exclude<NotificationSound, 'none'>, Note[]> = {

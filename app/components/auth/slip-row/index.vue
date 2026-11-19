@@ -9,25 +9,27 @@ defineProps<{
 </script>
 
 <template>
-  <li class="flex items-center gap-3 px-5 py-3.5">
+  <li class="flex items-center gap-3 px-5 py-3">
     <UIcon
       :name="icon"
       class="size-[18px] shrink-0"
       :class="state === 'found' ? 'text-highlighted' : 'text-dimmed'"
     />
     <div class="flex-1 min-w-0">
-      <p class="text-sm text-muted">
+      <p class="text-xs text-muted">
         {{ label }}
       </p>
       <p
-        class="text-[15px] truncate transition-colors"
-        :class="state === 'found' ? 'text-highlighted font-medium' : 'text-dimmed'"
+        class="text-sm truncate transition-colors duration-(--lb-dur-2)"
+        :class="state === 'found' ? 'text-highlighted font-medium' : 'text-muted'"
       >
-        <template v-if="state === 'found'">
-          {{ value }}
-        </template>
+        <span
+          v-if="state === 'found'"
+          :key="value"
+          class="lb-in"
+        >{{ value }}</span>
         <template v-else-if="state === 'looking'">
-          Looking
+          Looking…
         </template>
         <template v-else-if="state === 'missing'">
           {{ optional ? 'Not offered, you can add it later' : 'Enter it in server settings' }}
@@ -45,7 +47,7 @@ defineProps<{
     <UIcon
       v-else-if="state === 'found'"
       name="i-lucide-check"
-      class="size-4 text-primary"
+      class="size-4 text-primary lb-mark-pop"
     />
     <UIcon
       v-else-if="state === 'missing' && !optional"

@@ -60,7 +60,7 @@ const failed = computed(() => props.item.status === 'failed')
             color="neutral"
             variant="ghost"
             size="sm"
-            aria-label="Change time"
+            :aria-label="`Change time: ${item.subject || 'no subject'}`"
           />
         </UTooltip>
       </UDropdownMenu>
@@ -70,7 +70,7 @@ const failed = computed(() => props.item.status === 'failed')
           color="neutral"
           variant="ghost"
           size="sm"
-          aria-label="Edit"
+          :aria-label="`Edit: ${item.subject || 'no subject'}`"
           @click="emit('edit')"
         />
       </UTooltip>
@@ -80,7 +80,7 @@ const failed = computed(() => props.item.status === 'failed')
           color="neutral"
           variant="ghost"
           size="sm"
-          aria-label="Don’t send"
+          :aria-label="`Don’t send: ${item.subject || 'no subject'}`"
           @click="emit('cancel')"
         />
       </UTooltip>

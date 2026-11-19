@@ -1,7 +1,11 @@
 <script setup lang="ts">
-const { messages, status, cursor, load, folder, search, filter, filtering, selectedId, isSelected } = useMail()
+const { listed, messages, status, cursor, load, folder, search, filter, filtering, selectedId, isRowSelected, inboxTabs, tabbed, labelFilter } = useMail()
 const { view } = useMailLayout()
 const { isMobile } = useShell()
+const prefs = usePrefs()
+const priority = useAiPriority()
+// The priority inbox's "Needs you" narrows what's listed to what asks something of you
+const rows = computed(() => priority.needsYou.value ? listed.value.filter(priority.needsYouRow) : listed.value)
 // The list-only view packs a message into one line
 const compact = computed(() => view.value === 'list' && !isMobile.value)
 
@@ -20,78 +24,89 @@ watch(selectedId, (id) => {
   nextTick(() => scrollEl.value?.querySelector(`[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'nearest' }))
 })
 
+const tab = computed(() => tabbed.value ? inboxTabs.value?.tab.value : undefined)
+const rowHeight = computed(() => DENSITY_ROWS[prefs.value.density][compact.value ? 'compact' : 'roomy'])
+
 const empty = computed(() => {
-  if (filtering.value) return { icon: 'i-lucide-search-x', title: 'No matches', description: `Nothing in ${folder.value?.name ?? 'this folder'} matches${search.value ? ` “${search.value}”` : ''} with these filters.` }
-  if (filter.value === 'flagged') return { icon: 'i-lucide-flag', title: 'Nothing flagged', description: 'Press S on a message to flag it for later.' }
-  if (search.value) return { icon: 'i-lucide-search-x', title: 'No matches', description: `Nothing in ${folder.value?.name ?? 'this folder'} matches “${search.value}”.` }
-  if (filter.value === 'unread') return { icon: 'i-lucide-check-check', title: 'All read', description: 'You’re caught up.' }
-  return { icon: folderIcon(folder.value), title: `${folder.value?.name ?? 'This folder'} is empty`, description: folder.value?.role === 'inbox' ? 'New mail shows up here on its own.' : undefined }
+  if (priority.needsYou.value && listed.value.length) return { illustration: 'inbox-zero' as const, title: 'Nothing needs you', description: 'No message here waits for your reply or an action, as far as AI can tell.' }
+  if (filtering.value) return { illustration: 'no-results' as const, title: 'No matches', description: `Nothing in ${folder.value?.name ?? 'this folder'} matches${search.value ? ` “${search.value}”` : ''} with these filters.` }
+  if (filter.value === 'flagged') return { illustration: 'empty-folder' as const, title: 'Nothing flagged', description: 'Press S on a message to flag it for later.' }
+  if (search.value) return { illustration: 'no-results' as const, title: 'No matches', description: `Nothing in ${folder.value?.name ?? 'this folder'} matches “${search.value}”.` }
+  if (labelFilter.value) return { illustration: 'no-results' as const, title: 'Nothing with this label here', description: `No message in ${folder.value?.name ?? 'this folder'} carries it. Labels follow a message to other folders.` }
+  if (filter.value === 'unread') return { illustration: 'all-read' as const, title: 'All read', description: 'You’re caught up.' }
+  if (tab.value === 'screen') return { illustration: 'screen' as const, title: 'No one new', description: 'Mail from people who haven’t written to you before waits here until you allow or block them.' }
+  if (tab.value === 'tracked') return { illustration: 'no-subscriptions' as const, title: 'Nothing tracked', description: 'Messages you send with tracking on show here with what’s come back.' }
+  if (tab.value === 'newsletters') return { illustration: 'no-subscriptions' as const, title: 'No newsletters', description: 'Mail from the lists you’re on shows here.' }
+  if (tab.value === 'notifications') return { illustration: 'no-notifications' as const, title: 'No notifications', description: 'Receipts, alerts and other mail sent by machines shows here.' }
+  // Everything dealt with is worth a moment
+  if (folder.value?.role === 'inbox' && !messages.value.length) return { illustration: 'inbox-zero' as const, title: 'Inbox zero', description: 'Nothing left to deal with. New mail shows up here on its own.' }
+  if (messages.value.length) return { illustration: 'snoozed' as const, title: 'Nothing here right now', description: 'What’s left in this folder is snoozed or under another tab.' }
+  return { illustration: folder.value?.role === 'drafts' ? 'no-drafts' as const : 'empty-folder' as const, title: `${folder.value?.name ?? 'This folder'} is empty`, description: undefined }
 })
 </script>
 
 <template>
-  <div
+  <SkeletonMessageRow
     v-if="status === 'loading' && !messages.length"
-    class="flex-1 flex flex-col"
-  >
-    <div
-      v-for="n in 8"
-      :key="n"
-      class="flex gap-3 ps-6 pe-4 py-3.5 border-b border-default"
-    >
-      <USkeleton class="size-8 rounded-full shrink-0" />
-      <div class="flex-1 flex flex-col gap-2">
-        <USkeleton class="h-3.5 w-2/5" />
-        <USkeleton class="h-3.5 w-4/5" />
-        <USkeleton class="h-3 w-11/12" />
-      </div>
-    </div>
-  </div>
+    :compact="compact"
+    class="flex-1"
+  />
 
-  <UEmpty
-    v-else-if="!messages.length"
-    v-bind="empty"
-    variant="naked"
+  <AppEmpty
+    v-else-if="!rows.length"
+    :illustration="empty.illustration"
+    :title="empty.title"
+    :description="empty.description"
+    :size="compact ? 'md' : 'sm'"
     class="flex-1"
   />
 
   <UScrollArea
     v-else
     ref="scroller"
-    :key="compact ? 'compact' : 'roomy'"
-    :items="messages"
-    :virtualize="{ estimateSize: compact ? 41 : 84, overscan: 8 }"
-    class="flex-1 transition-opacity"
+    :key="`${compact ? 'compact' : 'roomy'}:${prefs.density}`"
+    data-tour="list"
+    role="region"
+    :aria-label="`Messages in ${folder?.name ?? 'this folder'}`"
+    :items="rows"
+    :virtualize="{ estimateSize: rowHeight, overscan: 8 }"
+    class="flex-1 transition-opacity duration-(--lb-dur-2)"
     :class="status === 'loading' && 'opacity-60'"
-    :ui="{ viewport: 'pb-6' }"
+    :ui="{ viewport: 'pb-16' }"
   >
     <template #default="{ item }">
       <MailListItemCompact
         v-if="compact"
         :message="item as MessageSummary"
-        :selected="isSelected(item as MessageSummary)"
-        :sent="folder?.role === 'sent' || folder?.role === 'drafts'"
+        :selected="isRowSelected(item as MessageSummary)"
+        :sent="folder?.role === 'sent' || folder?.role === 'drafts' || tab === 'tracked'"
+        :screen="tab === 'screen'"
       />
       <MailListItem
         v-else
         :message="item as MessageSummary"
-        :selected="isSelected(item as MessageSummary)"
-        :sent="folder?.role === 'sent' || folder?.role === 'drafts'"
+        :selected="isRowSelected(item as MessageSummary)"
+        :sent="folder?.role === 'sent' || folder?.role === 'drafts' || tab === 'tracked'"
+        :screen="tab === 'screen'"
       />
     </template>
   </UScrollArea>
 
-  <div
-    v-if="status === 'more'"
-    class="absolute bottom-3 inset-x-0 flex justify-center pointer-events-none"
-  >
-    <UBadge
-      icon="i-lucide-loader-circle"
-      label="Loading more"
-      color="neutral"
-      variant="soft"
-      class="rounded-full ring ring-default bg-default"
-      :ui="{ leadingIcon: 'animate-spin' }"
-    />
-  </div>
+  <MailBulkBar />
+
+  <Transition name="lb-fade">
+    <div
+      v-if="status === 'more'"
+      class="absolute bottom-3 inset-x-0 flex justify-center pointer-events-none"
+    >
+      <UBadge
+        icon="i-lucide-loader-circle"
+        label="Loading more"
+        color="neutral"
+        variant="soft"
+        class="rounded-full ring ring-default bg-default"
+        :ui="{ leadingIcon: 'animate-spin' }"
+      />
+    </div>
+  </Transition>
 </template>

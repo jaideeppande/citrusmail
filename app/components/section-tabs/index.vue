@@ -12,7 +12,7 @@ const route = useRoute()
 
 const lastMailPath = useState('last-mail-path', () => '/mail/INBOX')
 watch(() => route.fullPath, (path) => {
-  if (path.startsWith('/mail') || path.startsWith('/subscriptions')) lastMailPath.value = path
+  if (path.startsWith('/mail') || path.startsWith('/subscriptions') || path.startsWith('/later')) lastMailPath.value = path
 }, { immediate: true })
 
 const tabs = computed(() => [

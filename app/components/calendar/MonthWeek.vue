@@ -17,7 +17,7 @@ const props = defineProps<{
 const { date, visibleMonth, pathFor } = useCalendar()
 const { eventsForDay, eventsForDays, pendingRanges } = useCalendarEvents()
 const { draftEvent, onGridPointerdown, onGridDblclick } = useEventDraft()
-const { movingId, preview } = useEventMove()
+const { movingId, preview, ghost, targetDate } = useEventMove()
 
 const days = computed(() => Array.from({ length: 7 }, (_, index) => addDays(props.weekStart, index)))
 const weekEnd = computed(() => addDays(props.weekStart, 7))
@@ -50,6 +50,16 @@ const weekMoved = computed(() => {
     : null
 })
 
+// What it leaves behind, on the same terms: only the rows the place it was
+// picked up from runs through ever see it
+const weekGhost = computed(() => {
+  const event = ghost.value
+
+  return event && new Date(event.start) < weekEnd.value && new Date(event.end) > props.weekStart
+    ? event
+    : null
+})
+
 function others(events: CalendarEvent[]): CalendarEvent[] {
   return movingId.value ? events.filter(event => event.id !== movingId.value) : events
 }
@@ -58,7 +68,8 @@ const lanes = computed(() => layoutAllDay(
   [
     ...others(eventsForDays(days.value)).filter(event => event.allDay),
     ...(weekDraft.value?.allDay ? [weekDraft.value] : []),
-    ...(weekMoved.value?.allDay ? [weekMoved.value] : [])
+    ...(weekMoved.value?.allDay ? [weekMoved.value] : []),
+    ...(weekGhost.value?.allDay ? [weekGhost.value] : [])
   ],
   days.value
 ))
@@ -84,12 +95,14 @@ function covers(bar: AllDayPositionedEvent, index: number): boolean {
 const cells = computed(() => {
   const drafted = weekDraft.value && !weekDraft.value.allDay ? weekDraft.value : null
   const moved = weekMoved.value && !weekMoved.value.allDay ? weekMoved.value : null
+  const left = weekGhost.value && !weekGhost.value.allDay ? weekGhost.value : null
 
   return days.value.map((day, index) => {
     const timed = [
       ...others(eventsForDay(day)).filter(event => !event.allDay),
       ...(drafted && isSameDay(new Date(drafted.start), day) ? [drafted] : []),
-      ...(moved && isSameDay(new Date(moved.start), day) ? [moved] : [])
+      ...(moved && isSameDay(new Date(moved.start), day) ? [moved] : []),
+      ...(left && isSameDay(new Date(left.start), day) ? [left] : [])
     ].sort((a, b) => a.start.localeCompare(b.start))
 
     // One pass over the lanes: bars past the last lane never render, they only
@@ -135,7 +148,7 @@ const cells = computed(() => {
             slot,
             hidden: dropped.length + timed.length - visible.length,
             events: [...covering.map(bar => bar.event), ...timed]
-              .filter(event => event.id !== DRAFT_EVENT_ID)
+              .filter(event => event.id !== DRAFT_EVENT_ID && !isMoveGhost(event))
               .map(event => ({ event, anchored: !shown.has(event.id) }))
           }
         : null
@@ -191,7 +204,8 @@ function label(day: Date): string {
       v-for="({ day }, index) in cells"
       :key="`day-${day.getTime()}`"
       :data-date="isoDate(day)"
-      class="row-span-full border-b border-default"
+      :data-drop-target="targetDate === isoDate(day) || undefined"
+      class="lb-drop-day row-span-full border-b border-default"
       :class="[
         index !== 0 && 'border-s',
         index !== 0 && day.getDate() === 1 && 'border-s-accented',
@@ -211,10 +225,11 @@ function label(day: Date): string {
       v-for="({ day }, index) in cells"
       :key="`number-${day.getTime()}`"
       :to="pathFor(toCalendarDate(day), 'day')"
+      :aria-label="`${formatSpokenDate(day)}${isToday(day) ? ', today' : ''}, open the day`"
       class="select-none row-start-1 justify-self-end inline-flex items-center justify-center h-6 min-w-6 m-0.5 px-1 py-1 text-xs pointer-coarse:h-8 pointer-coarse:min-w-8 pointer-coarse:text-sm font-semibold rounded-full transition-colors focus-visible:outline-3"
       :class="isToday(day)
         ? 'text-inverted bg-primary active:bg-primary/75 outline-primary/25'
-        : [inFocus(day) ? 'text-default' : 'text-dimmed', 'hover:bg-(--control-bg) active:bg-(--control-bg) outline-inverted/25']"
+        : [inFocus(day) ? 'text-default' : 'text-muted', 'hover:bg-(--control-bg) active:bg-(--control-bg) outline-inverted/25']"
       :style="{ gridColumn: index + 1 }"
     >
       {{ label(day) }}
@@ -291,6 +306,7 @@ function label(day: Date): string {
             color="neutral"
             variant="ghost"
             size="xs"
+            :aria-label="`${more.hidden} more events on ${formatSpokenDate(day)}`"
             class="self-start mx-0.5 px-1.5 py-0.5 justify-start text-muted font-normal"
             :class="open && 'bg-elevated'"
             :style="{ gridColumn: index + 1, gridRow: more.slot + 2 }"

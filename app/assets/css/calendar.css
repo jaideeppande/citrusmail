@@ -1,0 +1,85 @@
+/* calendar features. Imported by main.css; uses the motion scale defined there (--lb-dur-*, --lb-ease-*). */
+
+/* A view switch (day, week, month, year) cross-fades on the app's own timing.
+   Stepping back and forward names a direction and keeps the slide it has */
+html:not([data-nav-direction])::view-transition-old(calendar),
+html:not([data-nav-direction])::view-transition-new(calendar) {
+  animation-duration: var(--lb-dur-3);
+  animation-timing-function: var(--lb-ease-in-out);
+}
+
+/* An event block in hand: lifted off the grid, and gliding from one snap
+   step to the next instead of jumping the quarter hour */
+:root {
+  --lb-event-lift-shadow: 0 10px 28px -10px rgb(0 0 0 / 0.28), 0 2px 8px -2px rgb(0 0 0 / 0.14);
+}
+
+@utility lb-event-lifted {
+  box-shadow: var(--lb-event-lift-shadow);
+  transition: transform var(--lb-dur-1) var(--lb-ease-out), height var(--lb-dur-1) var(--lb-ease-out), box-shadow var(--lb-dur-2) ease, background-color var(--lb-dur-1) ease;
+}
+
+/* The same for a chip on the month grid or in the all-day row, which is
+   redrawn in the cell it is over rather than carried there */
+@utility lb-chip-lifted {
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 6px 18px -8px rgb(0 0 0 / 0.3), 0 1px 4px -1px rgb(0 0 0 / 0.14);
+  scale: 1.01;
+  animation: lb-chip-lift var(--lb-dur-2) var(--lb-ease-out);
+}
+@keyframes lb-chip-lift { from { box-shadow: none; scale: 1; } }
+
+/* What an event leaves behind at the place it was picked up from */
+@utility lb-event-ghost {
+  opacity: 0.35;
+  pointer-events: none;
+  animation: lb-event-ghost var(--lb-dur-2) ease;
+}
+@keyframes lb-event-ghost { from { opacity: 0.8; } }
+
+/* The times a block in hand would take, riding along just above it */
+@utility lb-drag-label {
+  transition: transform var(--lb-dur-1) var(--lb-ease-out), top var(--lb-dur-1) var(--lb-ease-out);
+  animation: lb-in var(--lb-dur-1) ease both;
+}
+
+/* The day a dragged event would land on */
+@utility lb-drop-day {
+  transition: background-color var(--lb-dur-2) ease;
+  &[data-drop-target] { background-color: color-mix(in oklab, var(--ui-primary) 6%, transparent); }
+}
+
+/* Event text on its calendar's tint. The colour alone on a 15–25% tint of
+   itself reads at 1.6–3:1 in light mode (amber and green worst) and dips
+   under 4.5:1 for red in dark; half of it mixed into the strongest ink clears
+   4.5:1 for every calendar colour in both, and high contrast leans further */
+:root {
+  --lb-ink-mix: 50%;
+  --lb-ink-primary: color-mix(in oklab, var(--ui-primary) var(--lb-ink-mix), var(--ui-text-highlighted));
+  --lb-ink-secondary: color-mix(in oklab, var(--ui-secondary) var(--lb-ink-mix), var(--ui-text-highlighted));
+  --lb-ink-info: color-mix(in oklab, var(--ui-info) var(--lb-ink-mix), var(--ui-text-highlighted));
+  --lb-ink-success: color-mix(in oklab, var(--ui-success) var(--lb-ink-mix), var(--ui-text-highlighted));
+  --lb-ink-warning: color-mix(in oklab, var(--ui-warning) var(--lb-ink-mix), var(--ui-text-highlighted));
+  --lb-ink-error: color-mix(in oklab, var(--ui-error) var(--lb-ink-mix), var(--ui-text-highlighted));
+}
+html[data-contrast="high"] { --lb-ink-mix: 30%; }
+
+/* Find a time: a marked slot is an outline, never a fill, so it can never be
+   mistaken for an event; the events under the mode stay in sight but let the
+   pointer through to the grid */
+@utility lb-free-slot {
+  border: 1.5px dashed var(--ui-primary);
+  background-color: color-mix(in oklab, var(--ui-primary) 7%, transparent);
+  animation: lb-in-scale var(--lb-dur-2) var(--lb-ease-out) both;
+}
+[data-finding] [data-event] {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* The slot the keyboard is on while finding a time */
+@utility lb-free-cursor {
+  outline: 2px solid var(--ui-primary);
+  outline-offset: -2px;
+}

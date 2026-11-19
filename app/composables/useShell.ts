@@ -5,7 +5,10 @@ export type Section = 'mail' | 'calendar' | 'contacts' | 'settings'
 const _useShell = () => {
   const route = useRoute()
   const { user } = useUserSession()
-  const isMobile = useMediaQuery('(max-width: 1023px)')
+  // A pane of a split layout is narrow because it shares the window, not
+  // because it's a phone: it keeps the desktop's behaviour
+  const narrowScreen = useMediaQuery('(max-width: 1023px)')
+  const isMobile = computed(() => narrowScreen.value && windowKind() !== 'pane')
 
   // Folding the sidebar is remembered in this browser, apart from the phone slideover
   const folded = useLocalStorage('citrusmail-sidebar-folded', false)

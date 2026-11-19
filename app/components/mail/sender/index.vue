@@ -1,6 +1,8 @@
 <script setup lang="ts">
 const props = defineProps<{
   message: MessageDetail
+  /** In a conversation's card, whose header already shows who and when: only the recipients and what hangs under them */
+  compact?: boolean
 }>()
 
 const { compose } = useComposer()
@@ -17,18 +19,32 @@ const summary = computed(() => {
   const names = [...props.message.to, ...props.message.cc].map(personName)
   return names.length > 3 ? `${names.slice(0, 3).join(', ')} and ${names.length - 3} more` : names.join(', ')
 })
+
+// A quiet "3 min read" by the date; nothing for a message read in under a minute
+const minutes = computed(() => readingMinutes(messageText(props.message)))
 </script>
 
 <template>
   <div class="flex items-start gap-3">
-    <SenderAvatar
+    <!-- Resting the pointer on the sender brings up their card -->
+    <ContactCard
+      v-if="!compact"
       :address="message.from"
-      size="xl"
-    />
+    >
+      <span class="shrink-0 flex rounded-full">
+        <SenderAvatar
+          :address="message.from"
+          size="xl"
+        />
+      </span>
+    </ContactCard>
 
     <div class="flex-1 min-w-0">
-      <div class="flex items-baseline gap-2 flex-wrap">
-        <UTooltip :text="`Write to ${message.from.address}`">
+      <div
+        v-if="!compact"
+        class="flex items-baseline gap-2 flex-wrap"
+      >
+        <ContactCard :address="message.from">
           <UButton
             :label="personName(message.from)"
             color="neutral"
@@ -36,25 +52,30 @@ const summary = computed(() => {
             class="p-0 font-semibold text-highlighted min-w-0 max-w-full"
             @click="compose([message.from])"
           />
-        </UTooltip>
+        </ContactCard>
         <MailAddressCopy
           v-if="message.from.address"
           :address="message.from"
           bare
           class="text-sm text-muted min-w-0"
         />
-        <RevealButton
-          icon="i-lucide-calendar-search"
-          :aria-label="`Show Inbox mail from ${fullDate(message.date)}`"
-          class="ms-auto text-sm text-muted tabular-nums"
-          @click="showDay(message.date)"
-        >
-          <time :datetime="message.date">{{ fullDate(message.date) }}</time>
-        </RevealButton>
+        <span class="ms-auto flex items-baseline gap-2 text-sm text-muted tabular-nums">
+          <span
+            v-if="minutes"
+            class="text-muted lb-in"
+          >{{ minutes }} min read</span>
+          <RevealButton
+            icon="i-lucide-calendar-search"
+            :aria-label="`Show Inbox mail from ${fullDate(message.date)}`"
+            @click="showDay(message.date)"
+          >
+            <time :datetime="message.date">{{ fullDate(message.date) }}</time>
+          </RevealButton>
+        </span>
       </div>
 
       <UButton
-        :label="expanded ? 'Hide recipients' : `To ${summary || 'undisclosed recipients'}`"
+        :label="expanded ? 'Hide recipients' : compact ? 'Recipients' : `To ${summary || 'undisclosed recipients'}`"
         trailing-icon="i-lucide-chevron-down"
         color="neutral"
         variant="link"
@@ -76,7 +97,7 @@ const summary = computed(() => {
               v-for="row in recipients"
               :key="row.label"
             >
-              <dt class="text-xs leading-6 text-dimmed">
+              <dt class="text-xs leading-6 text-muted">
                 {{ row.label }}
               </dt>
               <dd class="flex flex-wrap items-center gap-1 min-w-0">

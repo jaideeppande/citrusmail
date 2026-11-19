@@ -15,9 +15,9 @@ const _useReplyTranslation = () => {
   let controller: AbortController | undefined
   let stage: Stage | undefined
 
-  // The composer moved on to another message while translating
+  // Another draft took the screen while translating
   let superseded = false
-  watch(() => draft.value.replyingTo, () => {
+  watch(() => draft.value.id, () => {
     superseded = true
     controller?.abort()
     original.value = undefined

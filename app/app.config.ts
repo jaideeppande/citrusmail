@@ -21,7 +21,9 @@ const theme: CitrusMailTheme = {
   unread: '',
   flag: '#F59E0B',
   font: '\'Schibsted Grotesk\', ui-sans-serif, system-ui, sans-serif',
-  fontSize: '16px',
+  // A size down from the browser's 16px: everything is measured in rem, so
+  // this one value sets how dense the whole app is
+  fontSize: '15px',
   radius: '0.375rem',
   sheetInset: '0.5rem',
   sheetRadius: '0.75rem',
@@ -32,7 +34,8 @@ const theme: CitrusMailTheme = {
     sheet: '#ffffff',
     elevated: n(100),
     accented: n(200),
-    border: n(200),
+    // Hairlines that separate without drawing boxes
+    border: mix(n(200), n(100), 35),
     sheetBorder: mix(n(900), 'transparent', 94),
     text: n(700),
     textHighlighted: n(900),
@@ -102,7 +105,8 @@ export default defineAppConfig({
     },
     button: {
       slots: {
-        base: 'font-medium'
+        // Every button answers a press the same small way
+        base: 'font-medium transition-[background-color,color,box-shadow,transform] duration-(--lb-dur-1) active:translate-y-px'
       },
       compoundVariants: [{
         color: 'neutral',

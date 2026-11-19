@@ -12,7 +12,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <p class="-mt-2 text-xs text-muted flex items-center gap-1.5">
+  <p class="text-xs text-muted flex items-center gap-1.5">
     <UIcon
       name="i-lucide-zap"
       class="size-3.5"

@@ -1,5 +1,11 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+@import "./reader.css";
+@import "./composer.css";
+@import "./calendar.css";
+@import "./settings.css";
+@import "./first-run.css";
+@import "./contacts.css";
 
 @theme static {
   /* Set at runtime from the theme's `font` */
@@ -24,6 +30,12 @@
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
+  }
+
+  /* One focus ring for anything that takes keyboard focus and draws none of its own */
+  :focus-visible {
+    outline: 2px solid var(--ui-primary);
+    outline-offset: 2px;
   }
 
   ::selection {
@@ -391,3 +403,375 @@ html.lb-has-background {
 html.lb-has-background.dark {
   --lb-desk: color-mix(in oklab, var(--lb-desk-solid) 78%, transparent);
 }
+
+/* ---------------------------------------------------------------- */
+/* Motion. One scale for the whole app: four durations and two curves, so a
+   menu, a row and a pane all move as if they were made of the same thing.
+   Settings → Appearance → Motion picks how much of it there is */
+:root {
+  --lb-ease-out: cubic-bezier(.2, .8, .2, 1);
+  --lb-ease-in-out: cubic-bezier(.45, .05, .35, 1);
+  /* A press, a hover */
+  --lb-dur-1: 120ms;
+  /* A menu, a chip, a row */
+  --lb-dur-2: 180ms;
+  /* A panel, a pane, a page */
+  --lb-dur-3: 240ms;
+  /* The few big moves: a window layout, the triage card */
+  --lb-dur-4: 320ms;
+}
+
+/* Reduced: things still fade so nothing pops, but nothing travels */
+html[data-motion='reduced'] {
+  --lb-dur-1: 80ms;
+  --lb-dur-2: 100ms;
+  --lb-dur-3: 120ms;
+  --lb-dur-4: 120ms;
+}
+html[data-motion='reduced'] *,
+html[data-motion='reduced'] *::before,
+html[data-motion='reduced'] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+}
+html[data-motion='off'] *,
+html[data-motion='off'] *::before,
+html[data-motion='off'] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+html:is([data-motion='reduced'], [data-motion='off'])::view-transition-group(*),
+html:is([data-motion='reduced'], [data-motion='off'])::view-transition-old(*),
+html:is([data-motion='reduced'], [data-motion='off'])::view-transition-new(*) {
+  animation: none !important;
+}
+
+/* One page giving way to another (Mail, Calendar, Contacts, Settings): the
+   browser's own cross-fade, on the app's timing rather than its default */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--lb-dur-3);
+  animation-timing-function: var(--lb-ease-in-out);
+}
+
+/* Things arriving: a fade with a few pixels of travel, from the side they
+   come from. `lb-in` on its own just fades */
+@utility lb-in {
+  animation: lb-in var(--lb-dur-2) var(--lb-ease-out) both;
+}
+@utility lb-in-up {
+  animation: lb-in-up var(--lb-dur-3) var(--lb-ease-out) both;
+}
+@utility lb-in-down {
+  animation: lb-in-down var(--lb-dur-3) var(--lb-ease-out) both;
+}
+@utility lb-in-right {
+  animation: lb-in-right var(--lb-dur-3) var(--lb-ease-out) both;
+}
+@utility lb-in-scale {
+  animation: lb-in-scale var(--lb-dur-2) var(--lb-ease-out) both;
+}
+@keyframes lb-in { from { opacity: 0; } }
+@keyframes lb-in-up { from { opacity: 0; transform: translateY(8px); } }
+@keyframes lb-in-down { from { opacity: 0; transform: translateY(-8px); } }
+@keyframes lb-in-right { from { opacity: 0; transform: translateX(12px); } }
+@keyframes lb-in-scale { from { opacity: 0; transform: scale(.96); } }
+
+/* A list whose rows arrive one after another: set --lb-i on each */
+@utility lb-stagger {
+  animation: lb-in-up var(--lb-dur-3) var(--lb-ease-out) both;
+  animation-delay: calc(min(var(--lb-i, 0), 8) * 28ms);
+}
+
+/* A control that gives a little under the pointer */
+@utility lb-press {
+  transition: transform var(--lb-dur-1) var(--lb-ease-out), background-color var(--lb-dur-1) ease, color var(--lb-dur-1) ease, box-shadow var(--lb-dur-1) ease;
+  &:active { transform: scale(.97); }
+}
+
+/* <Transition name="lb-fade | lb-pop | lb-rise | lb-slide-right | lb-collapse"> */
+.lb-fade-enter-active, .lb-fade-leave-active { transition: opacity var(--lb-dur-2) ease; }
+.lb-fade-enter-from, .lb-fade-leave-to { opacity: 0; }
+
+.lb-pop-enter-active { transition: opacity var(--lb-dur-2) ease, transform var(--lb-dur-2) var(--lb-ease-out); }
+.lb-pop-leave-active { transition: opacity var(--lb-dur-1) ease, transform var(--lb-dur-1) ease; }
+.lb-pop-enter-from, .lb-pop-leave-to { opacity: 0; transform: scale(.96); }
+
+.lb-rise-enter-active { transition: opacity var(--lb-dur-3) ease, transform var(--lb-dur-3) var(--lb-ease-out); }
+.lb-rise-leave-active { transition: opacity var(--lb-dur-2) ease, transform var(--lb-dur-2) ease; }
+.lb-rise-enter-from, .lb-rise-leave-to { opacity: 0; transform: translateY(12px); }
+
+.lb-slide-right-enter-active { transition: opacity var(--lb-dur-3) ease, transform var(--lb-dur-3) var(--lb-ease-out); }
+.lb-slide-right-leave-active { transition: opacity var(--lb-dur-2) ease, transform var(--lb-dur-2) ease; }
+.lb-slide-right-enter-from, .lb-slide-right-leave-to { opacity: 0; transform: translateX(24px); }
+
+/* Opens to its content's height (wrap the content in one child) */
+.lb-collapse-enter-active, .lb-collapse-leave-active {
+  display: grid;
+  transition: grid-template-rows var(--lb-dur-3) var(--lb-ease-out), opacity var(--lb-dur-2) ease;
+  & > * { min-height: 0; overflow: hidden; }
+}
+.lb-collapse-enter-from, .lb-collapse-leave-to { grid-template-rows: 0fr; opacity: 0; }
+.lb-collapse-enter-to, .lb-collapse-leave-from { grid-template-rows: 1fr; }
+
+/* <TransitionGroup name="lb-list">: rows make room for each other */
+.lb-list-move, .lb-list-enter-active, .lb-list-leave-active {
+  transition: transform var(--lb-dur-3) var(--lb-ease-out), opacity var(--lb-dur-2) ease;
+}
+.lb-list-enter-from, .lb-list-leave-to { opacity: 0; transform: translateY(6px); }
+.lb-list-leave-active { position: absolute; }
+
+/* One page giving way to the next */
+.lb-page-enter-active { transition: opacity var(--lb-dur-3) ease, transform var(--lb-dur-3) var(--lb-ease-out); }
+.lb-page-leave-active { transition: opacity var(--lb-dur-1) ease; }
+.lb-page-enter-from { opacity: 0; transform: translateY(6px); }
+.lb-page-leave-to { opacity: 0; }
+
+/* A row on its way out of the list: archived, deleted, moved or snoozed */
+@utility lb-row-leaving {
+  animation: lb-row-leave var(--lb-dur-2) var(--lb-ease-in-out) both;
+  pointer-events: none;
+}
+@keyframes lb-row-leave {
+  to { opacity: 0; transform: translateX(-16px); }
+}
+/* New mail settling in at the top */
+@utility lb-row-arriving {
+  animation: lb-row-arrive var(--lb-dur-4) var(--lb-ease-out) both;
+}
+@keyframes lb-row-arrive {
+  from { opacity: 0; transform: translateY(-6px); background-color: color-mix(in oklab, var(--ui-primary) 9%, transparent); }
+}
+
+/* The flag and the unread dot answer a click */
+@utility lb-mark-pop {
+  animation: reveal-pop var(--lb-dur-3) var(--lb-ease-out) both;
+}
+
+/* Keyboard focus, the same ring on everything that takes it */
+@utility lb-focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition: outline-color var(--lb-dur-1) ease;
+  &:focus-visible { outline-color: var(--ui-primary); }
+}
+
+/* Density (Settings → Appearance): how much air a row gets */
+:root { --lb-row-y: 0.625rem; --lb-row-gap: 0.125rem; }
+html[data-density='cozy'] { --lb-row-y: 0.4375rem; --lb-row-gap: 0; }
+html[data-density='compact'] { --lb-row-y: 0.3125rem; --lb-row-gap: 0; }
+
+/* ---------------------------------------------------------------- */
+/* Windows and panes */
+:root {
+  /* The strip above the page in each window */
+  --lb-bar: 2.5rem;
+  --lb-pane-gap: 0.5rem;
+}
+
+/* The page you read and write on: a sheet with a hairline edge, set into the desk */
+@utility lb-sheet {
+  background: var(--ui-bg);
+  @media (min-width: 64rem) {
+    border-radius: var(--lb-sheet-radius);
+    box-shadow: 0 0 0 1px var(--lb-sheet-border), var(--lb-sheet-shadow);
+  }
+}
+
+@utility lb-panes {
+  transition: grid-template-columns var(--lb-dur-4) var(--lb-ease-out), grid-template-rows var(--lb-dur-4) var(--lb-ease-out), gap var(--lb-dur-4) var(--lb-ease-out);
+  &[data-split] { gap: var(--lb-pane-gap); }
+  /* Following the pointer, not easing after it */
+  &[data-dragging] { transition: none; }
+  &[data-dragging] iframe { pointer-events: none; }
+}
+
+@utility lb-pane {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--ui-bg);
+  @media (min-width: 64rem) {
+    border-radius: var(--lb-sheet-radius);
+    box-shadow: 0 0 0 1px var(--lb-sheet-border), var(--lb-sheet-shadow);
+  }
+}
+
+/* The gap between two panes is the handle; a line shows on hover and focus */
+@utility lb-pane-divider {
+  position: absolute;
+  z-index: 5;
+  touch-action: none;
+  outline: none;
+  &::after {
+    content: '';
+    position: absolute;
+    border-radius: 999px;
+    background: var(--ui-primary);
+    opacity: 0;
+    transition: opacity var(--lb-dur-1) ease;
+  }
+  &:hover::after, &:focus-visible::after, [data-dragging] > &::after { opacity: .7; }
+  &[aria-orientation="vertical"] {
+    top: 0;
+    bottom: 0;
+    width: calc(var(--lb-pane-gap) + 6px);
+    transform: translateX(-50%);
+    cursor: col-resize;
+  }
+  &[aria-orientation="vertical"]::after { inset-block: 25%; left: 50%; width: 3px; transform: translateX(-50%); }
+  &[aria-orientation="horizontal"] {
+    right: 0;
+    height: calc(var(--lb-pane-gap) + 6px);
+    transform: translateY(-50%);
+    cursor: row-resize;
+  }
+  &[aria-orientation="horizontal"]::after { inset-inline: 25%; top: 50%; height: 3px; transform: translateY(-50%); }
+}
+
+/* A layout in the picker: its panes drawn small */
+@utility lb-layout-thumb {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 2px;
+  aspect-ratio: 4 / 3;
+  padding: 3px;
+  border-radius: calc(var(--ui-radius) * 1.5);
+  background: var(--ui-bg-elevated);
+  box-shadow: inset 0 0 0 1px var(--ui-border);
+  & > span {
+    border-radius: 2px;
+    background: var(--ui-border-accented);
+    transition: background-color var(--lb-dur-1) ease;
+  }
+  &:hover > span { background: var(--ui-text-dimmed); }
+  &[data-active="true"] { box-shadow: inset 0 0 0 1.5px var(--ui-primary); }
+  &[data-active="true"] > span { background: var(--ui-primary); }
+  &:disabled { opacity: .4; cursor: not-allowed; }
+}
+
+/* ---------------------------------------------------------------- */
+/* The message list */
+:root { --lb-row-compact: 2.5rem; }
+html[data-density='cozy'] { --lb-row-compact: 2.25rem; }
+html[data-density='compact'] { --lb-row-compact: 2rem; }
+
+/* The avatar gives way to a tick when the row is hovered, and for every row
+   once any is ticked */
+@utility lb-row-avatar {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  &[data-dot] { width: 1rem; height: 1rem; }
+  & > * { grid-area: 1 / 1; transition: opacity var(--lb-dur-1) ease, transform var(--lb-dur-2) var(--lb-ease-out); }
+  & > [data-check] { opacity: 0; transform: scale(.8); }
+  .group:hover > button > & > :first-child,
+  [data-checking] > button > & > :first-child { opacity: 0; transform: scale(.8); }
+  .group:hover > button > & > [data-check],
+  [data-checking] > button > & > [data-check] { opacity: 1; transform: none; }
+}
+
+@utility lb-row-check {
+  display: grid;
+  place-items: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: calc(var(--ui-radius) * 0.75);
+  box-shadow: inset 0 0 0 1.5px var(--ui-border-accented);
+  background: var(--ui-bg);
+  color: transparent;
+  cursor: pointer;
+  transition: background-color var(--lb-dur-1) ease, box-shadow var(--lb-dur-1) ease, color var(--lb-dur-1) ease;
+  &:hover { box-shadow: inset 0 0 0 1.5px var(--ui-primary); }
+  &[data-checked="true"] {
+    background: var(--ui-primary);
+    box-shadow: none;
+    color: var(--ui-bg);
+  }
+}
+
+/* What follows the pointer while rows are dragged to a folder */
+.lb-drag-ghost {
+  position: fixed;
+  top: -100px;
+  left: -100px;
+  max-width: 16rem;
+  padding: 0.375rem 0.625rem;
+  border-radius: calc(var(--ui-radius) * 1.5);
+  background: var(--ui-bg-inverted);
+  color: var(--ui-bg);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A folder in the sidebar with rows held over it */
+.lb-drop-folder {
+  background: color-mix(in oklab, var(--ui-primary) 12%, transparent);
+  box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--ui-primary) 55%, transparent);
+  border-radius: var(--ui-radius);
+}
+
+/* A button on the dark bar of bulk actions */
+@utility lb-bulk-action {
+  color: color-mix(in oklab, currentColor 82%, transparent);
+  border-radius: 999px;
+  padding: 0.375rem;
+  transition: background-color var(--lb-dur-1) ease, color var(--lb-dur-1) ease, transform var(--lb-dur-1) var(--lb-ease-out);
+  &:hover { color: inherit; background: color-mix(in oklab, currentColor 14%, transparent); }
+  &:active { transform: scale(.94); }
+}
+
+
+/* Triage: one card at a time. A decision sends the card off to the left and
+   down a touch; the next comes in from the right. Going back reverses it */
+@utility lb-triage-card {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--ui-bg);
+  border-radius: calc(var(--lb-sheet-radius) + 0.25rem);
+  box-shadow: 0 0 0 1px var(--lb-sheet-border), var(--lb-floating-shadow, 0 12px 32px -16px rgb(0 0 0 / 0.3));
+}
+.lb-triage-next-enter-active, .lb-triage-away-enter-active, .lb-triage-back-enter-active { transition: opacity var(--lb-dur-4) ease, transform var(--lb-dur-4) var(--lb-ease-out); }
+.lb-triage-next-leave-active, .lb-triage-away-leave-active, .lb-triage-back-leave-active { transition: opacity var(--lb-dur-3) ease, transform var(--lb-dur-3) var(--lb-ease-in-out); }
+.lb-triage-next-enter-from, .lb-triage-away-enter-from { opacity: 0; transform: translateX(48px) scale(.98); }
+.lb-triage-next-leave-to { opacity: 0; transform: translateX(-48px) scale(.98); }
+.lb-triage-away-leave-to { opacity: 0; transform: translate(-72px, 12px) rotate(-1.5deg) scale(.96); }
+.lb-triage-back-enter-from { opacity: 0; transform: translateX(-48px) scale(.98); }
+.lb-triage-back-leave-to { opacity: 0; transform: translateX(48px) scale(.98); }
+
+/* ---------------------------------------------------------------- */
+/* Labels: nine colours, mid-tones that sit on white and on near-black alike.
+   A label always shows its name beside the dot, so the colour is a help,
+   never the only way to tell two apart */
+:root {
+  --lb-label-red: oklch(0.63 0.2 25);
+  --lb-label-orange: oklch(0.7 0.17 55);
+  --lb-label-amber: oklch(0.78 0.15 85);
+  --lb-label-green: oklch(0.65 0.16 150);
+  --lb-label-teal: oklch(0.66 0.11 195);
+  --lb-label-blue: oklch(0.62 0.16 255);
+  --lb-label-violet: oklch(0.6 0.18 295);
+  --lb-label-pink: oklch(0.68 0.17 350);
+  --lb-label-grey: oklch(0.62 0.01 60);
+}
+
+/* A pane of a split layout is a desktop page in a narrow frame. The page's
+   own breakpoints see a phone-sized viewport, so what only phones need is
+   put away here: the menu button (a pane has no sidebar to open) and the
+   floating phone toolbar on the calendar */
+html[data-window='pane'] button[aria-label='Open menu'] { display: none; }
+html[data-window='pane'] .lb-phone-only { display: none; }

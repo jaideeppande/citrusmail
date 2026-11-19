@@ -1,4 +1,4 @@
-import { addDays, differenceInCalendarDays } from 'date-fns'
+import { addDays, addMinutes, differenceInCalendarDays } from 'date-fns'
 
 // Moving a chip is a whole-day gesture: the month grid has no time axis and an
 // all-day bar keeps the span it has, so only the date shifts. `useEventDrag`
@@ -7,6 +7,12 @@ import { addDays, differenceInCalendarDays } from 'date-fns'
 // One instance for the whole app rather than one per chip. The month view puts
 // a few hundred chips on screen, and a composable each would put its listeners
 // and its refs behind every one of them
+export const MOVE_GHOST_SUFFIX = '::moving'
+
+export function isMoveGhost(event: CalendarEvent): boolean {
+  return event.id.endsWith(MOVE_GHOST_SUFFIX)
+}
+
 const _useEventMove = () => {
   const { updateEvent } = useCalendarEvents()
 
@@ -33,6 +39,27 @@ const _useEventMove = () => {
     }
   })
 
+  // What the event leaves behind where it was picked up, once it has been
+  // carried clear of its own days: a copy under an id of its own, so a view
+  // can lay it out beside the one in flight and a chip can tell it is not the
+  // real thing. Clear of them, because a bar still overlapping its ghost would
+  // need a second lane to draw both, and the row would grow under the pointer
+  const ghost = computed<CalendarEvent | null>(() => {
+    const event = source.value
+    if (!event) {
+      return null
+    }
+
+    const days = Math.max(1, differenceInCalendarDays(new Date(event.end), new Date(event.start)))
+
+    return Math.abs(deltaDays.value) >= days
+      ? { ...event, id: `${event.id}${MOVE_GHOST_SUFFIX}` }
+      : null
+  })
+
+  // The day it would land on, as a cell's `data-date`, for the cell to light up
+  const targetDate = ref<string | null>(null)
+
   let gesture: { event: CalendarEvent, x: number, y: number, origin: Date, current: Date, moved: boolean, cancelled: boolean } | null = null
 
   function bind() {
@@ -52,6 +79,7 @@ const _useEventMove = () => {
     unbind()
     source.value = null
     deltaDays.value = 0
+    targetDate.value = null
   }
 
   // Let the trailing click pass before the popover is allowed to open again
@@ -107,6 +135,7 @@ const _useEventMove = () => {
     gesture.current = dateAtPoint(pointerEvent.clientX, pointerEvent.clientY) ?? gesture.current
 
     deltaDays.value = differenceInCalendarDays(gesture.current, gesture.origin)
+    targetDate.value = isoDate(gesture.current)
   }
 
   // The browser took the gesture away: nothing was dropped anywhere
@@ -145,6 +174,7 @@ const _useEventMove = () => {
       gesture.moved = false
       source.value = null
       deltaDays.value = 0
+      targetDate.value = null
     }
   })
 
@@ -157,9 +187,44 @@ const _useEventMove = () => {
     }
   })
 
+  // The keyboard's way to do what a drag does (Alt with an arrow on a
+  // focused event): whole days by the date, minutes by the clock, and a
+  // resize by the end alone. The same update a drop sends, said out loud
+  function moveBy(event: CalendarEvent, by: { days?: number, minutes?: number, resize?: boolean }) {
+    const days = by.days ?? 0
+    const minutes = by.minutes ?? 0
+    const start = new Date(event.start)
+    const end = new Date(event.end)
+
+    if (by.resize) {
+      const resized = addMinutes(end, minutes)
+      // Never shorter than a snap step, the way the drag handle stops
+      if (resized <= addMinutes(start, SNAP_MINUTES - 1)) {
+        announce(`${event.title} is as short as it goes`)
+
+        return
+      }
+
+      updateEvent({ ...event, end: toLocalISO(resized) })
+      announce(`${event.title} now ends at ${formatTime(resized)}`)
+
+      return
+    }
+
+    // `addDays` for the date so the wall clock survives a DST edge
+    const shift = (date: Date) => addMinutes(addDays(date, days), minutes)
+    const moved = { ...event, start: toLocalISO(shift(start)), end: toLocalISO(shift(end)) }
+
+    updateEvent(moved)
+    announce(`${event.title} moved to ${formatSpokenDate(shift(start))}${event.allDay ? '' : `, ${formatTime(shift(start))}`}`)
+  }
+
   return {
+    moveBy,
     movingId,
     preview,
+    ghost,
+    targetDate,
     suppressed,
     onPointerdown
   }

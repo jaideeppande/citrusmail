@@ -1,0 +1,25 @@
+/* contacts features. Imported by main.css; uses the motion scale defined there (--lb-dur-*, --lb-ease-*).
+   Nothing here is needed for the layout: the components carry that in Tailwind
+   classes. These are finishing touches keyed on data attributes */
+
+/* A group in the sidebar while contacts are dragged over it */
+[data-contact-drop="over"] {
+  background-color: color-mix(in oklab, var(--ui-primary) 10%, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--ui-primary);
+  transition: background-color var(--lb-dur-1) ease, box-shadow var(--lb-dur-1) ease;
+}
+
+/* A dragged contact row fades where it was, so it is clear what is moving */
+[data-contact-dragging] {
+  opacity: .5;
+  transition: opacity var(--lb-dur-1) ease;
+}
+
+/* The received/sent split bar on Relationships grows in from the left */
+[data-contact-bar] > span {
+  transform-origin: left;
+  animation: lb-contact-bar var(--lb-dur-4) var(--lb-ease-out) both;
+}
+@keyframes lb-contact-bar {
+  from { transform: scaleX(0); }
+}

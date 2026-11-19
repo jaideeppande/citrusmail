@@ -32,7 +32,7 @@ interface Gesture {
 // the pointer
 const DEFAULT_HOUR = 9
 // What an unnamed draft is called, on the ghost and once it is saved
-export const DEFAULT_TITLE = 'New Event'
+export const DEFAULT_TITLE = 'New event'
 
 const _useEventDraft = () => {
   const { view, date, pathFor } = useCalendar()
@@ -77,14 +77,15 @@ const _useEventDraft = () => {
     return visible?.id ?? calendars.value[0]?.id ?? 'work'
   }
 
-  function createDraft(input: { start: Date, end: Date, allDay?: boolean, title?: string, scroll?: boolean }) {
+  function createDraft(input: { start: Date, end: Date, allDay?: boolean, title?: string, scroll?: boolean, calendarId?: string, description?: string }) {
     draft.value = {
       start: input.start,
       end: input.end,
       allDay: input.allDay ?? false,
       title: input.title ?? '',
-      calendarId: defaultCalendarId(),
-      description: ''
+      // A calendar the AI named has to be one that is really there
+      calendarId: input.calendarId && calendars.value.some(calendar => calendar.id === input.calendarId) ? input.calendarId : defaultCalendarId(),
+      description: input.description ?? ''
     }
 
     everAnchored = false
@@ -128,10 +129,13 @@ const _useEventDraft = () => {
       return
     }
 
+    const title = draft.value.title || DEFAULT_TITLE
+    announce(`${title} added, ${formatSpokenDate(draft.value.start)}${draft.value.allDay ? '' : ` at ${formatTime(draft.value.start)}`}`)
+
     addEvent({
       id: crypto.randomUUID(),
       calendarId: draft.value.calendarId,
-      title: draft.value.title || DEFAULT_TITLE,
+      title,
       description: draft.value.description || undefined,
       start: toLocalISO(draft.value.start),
       end: toLocalISO(draft.value.end),
@@ -162,7 +166,8 @@ const _useEventDraft = () => {
   // route change, and the small-screen week window slides to it, where a day
   // merely inside the fetched range could still be off screen with no ghost
   // mounted to scroll to
-  async function createFromQuick(quick: QuickEvent | null, text: string) {
+  // The AI's reading brings a calendar and notes along with it
+  async function createFromQuick(quick: (QuickEvent & { calendarId?: string, description?: string }) | null, text: string) {
     // No time in it, so it goes where the `+` button would put it
     if (!quick) {
       return createAtAnchor(text)
@@ -170,7 +175,7 @@ const _useEventDraft = () => {
 
     await navigateTo(pathFor(toCalendarDate(quick.start), gridView.value))
 
-    createDraft({ ...quick, scroll: true })
+    createDraft({ start: quick.start, end: quick.end, allDay: quick.allDay, title: quick.title, calendarId: quick.calendarId, description: quick.description, scroll: true })
   }
 
   let gesture: Gesture | null = null
@@ -369,6 +374,7 @@ const _useEventDraft = () => {
     commitDraft,
     createAtAnchor,
     createFromQuick,
+    defaultCalendarId,
     onGridPointerdown,
     onGridDblclick,
     registerHost,

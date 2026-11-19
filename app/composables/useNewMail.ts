@@ -14,8 +14,11 @@ export function useNewMail() {
   const { refreshFolders } = useMail()
   const { switchTo } = useMailboxes()
   const toast = useToast()
+  const centre = useNotificationCentre()
   const cursors = useLocalStorage<Cursors>('citrusmail-notify-cursors', {})
   const prefs = computed(() => ({ ...DEFAULT_NOTIFICATIONS, ...settings.value.notifications }))
+  const dnd = useDoNotDisturb()
+  const vips = useVips()
   const desktop = import.meta.client ? window.citrusDesktop : undefined
 
   async function check() {
@@ -25,6 +28,10 @@ export function useNewMail() {
     cursors.value = result.cursors
     if (result.messages.length) {
       refreshFolders()
+      // Kept in the notification centre whatever the banners are set to
+      for (const message of result.messages) {
+        centre.push({ kind: 'mail', title: personName(message.from), body: message.subject || '(No subject)', to: pathTo(message.folder, message.id), mailbox: message.mailbox, key: `mail:${message.mailbox}:${message.folder}:${message.id}`, at: new Date(message.date).getTime() || undefined })
+      }
       announce(result.messages)
     }
   }
@@ -40,9 +47,13 @@ export function useNewMail() {
     navigateTo(path)
   }
 
-  function announce(messages: NewMessage[]) {
+  function announce(arrived: NewMessage[]) {
     const p = prefs.value
-    if (!p.enabled || inQuietHours(p)) return
+    // Quiet hours and do not disturb hold everything back but mail from a
+    // VIP of the mailbox it came to
+    const quiet = inQuietHours(p)
+    const messages = arrived.filter(message => shouldNotify(message.from.address, { enabled: p.enabled, quiet, dnd: dnd.active.value, vips: vips.of(message.mailbox) }))
+    if (!messages.length) return
     playSound(p.sound, p.volume)
 
     const newest = messages[messages.length - 1]!
