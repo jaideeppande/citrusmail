@@ -1,0 +1,71 @@
+name: main-release
+
+# Every push to main (a merged pull request included) builds the Windows
+# installer and publishes it as a GitHub release, so the latest main can be
+# downloaded straight from the Releases page:
+#
+#   https://github.com/<owner>/<repo>/releases/latest
+#
+# Each build is its own release, tagged main-<run number>, and the newest one
+# is marked "Latest". These are builds of main, not versioned releases: the
+# update feed files (latest.yml, .blockmap) are left out, so apps installed
+# from a version tag (release.yml) never update to them.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# A newer merge supersedes a build still running
+concurrency:
+  group: main-release
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        # Pinned: this job can write releases, so a moved tag can't run new code with that token
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - name: Install node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test
+        run: pnpm run test
+
+      - name: Build the installer
+        run: pnpm run desktop:build:win --x64 --publish never
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+
+      - name: Publish the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          tag="main-${GITHUB_RUN_NUMBER}"
+          exe=$(ls dist-desktop/*-x64.exe)
+          sha256sum "$exe" | sed 's#dist-desktop/##' > dist-desktop/SHA256SUMS.txt
+          gh release create "$tag" "$exe" dist-desktop/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "CitrusMail ${version} (main build ${GITHUB_RUN_NUMBER})" \
+            --notes "Windows installer built from ${GITHUB_SHA::7} on main.
+
+          Download **$(basename "$exe")** below and run it. It isn't code-signed, so Windows SmartScreen may ask you to confirm: More info → Run anyway." \
+            --latest
