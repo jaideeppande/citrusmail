@@ -31,7 +31,9 @@ module.exports = {
   copyright: desktop.copyright || 'Copyright © 2026 CitrusMail contributors',
   directories: { output: '../dist-desktop', buildResources: 'build' },
   artifactName: `${productName.replace(/[^\w.-]+/g, '-')}-\${version}-\${arch}.\${ext}`,
-  files: ['main.mjs', 'preload.cjs', 'package.json'],
+  // Every module of the main process: a new one (ai.mjs) left out of this list
+  // crashes the installed app on start. test/desktop-files.test.ts checks it
+  files: ['*.mjs', 'preload.cjs', 'package.json'],
   extraResources: [
     // The Nuxt server build, outside the asar so its own node_modules load as-is
     { from: '../.output', to: 'output' },
