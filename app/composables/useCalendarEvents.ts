@@ -35,7 +35,9 @@ const _useCalendarEvents = () => {
     getCachedData: (key, nuxtApp) => nuxtApp.payload.data[key] ?? nuxtApp.static.data[key]
   })
 
-  const hiddenCalendars = useCookie<string[]>('hidden-calendars', { default: () => [] })
+  // Kept on this computer (and shared by every window), so a calendar
+  // hidden stays hidden the next time the app opens
+  const hiddenCalendars = useLocalPref<string[]>('hidden-calendars', [])
 
   function toggleCalendar(id: string) {
     hiddenCalendars.value = hiddenCalendars.value.includes(id)

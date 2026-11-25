@@ -2,6 +2,14 @@
 // The thin bar of a pop-out window: what you drag it by, with the sidebar on
 // demand and a way to hand the page back to the main window
 const { sidebarShown } = useWindowChrome()
+const { isMobile, isSidebarOpen } = useShell()
+
+// In a narrow window the sidebar is a slideover, which mounts closed: showing
+// it also has to open it, or the button does nothing to see
+function toggleSidebar() {
+  sidebarShown.value = !sidebarShown.value
+  if (sidebarShown.value && isMobile.value) nextTick(() => (isSidebarOpen.value = true))
+}
 // Follows the page's own title as it changes
 const title = useTitle(null, { observe: true })
 </script>
@@ -17,7 +25,7 @@ const title = useTitle(null, { observe: true })
         :aria-label="sidebarShown ? 'Hide sidebar' : 'Show sidebar'"
         :aria-pressed="sidebarShown"
         class="text-muted hover:text-highlighted [-webkit-app-region:no-drag]"
-        @click="sidebarShown = !sidebarShown"
+        @click="toggleSidebar"
       />
     </UTooltip>
 

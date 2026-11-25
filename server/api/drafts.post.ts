@@ -9,7 +9,7 @@ const schema = outgoingSchema.extend({
 export default defineEventHandler(event =>
   withAccount(event, async (account): Promise<DraftRef> => {
     const { replace, ...message } = await readValidatedBody(event, schema)
-    const raw = await composeMessage(account, message, { keepBcc: true }).build()
+    const raw = await composeMessage(account, await withCarried(account, message), { keepBcc: true }).build()
     return mailFor(account).saveDraft(raw, replace)
   })
 )

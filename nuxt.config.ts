@@ -17,6 +17,13 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  // Light until someone picks otherwise in the user menu or Settings →
+  // Appearance (kept in this browser, so it's still their choice next time)
+  colorMode: {
+    preference: 'light',
+    fallback: 'light'
+  },
+
   ui: {
     experimental: {
       componentDetection: true

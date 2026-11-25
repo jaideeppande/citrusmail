@@ -387,8 +387,9 @@ const _useMail = () => {
     }
     return () => {
       leaving.delete(key)
-      // An AI search match from another folder was never on this folder's list
-      if (index !== -1) {
+      // An AI search match from another folder was never on this folder's list,
+      // and after a change of folder the list on screen isn't the one it left
+      if (index !== -1 && folderPath.value === message.folder) {
         messages.value.splice(index, 0, message)
         total.value++
       }
@@ -514,6 +515,11 @@ const _useMail = () => {
     pending.push(action)
   }
 
+  /** Sends every move and delete still waiting out its undo time, before the session changes hands */
+  function settle() {
+    return Promise.all([...pending].map(commit))
+  }
+
   /** Takes back the last move or delete, while it still can be */
   function undo() {
     pending[pending.length - 1]?.undo()
@@ -618,8 +624,10 @@ const _useMail = () => {
     }
     const first = due[0]!.message
     const centre = useNotificationCentre()
+    // Which mailbox it is in: ids mean something else in another one
+    const mailbox = shellAccount.value?.email.toLowerCase()
     for (const { message } of due) {
-      centre.push({ kind: 'snooze', title: 'Back from snooze', body: message.subject || '(No subject)', to: `${folderLink(message.folder)}?m=${encodeURIComponent(message.id)}`, key: `snooze:${messageKey(message)}` })
+      centre.push({ kind: 'snooze', title: 'Back from snooze', body: message.subject || '(No subject)', to: `${folderLink(message.folder)}?m=${encodeURIComponent(message.id)}`, key: `snooze:${mailbox}:${messageKey(message)}`, mailbox })
     }
     toast.add({
       title: due.length === 1 ? `Back from snooze: ${first.subject || '(No subject)'}` : `${due.length} messages are back from snooze`,
@@ -705,10 +713,8 @@ const _useMail = () => {
   }
 
   const onMail = () => route.path.startsWith('/mail')
-  // Not while a menu, list or dialog is open: its own keys (typeahead, arrows)
-  // would otherwise also archive, flag or step to the next message behind it
-  // (The phone's reader is a slideover, which is the mail itself, not over it)
-  const overlayOpen = () => !!document.querySelector('[role="menu"], [role="listbox"], [role="dialog"]:not(:has([data-reader]))')
+  // Not while a menu, list or dialog is open, or a composer button has the keyboard
+  const overlayOpen = mailOverlayOpen
   const when = (handler: () => void) => () => onMail() && !overlayOpen() && handler()
   const withSelected = (handler: (message: MessageSummary) => void) => when(() => selected.value && handler(selected.value))
   const withActing = (handler: (list: MessageSummary[]) => void) => when(() => {
@@ -724,7 +730,8 @@ const _useMail = () => {
     'mail.delete': withActing(removeMany),
     'mail.flag': withActing(list => flagMany(list, !list.every(message => message.flagged))),
     // Both ways, as the menus that show it say
-    'mail.toggleRead': withActing(list => setUnreadMany(list, !list.some(message => message.unread))),
+    // A conversation is unread while any message in it is, as its row shows it
+    'mail.toggleRead': withActing(list => setUnreadMany(list, !list.some(message => threadInfo(message)?.unread ?? message.unread))),
     'mail.pin': withSelected((message) => {
       marks.togglePin(message)
       announce(marks.isPinned(message) ? 'Pinned to top' : 'Unpinned')
@@ -773,6 +780,7 @@ const _useMail = () => {
     listed,
     thread,
     threadInfo,
+    settle,
     isRowSelected,
     vanishing,
     arrived,

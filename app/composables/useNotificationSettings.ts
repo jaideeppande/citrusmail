@@ -5,8 +5,15 @@ export function useNotificationSettings() {
   const toast = useToast()
   const prefs = computed<NotificationSettings>(() => ({ ...DEFAULT_NOTIFICATIONS, ...settings.value.notifications }))
 
-  function set(patch: Partial<NotificationSettings>) {
-    return save({ notifications: { ...prefs.value, ...patch } }, false)
+  // Shown at once and then saved: waiting for the server, a second switch
+  // flipped quickly was built on the old values and undid the first
+  async function set(patch: Partial<NotificationSettings>) {
+    const before = settings.value.notifications
+    const notifications = { ...prefs.value, ...patch }
+    settings.value = { ...settings.value, notifications }
+    const saved = await save({ notifications }, false)
+    if (!saved) settings.value = { ...settings.value, notifications: before }
+    return saved
   }
 
   async function setBanners(on: boolean) {

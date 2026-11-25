@@ -27,7 +27,7 @@ export interface SignInForm {
 // the password is in, the servers are known and the form only shows them
 // when someone opens the advanced settings
 export function useSignIn() {
-  const { fetch: refreshSession, loggedIn } = useUserSession()
+  const { loggedIn } = useUserSession()
   const config = useRuntimeConfig()
   const route = useRoute()
   /** Adding a mailbox next to the ones already signed in */
@@ -155,9 +155,10 @@ export function useSignIn() {
         await succeed()
         return window.location.assign('/mail/INBOX')
       }
-      await refreshSession()
       await succeed()
-      await navigateTo('/mail/INBOX')
+      // A fresh load here too: after a sign-out in this window, the last account's
+      // settings, signature and contacts would otherwise still be the ones loaded
+      return window.location.assign('/mail/INBOX')
     } catch (failure) {
       stage.value = 'idle'
       const { data, response } = failure as { data?: { message?: string }, response?: unknown }

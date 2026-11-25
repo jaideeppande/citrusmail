@@ -34,8 +34,20 @@ watch(pin, value => value.length && (wrong.value = false))
 
 // Everything under the sheet is out of reach while it's up: not clickable,
 // not focusable, not read out
+// Dialogs and slideovers are drawn outside the app's own element, straight
+// under <body>: left alone, an open one keeps the keyboard and the pointer,
+// and the PIN can't be typed. So everything but the sheet goes inert
+function setInert(on: boolean) {
+  const sheet = document.querySelector('.lb-lock-sheet')
+  for (const element of document.body.children) {
+    if (element.contains(sheet) && element !== document.getElementById('__nuxt')) continue
+    if (on) element.setAttribute('inert', '')
+    else element.removeAttribute('inert')
+  }
+}
+
 watch(locked, async (on) => {
-  document.getElementById('__nuxt')?.toggleAttribute('inert', on)
+  setInert(on)
   if (!on) return
   pin.value = []
   wrong.value = false
@@ -110,7 +122,7 @@ async function signOut() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="app-lock-title"
-        class="lb-lock-sheet fixed inset-0 z-1000 flex flex-col items-center justify-center gap-6 p-6 [-webkit-app-region:no-drag]"
+        class="lb-lock-sheet pointer-events-auto fixed inset-0 z-1000 flex flex-col items-center justify-center gap-6 p-6 [-webkit-app-region:no-drag]"
         aria-describedby="app-lock-hint"
         @keydown="onKeydown"
         @keyup.stop

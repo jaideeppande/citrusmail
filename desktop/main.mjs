@@ -8,7 +8,7 @@ import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage,
 import updater from 'electron-updater'
 import * as ai from './ai.mjs'
 import { randomBytes } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -74,7 +74,11 @@ const isSignIn = (url) => {
 
 // Before anything asks for userData: each brand keeps its own data folder
 app.setName(appName)
-if (!app.requestSingleInstanceLock()) app.quit()
+// A second copy stops right here. `app.quit()` alone lets the rest of this
+// file run first: it found the port taken (by the first copy), picked another
+// and saved it, and the next launch came up on a new origin with nothing the
+// windows had kept: the tour again, the theme back to its default
+if (!app.requestSingleInstanceLock()) app.exit(0)
 
 // The port is kept between launches: the session cookie and the saved
 // appearance belong to the origin, so a new port would sign you out
@@ -108,12 +112,22 @@ function anyPort() {
   })
 }
 
+// Opened again straight after quitting, the last run can still be letting go
+// of the port. It gets a few seconds before another port is taken for good
+async function freeSoon(port) {
+  for (let tries = 0; tries < 16; tries++) {
+    if (await isFree(port)) return true
+    await new Promise(resolve => setTimeout(resolve, 250))
+  }
+  return false
+}
+
 async function startServer() {
   const data = app.getPath('userData')
   mkdirSync(data, { recursive: true })
   const { config, save } = loadConfig()
   let port = config.port ?? DEFAULT_PORT
-  if (!(await isFree(port))) port = await anyPort()
+  if (!(await freeSoon(port))) port = await anyPort()
   config.port = port
   save()
 
@@ -147,6 +161,51 @@ async function startServer() {
 
 let origin
 let quitting = false
+
+/* What the windows remember ------------------------------------------- */
+
+// A window keeps its preferences (theme, the tour being done, layouts,
+// drafts) in local storage, which belongs to its origin, port included. When
+// the port does have to change, the page would start from nothing. So the
+// app keeps a copy here, and preload.cjs puts it back on a fresh origin
+const prefsFile = () => join(app.getPath('userData'), 'prefs.json')
+const PREFS_LIMIT = 16 * 1024 * 1024
+let prefs
+
+function savedPrefs() {
+  prefs ??= readJson(prefsFile())
+  return prefs
+}
+
+/** Only the app's own page, never one it navigated to (Sign in with Microsoft) */
+const fromOurPage = event => !!origin && isOurs(event.senderFrame?.url ?? '')
+
+ipcMain.on('citrusmail:prefs-load', (event) => {
+  event.returnValue = fromOurPage(event) ? savedPrefs() : null
+})
+
+ipcMain.on('citrusmail:prefs-save', (event, snapshot) => {
+  // Asked for both ways (in passing, and waited for as a window closes)
+  event.returnValue = true
+  if (!fromOurPage(event) || !snapshot || typeof snapshot !== 'object') return
+  const entries = Object.entries(snapshot).filter(([key, value]) => typeof key === 'string' && typeof value === 'string')
+  const text = JSON.stringify(Object.fromEntries(entries))
+  if (text.length > PREFS_LIMIT) return
+  try {
+    // Written beside it and moved over, so a crash halfway leaves the last good copy
+    writeFileSync(`${prefsFile()}.tmp`, text, { mode: 0o600 })
+    renameSync(`${prefsFile()}.tmp`, prefsFile())
+    prefs = Object.fromEntries(entries)
+  } catch {
+    // A full or read-only disk: the windows still have their own copy
+  }
+})
+
+/** Dark or light as the app will come up, so a new window doesn't flash the other one first */
+function startsDark() {
+  const mode = savedPrefs()['nuxt-color-mode'] ?? 'light'
+  return mode === 'dark' || (mode === 'system' && nativeTheme.shouldUseDarkColors)
+}
 app.on('before-quit', () => (quitting = true))
 
 /* Windows ------------------------------------------------------------ */
@@ -241,7 +300,7 @@ function createWindow({ kind = 'main', path = '/mail/INBOX', bounds, maximized, 
     title: appName,
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 18, y: 18 },
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#1c1917' : '#f5f5f4',
+    backgroundColor: startsDark() ? '#1c1917' : '#f5f5f4',
     show: false,
     webPreferences: {
       preload: join(here, 'preload.cjs'),

@@ -89,7 +89,7 @@ export const SHORTCUT_PRESETS: Record<ShortcutPreset, { label: string, descripti
       'mail.compose': ['meta_n'],
       'mail.reply': ['meta_r'],
       'mail.replyAll': ['meta_shift_r'],
-      'mail.forward': ['meta_shift_f'],
+      'mail.forward': ['meta_f'],
       'mail.quickReply': ['alt_r'],
       'mail.archive': ['backspace'],
       'mail.delete': ['delete', 'meta_d'],
@@ -98,16 +98,14 @@ export const SHORTCUT_PRESETS: Record<ShortcutPreset, { label: string, descripti
       'mail.search': ['meta_e', '/'],
       'mail.selectAll': ['meta_a'],
       'mail.undo': ['meta_z'],
-      'go.inbox': ['meta_shift_i'],
-      'go.calendar': ['meta_2'],
-      'go.contacts': ['meta_3']
+      'go.inbox': ['meta_shift_i']
     }
   },
   superhuman: {
     label: 'Superhuman',
     description: 'Single keys built for clearing an inbox fast.',
     keys: {
-      'mail.reply': ['r', 'enter'],
+      'mail.reply': ['r'],
       'mail.replyAll': ['shift_r', 'a'],
       'mail.quickReply': ['meta_shift_r'],
       'mail.toggleRead': ['u'],

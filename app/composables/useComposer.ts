@@ -10,6 +10,12 @@ export interface Draft {
   subject: string
   html: string
   attachments: OutgoingAttachment[]
+  /**
+   * The files of the message being answered or forwarded, which go along with
+   * it. Only named here: the server attaches them when the message is sent or
+   * saved, so they are never downloaded into the draft
+   */
+  carry?: { folder: string, id: string, files: Attachment[] }
   inReplyTo?: string
   references?: string[]
   /** Whether a signature goes under this message */
@@ -73,7 +79,7 @@ function prefixed(prefix: string, subject: string): string {
 /** What a person actually changed: recipients, subject, words and files */
 function fingerprint(draft: Draft) {
   const words = draft.html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
-  return JSON.stringify([draft.to, draft.cc, draft.bcc, draft.subject, words, draft.attachments.length, /<img/i.test(draft.html)])
+  return JSON.stringify([draft.to, draft.cc, draft.bcc, draft.subject, words, draft.attachments.length + (draft.carry?.files.length ?? 0), /<img/i.test(draft.html)])
 }
 
 // The original under a reply or forward: a header line and the message in a
@@ -135,7 +141,7 @@ const _useComposer = () => {
   const find = (id: string) => stored.value.find(item => item.id === id)
   /** The tabs of the dock: this mailbox's drafts that aren't in a window of their own */
   const drafts = computed(() => stored.value.filter(item => mine(item) && !item.popped))
-  const active = computed(() => stored.value.find(item => item.id === activeId.value && (standalone.value || !item.popped)))
+  const active = computed(() => stored.value.find(item => item.id === activeId.value && mine(item) && (standalone.value || !item.popped)))
   const hasDraft = computed(() => !!active.value)
   // What the fields bind to when nothing is open, so they never meet undefined
   const scratch = ref<Draft>(emptyDraft())
@@ -211,7 +217,9 @@ const _useComposer = () => {
   /** What a reply to a message starts from: who it goes to, the subject and the original underneath */
   function replyFields(message: MessageDetail, all = false): Partial<Draft> {
     const self = account.value?.email.toLowerCase()
-    const primary = message.replyTo.length ? message.replyTo : [message.from]
+    // Your own message (in Sent, or your card in a conversation) is answered to who it went to
+    const own = !message.replyTo.length && message.from.address.toLowerCase() === self && message.to.length
+    const primary = message.replyTo.length ? message.replyTo : own ? message.to : [message.from]
     const others = all
       ? [...message.to, ...message.cc].filter(address => address.address.toLowerCase() !== self && !primary.some(p => p.address.toLowerCase() === address.address.toLowerCase()))
       : []
@@ -224,8 +232,14 @@ const _useComposer = () => {
       inReplyTo: message.messageId,
       references: [...(message.references ?? []), ...(message.messageId ? [message.messageId] : [])],
       replyingTo: { folder: message.folder, id: message.id },
-      translateTo: translatedFrom(message)
+      translateTo: translatedFrom(message),
+      carry: carryOf(message)
     }
+  }
+
+  /** The original's attachments, to go along with a reply or a forward */
+  function carryOf(message: MessageDetail): Draft['carry'] {
+    return message.attachments.length ? { folder: message.folder, id: message.id, files: [...message.attachments] } : undefined
   }
 
   function reply(message: MessageDetail, all = false) {
@@ -247,7 +261,8 @@ const _useComposer = () => {
   function forward(message: MessageDetail) {
     start({
       subject: prefixed('Fwd', message.subject),
-      ...quote(message, `---------- Forwarded message ----------\nFrom: ${formatAddress(message.from)}\nDate: ${fullDate(message.date)}\nSubject: ${message.subject}`)
+      ...quote(message, `---------- Forwarded message ----------\nFrom: ${formatAddress(message.from)}\nDate: ${fullDate(message.date)}\nSubject: ${message.subject}`),
+      carry: carryOf(message)
     })
   }
 
@@ -279,7 +294,9 @@ const _useComposer = () => {
 
   /** A scheduled message taken back out to edit */
   function reopen(message: OutgoingMessage) {
-    start({ ...message, cc: message.cc ?? [], bcc: message.bcc ?? [], attachments: message.attachments ?? [], signature: false })
+    const { carry: _carry, ...rest } = message
+    // It exists nowhere else now: opened as changed (see restore), so closing it saves it to Drafts
+    restore({ ...emptyDraft(), ...rest, cc: message.cc ?? [], bcc: message.bcc ?? [], attachments: message.attachments ?? [], signature: false })
   }
 
   /** Brings a draft from the dock onto the screen */
@@ -442,6 +459,7 @@ const _useComposer = () => {
       subject: from.subject,
       html: outgoingHtml(from),
       attachments: from.attachments,
+      carry: from.carry?.files.length ? { folder: from.carry.folder, id: from.carry.id, indexes: from.carry.files.map(file => file.index) } : undefined,
       inReplyTo: from.inReplyTo,
       references: from.references,
       // Only once Settings → Tracking is set up (see mail/receipt-toggle)
@@ -492,7 +510,7 @@ const _useComposer = () => {
       subject: target.subject,
       text: plainText(target.html),
       // A picture placed in the message is what "attached" often means
-      attachments: target.attachments.length + (target.html.match(/<img/gi)?.length ?? 0),
+      attachments: target.attachments.length + (target.carry?.files.length ?? 0) + (target.html.match(/<img/gi)?.length ?? 0),
       recipients: [...target.to, ...target.cc, ...target.bcc],
       knownNames: known
     })
@@ -552,7 +570,15 @@ const _useComposer = () => {
   // set in Settings → Reading, and only then handed over: Undo is a matter of
   // not sending it. Held messages that the window closes on still go out
   // (or, when too large to send from a closing page, wait in the dock)
-  const waiting = new Map<string, { out: Outbound, timer: ReturnType<typeof setTimeout> }>()
+  const waiting = new Map<string, { out: Outbound, timer: ReturnType<typeof setTimeout>, go: () => Promise<void> }>()
+
+  /** Sends what is still inside its undo time, before the session changes hands */
+  function settleSends() {
+    return Promise.all([...waiting.values()].map(({ timer, go }) => {
+      clearTimeout(timer)
+      return go()
+    }))
+  }
 
   function holdBack(out: Outbound, seconds: number) {
     const id = `undo-send-${newId()}`
@@ -562,15 +588,13 @@ const _useComposer = () => {
       return true
     }
     pending.value++
-    waiting.set(id, {
-      out,
-      timer: setTimeout(async () => {
-        if (!settle()) return
-        toast.remove(id)
-        // Not sent after all: the draft goes back where it can be tried again
-        if (!(await dispatch(out, false))) restore(out.kept)
-      }, seconds * 1000)
-    })
+    const go = async () => {
+      if (!settle()) return
+      toast.remove(id)
+      // Not sent after all: the draft goes back where it can be tried again
+      if (!(await dispatch(out, false))) restore(out.kept)
+    }
+    waiting.set(id, { out, timer: setTimeout(go, seconds * 1000), go })
     toast.add({
       id,
       title: 'Sending…',
@@ -672,7 +696,8 @@ const _useComposer = () => {
 
     const target = draft.value
     const added = await Promise.all(files.map(read))
-    const size = [...target.attachments, ...added].reduce((sum, file) => sum + file.content.length * 0.75, 0)
+    const carried = target.carry?.files.reduce((sum, file) => sum + file.size, 0) ?? 0
+    const size = carried + [...target.attachments, ...added].reduce((sum, file) => sum + file.content.length * 0.75, 0)
     if (size > 25 * 1024 * 1024) {
       toast.add({ title: 'Attachments are over 25 MB', description: 'Most mail servers refuse messages that large.', color: 'warning', icon: 'i-lucide-paperclip' })
       return
@@ -682,6 +707,12 @@ const _useComposer = () => {
 
   function detach(index: number) {
     draft.value.attachments = draft.value.attachments.filter((_, i) => i !== index)
+  }
+
+  /** Leaves one of the original's files behind */
+  function detachCarried(index: number) {
+    const { carry } = draft.value
+    if (carry) draft.value.carry = { ...carry, files: carry.files.filter(file => file.index !== index) }
   }
 
   // True when the app has just been started, rather than this window reloaded
@@ -721,7 +752,7 @@ const _useComposer = () => {
   })
 
   defineAppShortcuts({
-    'mail.compose': () => compose(),
+    'mail.compose': () => !mailOverlayOpen() && compose(),
     'compose.send': {
       usingInput: true,
       // Only from inside the composer: the quick reply under a message has the same keys
@@ -732,8 +763,8 @@ const _useComposer = () => {
   })
 
   return {
-    open, sending, draft, version, isDirty, editor, focusBody, start, compose, reply, forward, editDraft, reopen, close, discard, send, attach, detach,
-    drafts, activeId, hasDraft, standalone, pending, closed, activate, minimise, popOut, adopt, restore, reopenClosed, forgetClosed, composeFromMailto, replyDraft, deliver
+    open, sending, draft, version, isDirty, editor, focusBody, start, compose, reply, forward, editDraft, reopen, close, discard, send, attach, detach, detachCarried,
+    drafts, activeId, hasDraft, standalone, pending, closed, activate, minimise, popOut, adopt, restore, reopenClosed, forgetClosed, composeFromMailto, replyDraft, deliver, settleSends
   }
 }
 

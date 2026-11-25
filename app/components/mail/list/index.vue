@@ -28,7 +28,7 @@ const tab = computed(() => tabbed.value ? inboxTabs.value?.tab.value : undefined
 const rowHeight = computed(() => DENSITY_ROWS[prefs.value.density][compact.value ? 'compact' : 'roomy'])
 
 const empty = computed(() => {
-  if (priority.needsYou.value && listed.value.length) return { illustration: 'inbox-zero' as const, title: 'Nothing needs you', description: 'No message here waits for your reply or an action, as far as AI can tell.' }
+  if (priority.needsYou.value) return { illustration: 'inbox-zero' as const, title: 'Nothing needs you', description: 'No message here waits for your reply or an action, as far as AI can tell.' }
   if (filtering.value) return { illustration: 'no-results' as const, title: 'No matches', description: `Nothing in ${folder.value?.name ?? 'this folder'} matches${search.value ? ` “${search.value}”` : ''} with these filters.` }
   if (filter.value === 'flagged') return { illustration: 'empty-folder' as const, title: 'Nothing flagged', description: 'Press S on a message to flag it for later.' }
   if (search.value) return { illustration: 'no-results' as const, title: 'No matches', description: `Nothing in ${folder.value?.name ?? 'this folder'} matches “${search.value}”.` }

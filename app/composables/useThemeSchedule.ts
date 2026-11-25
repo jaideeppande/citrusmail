@@ -18,7 +18,7 @@ const _useThemeSchedule = () => {
 
   /** Back to what was chosen before, or to `preference` when a theme is picked by hand */
   function turnOff(preference?: string) {
-    const before = preference ?? schedule.value.before ?? 'system'
+    const before = preference ?? schedule.value.before ?? 'light'
     schedule.value = { on: false, light: schedule.value.light, dark: schedule.value.dark }
     colorMode.preference = before
   }

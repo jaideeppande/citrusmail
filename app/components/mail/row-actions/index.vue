@@ -12,7 +12,9 @@ const { kbds } = useShortcutKeys()
 const nudges = useNudges()
 
 const unread = computed(() => threadInfo(props.message)?.unread ?? props.message.unread)
-const snoozes = computed(() => [snoozeItems(() => [props.message])])
+// Read again each time the menu opens: "Tomorrow morning" is another day by then
+const snoozeOpened = ref(0)
+const snoozes = computed(() => snoozeOpened.value >= 0 ? [snoozeItems(() => [props.message])] : [])
 </script>
 
 <template>
@@ -86,6 +88,7 @@ const snoozes = computed(() => [snoozeItems(() => [props.message])])
         :items="snoozes"
         :content="{ align: 'end' }"
         :ui="{ content: 'min-w-56' }"
+        @update:open="$event && snoozeOpened++"
       >
         <UTooltip
           text="Snooze"

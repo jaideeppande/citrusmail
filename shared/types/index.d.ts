@@ -255,6 +255,8 @@ export interface OutgoingMessage {
   inReplyTo?: string
   references?: string[]
   attachments?: OutgoingAttachment[]
+  /** Attachments of another message (a reply's or forward's original) for the server to attach as they are */
+  carry?: { folder: string, id: string, indexes: number[] }
   /** Track delivery and opens: a read receipt request, a delivery report and, if set up, the tracking image */
   readReceipt?: boolean
 }

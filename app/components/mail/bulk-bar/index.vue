@@ -26,7 +26,9 @@ const targets = computed<DropdownMenuItem[][]>(() => [folders.value
   .filter(item => item.path !== folder.value?.path && item.role !== 'drafts' && item.role !== 'sent' && item.role !== 'flagged')
   .map(item => ({ label: item.name, icon: folderIcon(item), onSelect: () => moveMany(checkedRows.value, item.path) }))])
 
-const snoozes = computed(() => [snoozeItems(() => checkedRows.value)])
+// Read again each time the menu opens: "Tomorrow morning" is another day by then
+const snoozeOpened = ref(0)
+const snoozes = computed(() => snoozeOpened.value >= 0 ? [snoozeItems(() => checkedRows.value)] : [])
 
 const bar = useTemplateRef<HTMLElement>('bar')
 useRovingFocus(bar)
@@ -92,6 +94,7 @@ useRovingFocus(bar)
           :items="snoozes"
           :content="{ side: 'top' }"
           :ui="{ content: 'min-w-56' }"
+          @update:open="$event && snoozeOpened++"
         >
           <UTooltip text="Snooze">
             <UButton

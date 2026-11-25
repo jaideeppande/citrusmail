@@ -19,7 +19,9 @@ const showImages = ref(false)
 // The copy on hand shows at once; otherwise the server is asked
 const { message, status, offline, arrived, refresh, row } = useReaderMessage(() => ({ folder: props.folder, id: props.id }), showImages, { neighbours: true })
 
-const summary = computed(() => row(props.id, props.folder))
+// The row in the list, or the message itself when it isn't on the page loaded
+// (an older search result, a notification, a reload): its actions work either way
+const summary = computed(() => row(props.id, props.folder) ?? message.value)
 const thread = useTemplateRef('thread')
 const header = useTemplateRef('header')
 
@@ -83,7 +85,7 @@ watch(() => [props.id, props.folder], () => (scrolls.value = false))
 /* Keys and commands -------------------------------------------------- */
 
 // Not over a message being written: it would be replaced without being saved
-const free = () => !composing.value && !!message.value
+const free = () => !composing.value && !!message.value && !mailOverlayOpen()
 defineAppShortcuts({
   'mail.reply': () => free() && reply(message.value!),
   'mail.replyAll': () => free() && reply(message.value!, true),

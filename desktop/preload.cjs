@@ -58,6 +58,62 @@ contextBridge.exposeInMainWorld('citrusDesktop', {
   }
 })
 
+// What the page keeps in local storage (theme, the tour being done, layouts,
+// drafts) belongs to its origin, and the origin has the local server's port in
+// it. When that port has to change, the page would start from nothing. The app
+// keeps a copy (main.mjs, prefs.json) that is put back here, before any of the
+// page's own scripts read it. The list cache is left out: it's large and refetched
+const mirrored = key => typeof key === 'string' && (key.startsWith('citrusmail-') || key === 'nuxt-color-mode') && key !== 'citrusmail-list-cache'
+const VALUE_LIMIT = 2 * 1024 * 1024
+
+function mirroredKeys() {
+  const keys = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (mirrored(key)) keys.push(key)
+  }
+  return keys
+}
+
+function restorePrefs() {
+  try {
+    // Anything already here means this origin has been used: it is the truth
+    if (window.top !== window || mirroredKeys().length) return
+    const saved = ipcRenderer.sendSync('citrusmail:prefs-load')
+    if (!saved) return
+    for (const [key, value] of Object.entries(saved)) {
+      if (mirrored(key) && typeof value === 'string') localStorage.setItem(key, value)
+    }
+  } catch {
+    // Storage is off or the app didn't answer: the page starts as it would have
+  }
+}
+
+let lastSaved = ''
+function savePrefs(wait) {
+  try {
+    if (window.top !== window) return
+    const snapshot = {}
+    for (const key of mirroredKeys()) {
+      const value = localStorage.getItem(key)
+      if (value !== null && value.length <= VALUE_LIMIT) snapshot[key] = value
+    }
+    const text = JSON.stringify(snapshot)
+    // Nothing kept yet (a page on its way to sign-in) never replaces a real copy
+    if (text === lastSaved || text === '{}') return
+    lastSaved = text
+    if (wait) ipcRenderer.sendSync('citrusmail:prefs-save', snapshot)
+    else ipcRenderer.send('citrusmail:prefs-save', snapshot)
+  } catch {
+    // The next round tries again
+  }
+}
+
+restorePrefs()
+setInterval(savePrefs, 5000)
+// A change made just before closing is waited for, so it isn't lost with the window
+window.addEventListener('pagehide', () => savePrefs(true))
+
 const mark = () => document.documentElement?.classList.add('desktop', `desktop-${process.platform}`)
 mark()
 window.addEventListener('DOMContentLoaded', mark)

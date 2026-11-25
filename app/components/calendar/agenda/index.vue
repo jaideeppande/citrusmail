@@ -46,7 +46,7 @@ const blocks = computed(() => agendaBlocks(
   day => isToday(day) || (!!draftDay.value && isSameDay(draftDay.value, day))
 ))
 
-const empty = computed(() => !loading.value && blocks.value.every(block => block.kind === 'free' || !block.events.length))
+const empty = computed(() => blocks.value.every(block => block.kind === 'free' || !block.events.length))
 
 const scroller = useTemplateRef('scroller')
 

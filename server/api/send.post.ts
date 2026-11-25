@@ -11,8 +11,10 @@ const bodySchema = z.object({
 
 export default defineEventHandler(event =>
   withAccount(event, async (account) => {
-    const { message, sendAt, draft } = await readValidatedBody(event, bodySchema)
+    const { message: written, sendAt, draft } = await readValidatedBody(event, bodySchema)
     const mail = mailFor(account)
+    // With the original's files, read now: by the time a scheduled message goes out it may have been filed away
+    const message = await withCarried(account, written)
 
     if (sendAt && new Date(sendAt).getTime() > Date.now() + 30_000) {
       if (new Date(sendAt).getTime() > Date.now() + 366 * 86_400_000) {

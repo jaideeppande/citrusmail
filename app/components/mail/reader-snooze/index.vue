@@ -19,7 +19,12 @@ function until(at: Date) {
   if (props.summary) snooze([props.summary], at)
 }
 
-const items = computed<DropdownMenuItem[][]>(() => [
+const items = computed<DropdownMenuItem[][]>(() => {
+  // Read so the times are worked out again each time the menu opens: "Tomorrow morning" is another day by then
+  const _opened = open.value
+  return presetItems()
+})
+const presetItems = (): DropdownMenuItem[][] => [
   snoozePresets().map(preset => ({
     label: preset.label,
     icon: preset.icon,
@@ -28,7 +33,7 @@ const items = computed<DropdownMenuItem[][]>(() => [
     onSelect: () => until(preset.date)
   })),
   [{ label: 'Pick a time…', icon: 'i-lucide-calendar-clock', onSelect: () => (picking.value = true) }]
-])
+]
 
 const day = shallowRef<CalendarDate>()
 const time = shallowRef<Time>()

@@ -22,7 +22,13 @@ export const outgoingSchema = z.object({
     contentType: z.string().max(255),
     content: z.base64()
   })).max(50).optional(),
-  readReceipt: z.boolean().optional()
+  readReceipt: z.boolean().optional(),
+  /** Attachments of another message that go along as they are, on a reply or forward (see carry.ts) */
+  carry: z.object({
+    folder: z.string().min(1).max(1000),
+    id: z.string().min(1).max(255),
+    indexes: z.array(z.number().int().min(0).max(999)).max(50)
+  }).optional()
 })
 
 export const sendableSchema = outgoingSchema

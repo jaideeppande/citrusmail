@@ -107,7 +107,10 @@ function onEscape(event: KeyboardEvent) {
     zen.value = false
     return
   }
-  if (!props.standalone) minimise()
+  if (props.standalone) return
+  // Taken here: the same key would otherwise also close the message open behind
+  event.preventDefault()
+  minimise()
 }
 
 defineAppShortcuts({

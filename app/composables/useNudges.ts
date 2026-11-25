@@ -46,10 +46,11 @@ const _useNudges = () => {
     const fresh = [...map.keys()].filter(key => !told.value.includes(key))
     if (!fresh.length) return
     const centre = useNotificationCentre()
+    const mailbox = account.value?.email.toLowerCase()
     for (const key of fresh) {
       const message = messages.value.find(item => messageKey(item) === key)
       if (!message) continue
-      centre.push({ kind: 'nudge', title: `No reply from ${personName(message.to[0])}`, body: `${message.subject || '(No subject)'} · sent ${map.get(key)} days ago`, to: `${folderLink(message.folder)}?m=${encodeURIComponent(message.id)}`, key: `nudge:${key}` })
+      centre.push({ kind: 'nudge', title: `No reply from ${personName(message.to[0])}`, body: `${message.subject || '(No subject)'} · sent ${map.get(key)} days ago`, to: `${folderLink(message.folder)}?m=${encodeURIComponent(message.id)}`, key: `nudge:${mailbox}:${key}`, mailbox })
     }
     told.value = [...told.value, ...fresh].slice(-200)
   })
